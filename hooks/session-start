@@ -1,0 +1,41 @@
+#!/usr/bin/env node
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const hooksDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = dirname(hooksDir);
+const skillFile = join(projectRoot, 'skills', 'using-skills', 'SKILL.md');
+
+if (existsSync(skillFile)) {
+  const content = readFileSync(skillFile, 'utf-8');
+  process.stdout.write(
+    `<EXTREMELY_IMPORTANT>\n` +
+    `You have skills.\n\n` +
+    `**Below is the full content of your 'wz:using-skills' skill:**\n\n` +
+    `${content}\n` +
+    `</EXTREMELY_IMPORTANT>\n`,
+  );
+} else {
+  process.stdout.write(
+    `<system-reminder>\n` +
+    `WARNING: wz:using-skills skill not found at ${skillFile}\n` +
+    `The Wazir skill bootstrap is not available. Skills will not be auto-discovered.\n` +
+    `Run: check that skills/using-skills/SKILL.md exists.\n` +
+    `</system-reminder>\n`,
+  );
+}
+
+process.stdout.write(
+  `<cli-bootstrap-guidance>\n` +
+  `## CLI Bootstrap\n\n` +
+  `Run the following checks at session start:\n\n` +
+  `1. Run \`wazir doctor --json\` to check repo health.\n` +
+  `2. Run \`wazir index refresh\` to update the index.\n` +
+  `   - If no index exists, run \`wazir index build && wazir index summarize --tier all\`.\n` +
+  `3. Check \`<state-root>/runs/latest\` for previous run ID.\n` +
+  `   - If previous run is incomplete, resume it.\n` +
+  `   - Otherwise run \`wazir capture init --run <new-id> --phase clarify --status starting\`.\n` +
+  `</cli-bootstrap-guidance>\n`,
+);
+process.exit(0);

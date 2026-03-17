@@ -1,0 +1,8 @@
+{
+  "id": "install-codex-cli",
+  "file": "docs/install.md",
+  "claim_type": "command",
+  "subject": "wazir export --host codex",
+  "verifier": "wazir export --help",
+  "required": true
+}

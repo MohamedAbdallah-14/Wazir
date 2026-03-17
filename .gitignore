@@ -1,0 +1,30 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+.cursor/hooks/state/
+*.swp
+*.swo
+
+# Node
+node_modules/
+dist/
+
+# Test coverage output
+coverage/
+
+# Wazir runtime state (generated per-run, never committed)
+.agent-os/
+.wazir-state/
+.worktrees/
+tasks/
+
+# Social / launch / viral planning (local only)
+social/
+.claude/worktrees/
+ideations/
+
+.env

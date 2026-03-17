@@ -1,0 +1,10 @@
+{
+  "check-coverage": true,
+  "lines": 80,
+  "branches": 70,
+  "functions": 80,
+  "reporter": ["text", "lcov"],
+  "all": true,
+  "include": ["tooling/src"],
+  "exclude": ["tooling/test/**"]
+}

@@ -1,0 +1,13 @@
+---
+description: Pipeline phase sequence and approval gates
+alwaysApply: true
+---
+
+pipeline-phases:
+
+- clarify → discover → specify → spec-challenge (GATE) → author → design → design-review (GATE) → plan → plan-review (GATE) → execute → verify → review → learn → prepare-next
+- Three adversarial review gates block progress until the reviewer explicitly approves.
+- The reviewer is never the phase author. Adversarial review runs by a different model or model family.
+- Nine hard approval gates block advancement until artifacts pass.
+- Every phase consumes a named artifact from the previous phase and produces a named artifact for the next.
+- Nothing flows through conversation history. Handoffs are explicit, structured, and schema-validated.

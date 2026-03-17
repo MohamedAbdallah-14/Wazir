@@ -1,0 +1,20 @@
+{
+  "name": "wazir",
+  "version": "0.1.0",
+  "description": "Host-native engineering OS kit for AI coding agents — 10 roles, 14 phases, 308 expertise modules, quality gates",
+  "author": {
+    "name": "Mohamed Abdallah"
+  },
+  "homepage": "https://github.com/MohamedAbdallah-14/Wazir",
+  "repository": "https://github.com/MohamedAbdallah-14/Wazir",
+  "license": "MIT",
+  "keywords": [
+    "ai-agents",
+    "engineering-os",
+    "roles",
+    "workflows",
+    "skills",
+    "tdd",
+    "code-review"
+  ]
+}

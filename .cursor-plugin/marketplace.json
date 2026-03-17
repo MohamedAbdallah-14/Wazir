@@ -1,0 +1,19 @@
+{
+  "name": "wazir-marketplace",
+  "owner": {
+    "name": "Mohamed Abdallah",
+    "url": "https://github.com/MohamedAbdallah-14"
+  },
+  "metadata": {
+    "description": "Wazir — engineering with itqan",
+    "version": "0.1.0",
+    "pluginRoot": "."
+  },
+  "plugins": [
+    {
+      "name": "wazir",
+      "source": ".",
+      "description": "Host-native engineering OS kit — 10 canonical roles, 14-phase pipeline, 261 expertise modules for Claude, Codex, Gemini & Cursor"
+    }
+  ]
+}

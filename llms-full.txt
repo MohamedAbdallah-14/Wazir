@@ -1,0 +1,2355 @@
+# Wazir — Complete Documentation
+
+> Generated: 2026-03-16T23:53:58Z
+
+---
+## Source: docs/concepts/architecture.md
+
+# Architecture
+
+Wazir is a host-native engineering OS kit. The host environment (Claude, Codex, Gemini, Cursor) remains the execution container. Wazir supplies the operating model, guardrails, and artifact contracts.
+
+## Core components
+
+| Component | Purpose |
+|-----------|---------|
+| Roles | Canonical contracts defining what each agent role does and produces |
+| Workflows | Phase entrypoints that sequence roles through delivery |
+| Skills | Reusable procedures (wz:tdd, wz:debugging, wz:verification, wz:brainstorming) |
+| Hooks | Guardrails enforcing protected paths, loop caps, and capture routing |
+| Expertise | 308 curated knowledge modules composed into agent prompts |
+| Templates | Artifact templates for phase outputs and handoff |
+| Schemas | Validation schemas for manifest, hooks, artifacts, and exports |
+| Exports | Generated host packages tailored per supported host |
+| Tooling | CLI for validation, indexing, recall, capture, and status |
+
+## Design influences
+
+| Source | What Wazir keeps |
+|--------|----------------------|
+| Wazir skill system | Disciplined workflows, TDD, verification, review rigor, skill ergonomics |
+| Spec-Kit | Spec-first development, explicit artifacts, approval gates |
+| Oh My Claude | Host-native prompt structure and operator ergonomics |
+| autoresearch | Research loops, experiment tracking, self-improvement discipline |
+
+## Context and indexing
+
+Wazir ships a built-in local index and recall surface that reduces context window consumption by 60-80% on exploration-heavy phases.
+
+### Context tiers
+
+| Tier | Token budget | Content | When to use |
+|------|-------------|---------|-------------|
+| L0 | ~100 tokens | One-line identifier (name, kind, language, line range) | Inventory scans, deciding what to load |
+| L1 | ~500-2k tokens | Structural summary (signature, fields, purpose, dependencies) | Understanding shape without full source |
+| L2 | Full content | Exact line-bounded source slice | Implementation, debugging, code review |
+
+### Role-specific recall defaults
+
+Roles are assigned default tiers based on their information needs:
+
+- **Exploration roles** (clarifier, researcher, specifier, content-author, designer, planner) default to L1 -- they need to understand structure across many files without reading every line
+- **Implementation roles** (executor, verifier) default to direct read (L2) -- they need exact source for code changes and verification
+- **Review role** (reviewer) starts at L1 as a triage pass, escalating to direct read only for logic errors, security concerns, or ambiguous summaries
+- **Learning role** (learner) defaults to L0 -- it needs only inventory-level context to identify what changed
+
+Every role includes a fallback chain: if the preferred tier fails (no index, no summaries), the role falls back to direct file reads. The system degrades gracefully -- no wasted tokens on failed index operations.
+
+### Capture routing
+
+Large tool output is routed to run-local files via `wazir capture route` and `wazir capture output`, keeping the context window lean. The agent receives a file path reference (~50 tokens) instead of the full output.
+
+### Pipeline integration points
+
+The index and recall surface integrates with the pipeline at five points:
+
+1. **Session start** -- the bootstrap hook runs `index refresh` (or `build` for first run) to ensure the index is current
+2. **Scan project** -- the `scan-project` skill runs `index stats` to report index health in the project profile
+3. **Debugging** -- the `wz:debugging` OBSERVE phase uses `index search-symbols` and `recall --tier L1` for symbol-first exploration
+4. **Execute** -- the executor uses `recall file` and `recall symbol` for targeted source reads
+5. **Verify** -- the verifier uses direct reads for full validation
+
+### Measuring savings
+
+`wazir capture usage` generates a per-run token savings report showing capture routing statistics and context window savings. This provides concrete evidence of token reduction per session.
+
+The context-mode integration remains an optional adapter -- off by default, never required for core install, build, or test paths.
+
+See [Indexing and Recall](indexing-and-recall.md) for full command details and extractor documentation.
+
+## Design Phase
+
+The design phase runs after specification and before planning. The `designer` role uses open-pencil MCP tools to produce visual designs from the approved spec. Outputs include a `.fig` design file, exported Tailwind JSX/HTML+CSS scaffolds, design tokens JSON, and screenshot PNGs.
+
+The `design-review` workflow validates designs against the spec before planning begins. The existing `review` workflow also checks design-vs-implementation alignment after execution.
+
+open-pencil is integrated as an optional adapter (`open_pencil`) — it is not required for core Wazir functionality.
+
+## Key references
+
+- [Roles & Workflows](roles-and-workflows.md)
+- [Artifact Model](artifact-model.md)
+- [Host Exports](../reference/host-exports.md)
+- [Hooks](../reference/hooks.md)
+- [Expertise & Antipatterns](composition-engine.md)
+
+---
+## Source: docs/concepts/artifact-model.md
+
+# Artifact Model
+
+Wazir separates operator input, committed repo artifacts, and live run state.
+
+## Human Truth
+
+- `input/` is the read-only operator briefing surface.
+
+## Default Live Run State
+
+Default run state lives outside the repo:
+
+- `~/.wazir/projects/<project-slug>/runs/<run-id>/`
+
+Typical run contents:
+
+- `manifest.json`
+- `sources.json`
+- phase subdirectories such as `clarify/`, `plan/`, `verify/`, `review/`
+- `status.json`
+- `events.ndjson`
+- `summary.md`
+
+## Committed Repo Artifacts
+
+Use `artifacts/` only for committed evidence such as:
+
+- release evidence
+- checked-in examples
+
+## Artifact Rules
+
+- every artifact should declare phase, role, run ID, timestamp, sources, status, and loop number
+- non-trivial claims must cite a source file, source URL, or verification command
+- approval-gated artifacts must record approval status and approver when relevant
+- scratch work must not be confused with durable artifacts
+- learnings belong in `memory/`, not in fresh-run source truth
+
+## Templates
+
+Canonical starting points live under:
+
+- `templates/artifacts/*.md`
+- `templates/artifacts/*.json`
+
+Those templates define the minimum metadata for clarification, research, specs, plan review, execution notes, verification, review, learning promotion, and next-run handoff artifacts.
+
+## Repo-Local Override
+
+Repo-local run state is opt-in only. If an operator deliberately uses a repo-local override, the recommended path is:
+
+- `.wazir-state/`
+
+That path must remain gitignored so a normal run still leaves `git status` clean.
+
+## Retention
+
+- keep committed `artifacts/` focused on release evidence and checked-in examples
+- archive stale or disproven learnings instead of rewriting history in place
+- prune external run-state captures when they no longer provide audit or debugging value
+
+---
+## Source: docs/concepts/composition-engine.md
+
+# Composition Engine
+
+Wazir uses a composition engine to assemble the right expertise into each role's context at each phase.
+
+## How expertise loading works
+
+- `clarify` and `discover` start from `input/`, active docs, and `docs/research/`
+- `specify` and `plan` pull only the expertise slices relevant to the stack and risks
+- `review` always considers `expertise/antipatterns/` before broader domain modules
+- `learn` can propose updates to expertise, but may not silently rewrite it
+
+## Anti-patterns first
+
+`expertise/antipatterns/` is first-class review input. It exists to catch:
+
+- fake completion
+- unwired abstractions
+- shallow tests
+- security theater
+- architecture drift
+- AI-coding failure modes
+
+Anti-patterns are loaded into reviewer context before any other domain modules. This ordering ensures that known failure modes are the first lens through which review happens.
+
+## Why scoped loading matters
+
+Brute-force loading of all expertise modules would flood the context window. The composition engine resolves which modules to load based on the task's declared stack and concerns, keeping context tight and relevant. Max 15 modules per dispatch, with token budget enforcement.
+
+## Source material
+
+- Research findings: `docs/research/`
+- Expertise modules: `expertise/`
+- Anti-pattern catalog: `expertise/antipatterns/`
+- Expertise metadata: `expertise/index.yaml`
+
+For the complete module listing and anti-pattern catalog, see the [Expertise Index reference](../reference/expertise-index.md).
+
+---
+## Source: docs/concepts/indexing-and-recall.md
+
+# Indexing and Recall
+
+Wazir ships a built-in local indexer so context reduction does not depend on an external commercial tool.
+
+## Current implementation
+
+- storage engine: built-in `node:sqlite`
+- index location: `<state-root>/index/index.sqlite`
+- default state root: `~/.wazir/projects/{project_slug}`
+- override: `--state-root <path>`
+- refresh model: hash-based incremental refresh
+- retrieval model: exact file slices and symbol slices read back from the working tree
+
+## Context tiers
+
+Wazir supports three context tiers for recall, enabling token-efficient context loading:
+
+| Tier | Target size | Content | Use case |
+| --- | --- | --- | --- |
+| L0 | ~100 tokens | One-line identifier summary (name, kind, language, line range) | Inventory scans, bulk listing, deciding what to load |
+| L1 | ~500-2k tokens | Structural summary (signature, key fields, purpose, dependencies) | Understanding shape and role without full source |
+| L2 | Full content | Exact line-bounded source slice | Implementation details, debugging, code review |
+
+L2 is the default recall behavior (exact slices). L0 and L1 require summaries to be generated first via `index summarize`.
+
+## Summary generation
+
+The `wazir index summarize` command generates L0 and L1 heuristic summaries for all indexed files and symbols.
+
+```
+wazir index summarize [--state-root <path>] [--refresh]
+```
+
+- Generates summaries for every file and symbol currently in the index
+- Summaries are stored in the index database alongside the source metadata
+- The `--refresh` flag regenerates summaries even if they already exist
+- Summary generation is heuristic-based (no external LLM calls required)
+- Each summary records the content hash at generation time for freshness checking
+
+## Tiered recall
+
+The `--tier` flag on `recall file` and `recall symbol` switches from full-content (L2) recall to summary recall:
+
+```
+wazir recall file <path> --tier L0
+wazir recall file <path> --tier L1
+wazir recall symbol <name> --tier L0
+wazir recall symbol <name> --tier L1
+```
+
+- `--tier` is mutually exclusive with `--start`/`--end` line-range options
+- When `--tier` is specified, the response includes the summary text and a `fresh` field
+- Without `--tier`, recall behaves exactly as before (L2 exact slices)
+
+## Freshness checking
+
+When summaries are recalled via `--tier`, the response includes a `fresh` boolean field:
+
+- `fresh: true` -- the content hash at summary generation time matches the current file hash on disk
+- `fresh: false` -- the file has been modified since the summary was generated; the summary may be stale
+
+Consumers should treat stale summaries as approximate and consider re-running `index summarize --refresh` or falling back to L2 recall for critical decisions.
+
+## Pipeline integration
+
+The index and recall surface integrates with the Wazir pipeline at multiple points:
+
+- **Session start** -- the session-start hook runs `index refresh` (or `index build` for first run) as part of the 3-step CLI bootstrap
+- **Scan project** -- the `scan-project` skill runs `index stats` to report index health in the project profile
+- **Debugging** -- the `wz:debugging` OBSERVE phase uses `index search-symbols` and `recall --tier L1` for symbol-first exploration before targeted source reads
+- **Execution** -- the executor uses `recall file` and `recall symbol` for targeted source access
+- **Verification** -- the verifier uses direct reads for full validation
+
+Each role has a default recall tier. See [Roles Reference -- Context retrieval defaults](../reference/roles-reference.md#context-retrieval-defaults) for the full table.
+
+## Current commands
+
+Implemented now:
+
+- `wazir index build`
+- `wazir index refresh`
+- `wazir index stats`
+- `wazir index summarize`
+- `wazir index search-symbols`
+- `wazir index get-symbol`
+- `wazir index get-file-outline`
+- `wazir recall file`
+- `wazir recall symbol`
+
+Reserved for later host/runtime work:
+
+- adapter-backed summary generation (LLM-powered summaries via optional adapters)
+- directory-level summaries (roll up file summaries into directory-level context)
+- adapter activation flows
+- richer parser inventories
+
+## Extractor coverage
+
+The current core extractor roster is heuristic and built in-repo:
+
+- `builtin-heuristic-javascript`
+- `builtin-heuristic-typescript`
+- `builtin-heuristic-python`
+- `builtin-heuristic-go`
+- `builtin-heuristic-rust`
+- `builtin-heuristic-java`
+- `builtin-heuristic-sql`
+- `builtin-heuristic-json`
+- `builtin-heuristic-yaml`
+- `builtin-heuristic-markdown`
+
+Behavior:
+
+- supported files get file metadata, hashes, outlines, and best-effort symbol extraction
+- unsupported text files can still be added later, but should not claim symbol precision they do not provide
+- markdown headings and top-level structured keys are first-class outline targets
+
+## Output model
+
+The index stores:
+
+- files
+- symbols
+- outlines
+- hashes
+- ingestion runs
+- retrieval logs
+
+Recall returns:
+
+- exact line-bounded slice
+- exact source path
+- exact line start and line end
+- optional surrounding context window
+
+## Ignore and hygiene rules
+
+The built-in index currently skips common non-source or generated trees such as:
+
+- `.git/`
+- `.worktrees/`
+- `node_modules/`
+- `dist/`
+- `build/`
+- `coverage/`
+- `.next/`
+
+If the chosen state root lives inside the repo, Wazir skips indexing that path so it does not index its own artifacts.
+
+## Adapter stance
+
+The built-in index is the default and required path.
+
+The optional `context-mode` adapter remains:
+
+- disabled by default
+- external
+- non-required for default install or test paths
+
+See the adapter docs for current status and constraints.
+
+---
+## Source: docs/concepts/observability.md
+
+# Observability
+
+Wazir observability is file-based and host-native. All observability requires no external services.
+
+## Current observability surfaces
+
+Implemented now:
+
+- `wazir status --run <id> [--json]`
+- canonical hook definitions for status, capture, compaction, and handoff events
+- external state-root policy for run-local files
+- `wazir capture init` for `status.json` and `events.ndjson` bootstrap
+- `wazir capture event` for event append and status updates
+- `wazir capture route` and `wazir capture output` for large-output artifact capture
+- `wazir capture summary` for `summary.md` and stop-time or compaction summaries
+
+Planned next:
+
+- host-specific native-hook or wrapper wiring that calls the capture commands automatically
+
+## Current status path
+
+The status command reads:
+
+- `<state-root>/runs/<run-id>/status.json`
+
+Use `--state-root <path>` to target a fixture or non-default state location.
+
+The capture command family writes under:
+
+- `<state-root>/runs/<run-id>/status.json`
+- `<state-root>/runs/<run-id>/events.ndjson`
+- `<state-root>/runs/<run-id>/summary.md`
+- `<state-root>/runs/<run-id>/captures/*`
+
+## Design rules
+
+- run-local observability lives outside the repo by default
+- machine-readable status must exist without any server
+- captured output should reduce context flooding, not increase it
+- summaries must point back to captured files instead of pretending the full output stayed in context
+
+---
+## Source: docs/concepts/roles-and-workflows.md
+
+# Roles and Workflows
+
+Wazir defines explicit canonical roles and explicit phase workflows. Understanding why these exist and how they interact is key to using the system effectively.
+
+## Why roles?
+
+Roles are isolation boundaries, not personas. Each role has defined inputs, allowed tools, required outputs, escalation rules, and failure conditions. An agent inside a role cannot write to protected paths, cannot skip required outputs, and must escalate when ambiguity conditions are met. The discipline is structural, not instructional.
+
+Separating concerns into roles means that the entity implementing a task is never the same entity reviewing it. This adversarial separation is what makes quality enforcement structural rather than aspirational.
+
+## Why phases?
+
+Phases are artifact checkpoints, not conversation stages. Every phase consumes a named artifact from the previous phase and produces a named artifact for the next. Nothing flows via conversation history. A session can end, a new agent can pick up the artifacts, and delivery continues — because the handoff is explicit, structured, and schema-validated.
+
+## The phase model
+
+The canonical workflow sequence is:
+
+1. **clarify** — resolve ambiguity before committing to a spec
+2. **discover** — gather research and prior art
+3. **specify** — produce a measurable spec with acceptance criteria
+4. **spec-challenge** — adversarial review of the spec
+5. **author** — finalize content, microcopy, and i18n keys
+6. **design** — produce visual designs from the approved spec
+7. **design-review** — validate designs against spec, accessibility, and visual consistency
+8. **plan** — create an implementation plan from the approved spec and designs
+9. **plan-review** — adversarial review of the plan
+10. **execute** — implement the plan
+11. **verify** — QA hard gate with fresh proof
+12. **review** — adversarial quality review
+13. **learn** — capture scoped learnings
+14. **prepare-next** — produce a clean handoff for the next run
+
+## Role routing
+
+The orchestrator dispatches three roles per task: `executor`, `reviewer`, and `verifier`. By default, all three run for every task. The `required_roles` field in a task's YAML frontmatter controls which roles are dispatched, allowing the orchestrator to skip unnecessary roles and save context window budget.
+
+### Auto-detection
+
+The clarifier assigns `required_roles` based on task type:
+
+| Task type | Required roles | Rationale |
+|-----------|---------------|-----------|
+| `feature` | `[executor, reviewer, verifier]` | Full pipeline |
+| `bugfix` | `[executor, reviewer, verifier]` | Full pipeline |
+| `refactor` | `[executor, reviewer, verifier]` | Full pipeline |
+| `docs` | `[executor, verifier]` | No adversarial review needed |
+| `config` | `[executor, verifier]` | No adversarial review needed |
+
+If `security_critical: true`, `reviewer` is always included.
+
+### Constraints
+
+- `verifier` is always present — it is the QA hard gate and cannot be removed
+- Default when `required_roles` is absent: `[executor, reviewer, verifier]` (backward compatible)
+
+## Canonical source
+
+Use the files under `roles/` and `workflows/` as the canonical source for role contracts and phase entrypoints. For exact role and workflow tables, see the [Roles Reference](../reference/roles-reference.md).
+
+---
+## Source: docs/concepts/terminology-policy.md
+
+# Wazir Brand and Terminology Guide
+
+## Canonical Terms
+
+Use these terms in all product surfaces:
+
+- Wazir
+- host-native engineering OS kit
+- roles
+- workflows
+- skills
+- hooks
+- templates
+- schemas
+- research
+- memory
+- host exports
+
+## Terms That Do Not Describe This Product
+
+Do not use terms that describe Wazir as a background service, a web-based control surface, or a long-running process. The product is a host-native kit, and all terminology should reflect that.
+
+## Rules
+
+- Wazir is a host-native engineering OS kit, not a server or background service.
+- Use the canonical terms above in all roles, workflows, skills, and documentation.
+- When in doubt, describe what Wazir is, not what it is not.
+
+---
+## Source: docs/getting-started/01-installation.md
+
+# Installation
+
+## Claude Code Plugin (recommended)
+
+The fastest way to use Wazir. Two commands in Claude Code:
+
+```bash
+/plugin marketplace add MohamedAbdallah-14/Wazir
+/plugin install wazir
+```
+
+Skills, roles, and workflows are now available in your Claude sessions. No files to copy, no exports needed.
+
+## Codex
+
+Copy the generated host export to your project:
+
+```bash
+git clone https://github.com/MohamedAbdallah-14/Wazir.git
+cd wazir && npm install && npx wazir export build
+cp exports/hosts/codex/AGENTS.md ~/your-project/
+```
+
+## Gemini
+
+```bash
+git clone https://github.com/MohamedAbdallah-14/Wazir.git
+cd wazir && npm install && npx wazir export build
+cp exports/hosts/gemini/GEMINI.md ~/your-project/
+```
+
+## Cursor
+
+```bash
+git clone https://github.com/MohamedAbdallah-14/Wazir.git
+cd wazir && npm install && npx wazir export build
+cp -r exports/hosts/cursor/.cursor ~/your-project/
+```
+
+## npm (global CLI)
+
+```bash
+npm install -g @wazir-dev/cli
+```
+
+The CLI provides validation, export, indexing, and doctor commands. You still need to clone the source to build host exports.
+
+## Homebrew (macOS)
+
+```bash
+brew tap MohamedAbdallah-14/Wazir
+brew install wazir
+```
+
+## From Source (contributors)
+
+```bash
+git clone https://github.com/MohamedAbdallah-14/Wazir.git
+cd wazir
+npm ci
+npx wazir doctor    # verify environment
+npm test                 # run test suite
+```
+
+## Verify
+
+After any install method, verify with:
+
+```bash
+npx wazir doctor
+# PASS manifest: Manifest is valid.
+# PASS hooks: Hook definitions are valid.
+# PASS host-exports: All required host export directories exist.
+```
+
+## What's next
+
+[Your First Run](02-first-run.md) — walk through the full pipeline from brief to shipped code.
+
+---
+## Source: docs/getting-started/02-first-run.md
+
+# Your First Run
+
+Walk through the full Wazir pipeline: describe a task, clarify it, execute with TDD, and review.
+
+## What you'll do
+
+Take a vague requirement through the full pipeline and see what each role produces.
+
+## Prerequisites
+
+- Wazir installed (see [Installation](01-installation.md))
+- An AI host open in your project (Claude, Codex, Gemini, or Cursor)
+
+## Step 1: Describe your task
+
+Tell your agent what you want to build. For example:
+
+> "Add a user registration endpoint with email validation"
+
+The clarifier role activates and reads your brief.
+
+## Step 2: Clarify
+
+The clarifier asks questions and produces a structured spec with acceptance criteria. It escalates ambiguity — it never assumes.
+
+**Expected output:**
+- Acceptance criteria (testable, specific)
+- Open questions resolved
+- Scope boundaries defined
+- Assumptions and non-goals listed
+
+If the clarifier can't resolve ambiguity, it escalates to you rather than guessing.
+
+## Step 3: Spec Challenge (approval gate)
+
+A reviewer (different from the clarifier) adversarially reviews the spec. The reviewer checks for gaps, contradictions, and unstated assumptions.
+
+**Expected output:** Gate decision — APPROVED or REJECTED with specific reasons.
+
+**Your action:** You must explicitly approve the spec before planning begins. If rejected, it loops back to clarify with the reviewer's feedback.
+
+## Step 4: Plan (approval gate)
+
+The planner breaks the approved spec into ordered, testable tasks with dependencies.
+
+The plan-review phase runs adversarial review on the plan — checking for missing edge cases, incorrect ordering, and scope creep.
+
+**Expected output:** Task breakdown with:
+- Implementation order and dependencies
+- Test strategy per task
+- Estimated complexity
+
+**Your action:** You must explicitly approve the plan before execution begins.
+
+## Step 5: Execute
+
+The executor implements each task with TDD:
+1. Write a failing test (RED)
+2. Write minimal code to pass (GREEN)
+3. Refactor while green (REFACTOR)
+4. Commit with conventional message
+
+The composition engine loads role-specific expertise modules automatically — the executor gets modules on how to build, anti-patterns to avoid, and stack-specific guidance.
+
+**Expected output:**
+- Test files (failing → passing)
+- Implementation code
+- Conventional commits at each step
+
+## Step 6: Review
+
+The reviewer (never the executor) performs adversarial review against the acceptance criteria from the spec.
+
+**Expected output:** Review artifact with:
+- Pass/fail per acceptance criterion
+- Findings with severity and evidence
+- Recommendation: APPROVE, REQUEST_CHANGES, or REJECT
+
+## Step 7: Learn
+
+The learner captures what worked and what didn't. Proposed learnings go to `memory/learnings/proposed/` and require explicit review before promotion.
+
+Only learnings whose file patterns overlap the current task are loaded in future runs — the system gets smarter per-project without drifting.
+
+**Expected output:** Proposed learnings with scope tags.
+
+## Under the hood
+
+The 7 steps above map to 14 internal phases:
+
+| User Stage | Internal Phases | Roles |
+|------------|----------------|-------|
+| **Clarify** | clarify → discover → specify → spec-challenge | clarifier, researcher, specifier, reviewer |
+| **Execute** | author → design → design-review → plan → plan-review → execute → verify | content-author, designer, planner, executor, verifier |
+| **Review** | review | reviewer |
+| **Learn** | learn → prepare-next | learner |
+
+## What's next
+
+- [Architecture](../concepts/architecture.md) — understand why Wazir works this way
+- [Roles & Workflows](../concepts/roles-and-workflows.md) — deep dive into role contracts
+- [Composition Engine](../concepts/composition-engine.md) — how expertise modules are loaded
+
+---
+## Source: docs/guides/memory-and-learnings.md
+
+# Memory and Learnings
+
+Wazir keeps learning durable but scoped.
+
+## Memory Layout
+
+- `memory/learnings/proposed/`
+- `memory/learnings/accepted/`
+- `memory/learnings/archived/`
+- `memory/experiments/`
+- `memory/anti-pattern-observations/`
+- `memory/summaries/`
+
+## Rules
+
+- new learnings start as proposed
+- accepted learnings require explicit review and scope tags
+- fresh runs do not auto-load learnings by default
+- experiments must record whether they improved, regressed, or were neutral
+- every learning or experiment must cite the artifacts or verification that justify it
+- stale proposed learnings should be archived instead of silently lingering as pending truth
+
+## Guardrails
+
+- do not silently rewrite canonical guidance from a learning
+- do not broaden a learning beyond its proven scope
+- archive stale or disproven learnings instead of letting them drift
+
+## Promotion Path
+
+1. Capture a proposed learning with scope, evidence, and confidence.
+2. Review it explicitly.
+3. Promote it to `memory/learnings/accepted/` only when the scope and evidence are durable.
+4. Move disproven or obsolete learnings to `memory/learnings/archived/`.
+
+---
+## Source: docs/guides/troubleshooting.md
+
+# Troubleshooting
+
+This guide covers the Wazir CLI and host-native tooling surface.
+
+## `wazir validate manifest` fails
+
+Common causes:
+
+- required canonical paths are missing
+- a manifest path resolves outside the project root
+- manifest fields no longer match `schemas/wazir-manifest.schema.json`
+
+What to check:
+
+- `wazir.manifest.yaml`
+- `schemas/wazir-manifest.schema.json`
+- directory names under the repo root
+
+## `wazir validate hooks` fails
+
+Common causes:
+
+- hook YAML parses to `null` or another non-object shape
+- hook file name and `id` do not match
+- required hooks in the manifest do not match files in `hooks/definitions/`
+- a host fallback entry is missing for one of the declared hosts
+
+What to check:
+
+- `hooks/definitions/*.yaml`
+- `schemas/hook.schema.json`
+- `wazir.manifest.yaml`
+
+## `wazir index build` or `refresh` does not index what you expect
+
+Current ignore rules skip common generated or dependency trees such as:
+
+- `.git/`
+- `.worktrees/`
+- `node_modules/`
+- `dist/`
+- `build/`
+- `coverage/`
+- `.next/`
+
+Also note:
+
+- only the current built-in text/code extractor set is indexed
+- the chosen state root is skipped if it lives inside the repo
+- use `--state-root <path>` in tests or custom setups
+
+## `wazir recall file` or `recall symbol` fails
+
+Common causes:
+
+- the index was never built
+- the file or symbol is not present in the current index
+- the wrong state root is being queried
+
+Recommended sequence:
+
+1. `wazir index build --state-root <path>`
+2. `wazir index stats --state-root <path>`
+3. `wazir index search-symbols <query> --state-root <path>`
+4. retry the recall command with the same state root
+
+## `wazir doctor` fails
+
+Current doctor checks:
+
+- manifest validation
+- hook validation
+- external default state-root policy
+- required host export directories under `exports/hosts/`
+
+If doctor fails, inspect the returned check list and fix the specific failing surface instead of bypassing the command.
+
+## Guard hook blocks a write or loop
+
+Current guard wrapper exit codes:
+
+- `42` from `hooks/protected-path-write-guard`
+- `43` from `hooks/loop-cap-guard`
+
+Typical causes:
+
+- trying to write under `input/` or generated host export paths without an approved regeneration flow
+- phase loop counts in run status already meeting the configured cap
+
+## `wazir status --run <id>` fails
+
+The status command reads:
+
+- `<state-root>/runs/<run-id>/status.json`
+
+If it says the run status is missing:
+
+- confirm the run ID
+- confirm the state root
+- confirm the file exists on disk
+- use `--json` for machine-readable output during automation
+
+---
+## Source: docs/reference/configuration-reference.md
+
+# Configuration Reference
+
+Wazir configuration currently starts from the canonical manifest:
+
+- `wazir.manifest.yaml`
+
+That manifest is the source of truth for:
+
+- project identity
+- project description and versioning policy
+- canonical repo paths
+- supported hosts
+- canonical workflows and export targets
+- phase and role rosters
+- required hooks
+- protected paths
+- brand-term enforcement for active surfaces
+- optional adapters
+- validation checks
+
+## Path policy
+
+Repo-managed canonical paths live in the repository:
+
+- `input/`
+- `roles/`
+- `workflows/`
+- `skills/`
+- `hooks/`
+- `templates/`
+- `schemas/`
+- `expertise/`
+- `docs/`
+- `exports/`
+- `tooling/`
+- `memory/`
+- `examples/`
+
+The default external run-state root is declared in the manifest as:
+
+- `~/.wazir/projects/{project_slug}`
+
+That path is intentionally outside the repo so normal runs do not dirty adopters' worktrees.
+
+Indexing and recall commands also accept:
+
+- `--state-root <path>`
+
+Use that override for tests, CI fixtures, or operators who need the index somewhere else.
+
+The status command uses the same state-root resolution rules when reading run-local status files.
+
+## Protected paths
+
+The current protected path roster is declared in `wazir.manifest.yaml`:
+
+- `input`
+- `roles`
+- `workflows`
+- `schemas`
+- `exports/hosts`
+
+These paths are reserved for canonical source material or generated host exports and should not be rewritten by ad hoc task output.
+
+Generated host packages live under:
+
+- `exports/hosts/claude`
+- `exports/hosts/codex`
+- `exports/hosts/gemini`
+- `exports/hosts/cursor`
+
+## Dependency policy
+
+The active CLI keeps runtime dependencies small and explicit:
+
+- `ajv` for JSON Schema enforcement
+- `yaml` for canonical manifest and hook parsing
+- `gray-matter` for frontmatter parsing in library tests
+
+Policy:
+
+- prefer built-in Node APIs unless a library meaningfully reduces correctness risk
+- allow small parsing and schema-validation libraries
+- do not add framework, server, or web-stack dependencies to the product surface
+- keep optional adapter integrations external by default
+
+## Adapter policy
+
+The manifest currently declares one optional adapter:
+
+- `context_mode`
+
+It is:
+
+- disabled by default
+- optional
+- external-install mode
+
+Wazir must remain useful without the adapter present.
+
+## Versioning and naming guardrails
+
+The manifest also records:
+
+- a versioning policy for the active pre-`1.0` line
+- export targets for each supported host
+- brand-term enforcement rules for active surfaces
+- `manifest_version`, currently `2`, for breaking manifest contract changes
+
+Those fields exist to keep the active repo aligned with the Wazir product identity.
+
+The required manifest fields are:
+
+- `project.description`
+- `versioning_policy`
+- `workflows`
+- `export_targets`
+- `prohibited_terms`
+
+Current enforcement scope:
+
+- manifest-declared role files under `roles/`
+- manifest-declared workflow files under `workflows/`
+
+That scope is intentional. The manifest check is a canonical-surface guard for active operating-model content, not a blanket full-repo grep.
+
+Out of scope for this manifest check:
+
+- undeclared helper scripts
+- undeclared config files
+- scratch files
+- generated run artifacts
+
+Maintainers are responsible for policing those surfaces with the separate docs-truth, runtime-surface, and repository review checks.
+
+## Workflows vs phases
+
+- `phases` are the core lifecycle states of the operating model.
+- `workflows` are the canonical callable or review-gated entrypoints that drive those phases.
+
+They overlap heavily, but they are not identical:
+
+- `spec_challenge`, `plan_review`, and `prepare_next` are workflows that sit between or around the core execution phases.
+- Validators and exports should treat manifest-declared workflows as the canonical workflow file roster.
+
+## Current index parser roster
+
+The active manifest currently declares built-in heuristic extractors for:
+
+- JavaScript
+- TypeScript
+- Python
+- Go
+- Rust
+- Java
+- SQL
+- JSON
+- YAML
+- Markdown
+
+---
+## Source: docs/reference/expertise-index.md
+
+# Expertise Index
+
+This reference documents the expertise module system and anti-pattern catalog.
+
+## Metadata
+
+Top-level expertise metadata lives in:
+
+- `expertise/index.yaml`
+
+That index records domain, use cases, review applicability, and freshness date so loading can stay scoped instead of brute-force.
+
+## Module locations
+
+- Domain expertise modules: `expertise/` (organized by domain subdirectory)
+- Anti-pattern modules: `expertise/antipatterns/`
+- Research source material: `docs/research/`
+
+## Loading policy
+
+| Phase | Loads from |
+|-------|-----------|
+| `clarify`, `discover` | `input/`, active docs, `docs/research/` |
+| `specify`, `plan` | Relevant expertise slices based on stack and risks |
+| `review` | `expertise/antipatterns/` first, then broader domain modules |
+| `learn` | Can propose updates to expertise (not silently rewrite) |
+
+## Anti-pattern catalog
+
+The `expertise/antipatterns/` directory contains modules that catch:
+
+- **Fake completion** — claiming done without evidence
+- **Unwired abstractions** — interfaces defined but never connected
+- **Shallow tests** — tests that pass without exercising real behavior
+- **Security theater** — security measures that look good but do not protect
+- **Architecture drift** — implementation diverging from documented architecture
+- **AI-coding failure modes** — patterns specific to LLM-generated code
+
+## Humanize domain
+
+The `expertise/humanize/` domain provides AI text pattern detection and removal. It contains 7 modules: vocabulary blacklist (61 items), sentence patterns (24-pattern taxonomy), domain-specific rules for technical docs, code artifacts, and user-facing content, and a two-pass self-audit checklist.
+
+**Loading policy:** Loads for `specify`, `plan`, `execute`, `author`, `review`, and `learn` phases -- broader than most domains because all text-producing roles generate content that benefits from humanization. Loaded via the `humanize` concern in `expertise/composition-map.yaml` with role-specific module selection.
+
+## Rules
+
+- Expertise modules must be scoped by domain and use case
+- Anti-patterns are always loaded before domain modules during review
+- The composition engine enforces a maximum of 15 modules per dispatch
+- Token budget is enforced per dispatch
+
+For conceptual understanding of how the composition engine works, see [Composition Engine](../concepts/composition-engine.md).
+
+---
+## Source: docs/reference/git-flow.md
+
+# Git-Flow Policy
+
+This document defines the branching model, merge discipline, and changelog rules for the Wazir project.
+
+## Branching Model
+
+| Branch | Pattern | Created From | Merges To | Protected |
+|--------|---------|-------------|-----------|-----------|
+| Main | `main` | — | — | Yes |
+| Develop | `develop` | `main` (once) | — | Yes |
+| Feature | `feat/<slug>` or `feature/<slug>` | `develop` | `develop` | No |
+| Codex | `codex/<slug>` | `develop` | `develop` | No |
+| Release | `release/<version>` | `develop` | `main` + `develop` | No |
+| Hotfix | `hotfix/<slug>` | `main` | `main` + `develop` | No |
+
+## Merge Rules
+
+- All merges to `develop` and `main` use `--no-ff` to preserve merge commits
+- Merges happen only after the full Executor, Verifier, Reviewer gate passes
+- No role performs the merge — it is a post-review integration step
+
+## Conventional Commits
+
+All commit messages must follow the conventional commits specification:
+
+```
+<type>(<optional scope>): <description>
+```
+
+Allowed types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`, `perf`, `build`
+
+## Changelog Rules
+
+- Format: Keep a Changelog (keepachangelog.com)
+- Every user-facing change must have an entry under `[Unreleased]`
+- Valid categories: Added, Changed, Deprecated, Removed, Fixed, Security
+- The executor updates the changelog; the verifier validates it; the reviewer flags quality issues
+
+## Enforcement
+
+- **Tooling:** `wazir validate branches`, `wazir validate commits`, `wazir validate changelog`
+- **CI:** All three validators run on pull requests; `--require-entries` blocks feature/codex/hotfix branches without changelog entries
+- **Roles:** Each role has documented git-flow responsibilities in its contract
+
+---
+## Source: docs/reference/hooks.md
+
+# Hooks Reference
+
+Wazir defines canonical hook contracts in `hooks/definitions/*.yaml`.
+
+These hook definitions are product contracts first. Host-specific native hooks or wrapper commands must preserve the same behavior.
+
+## Canonical hook roster
+
+| Hook ID | Purpose | Failure mode |
+| --- | --- | --- |
+| `session_start` | Initialize run-local status capture and bootstrap summaries | capture |
+| `pre_tool_capture_route` | Route large tool output away from model context | warn |
+| `post_tool_capture` | Append tool execution events and captured output metadata | capture |
+| `pre_compact_summary` | Summarize captured state before compaction or handoff | warn |
+| `stop_handoff_harvest` | Persist final handoff and stop-time observability data | capture |
+| `protected_path_write_guard` | Block writes to protected canonical paths outside approved flows | block |
+| `loop_cap_guard` | Block extra iterations after the configured loop cap | block |
+
+## Source of truth
+
+- hook contracts: `hooks/definitions/*.yaml`
+- schema: `schemas/hook.schema.json`
+- required hook roster: `wazir.manifest.yaml`
+- validation command: `wazir validate hooks`
+
+## Host fallback policy
+
+Every canonical hook definition includes `host_fallback` guidance for:
+
+- Claude
+- Codex
+- Gemini
+- Cursor
+
+Fallbacks may be native hooks or wrapper commands, but they must preserve:
+
+- the same trigger intent
+- the same protected-path policy
+- the same loop-cap policy
+- the same observable outputs or an explicitly documented equivalent
+
+## Current implementation status
+
+Implemented now:
+
+- canonical hook definitions and schema validation
+- manifest-level required hook roster
+- CLI validation through `wazir validate hooks`
+- capture/status file writers through:
+  - `wazir capture init`
+  - `wazir capture event`
+  - `wazir capture route`
+  - `wazir capture output`
+  - `wazir capture summary`
+- wrapper guard scripts:
+  - `hooks/protected-path-write-guard`
+  - `hooks/loop-cap-guard`
+- session-start CLI bootstrap script (`hooks/session-start`) emitting `<cli-bootstrap-guidance>` for doctor, index, and run recovery
+
+Planned next:
+
+- wrapper/native execution helpers
+
+## CLI bootstrap
+
+The `session_start` hook emits a `<cli-bootstrap-guidance>` block alongside the skill bootstrap text. This block guides agents through a 3-step CLI bootstrap sequence at the start of every session:
+
+1. **Doctor check** -- run `wazir doctor` to validate the repo surface (manifest, hooks, state-root, exports)
+2. **Index refresh** -- run `wazir index refresh` (or `index build` if no index exists) to ensure the local index is current
+3. **Run recovery** -- check `<state-root>/runs/latest` for a prior run ID; resume it or start a new run via `capture init`
+
+The `session_start.yaml` output contract produces `cli_bootstrap_guidance` alongside `skill_bootstrap_text`. Both are injected into the agent's initial context.
+
+The bootstrap sequence is advisory -- it guides the agent but does not enforce execution order. The session-start hook always exits 0 to avoid blocking session startup.
+
+## Guardrail note
+
+Hook definitions are the authoritative product contracts. The canonical definitions above take precedence over any other hook documentation.
+
+## Current guard exit codes
+
+- `hooks/protected-path-write-guard`
+  - `0` allow
+  - `42` block
+- `hooks/loop-cap-guard`
+  - `0` allow
+  - `43` block
+
+---
+## Source: docs/reference/host-exports.md
+
+# Host Exports
+
+Wazir now includes a canonical export compiler for host packages under:
+
+- `exports/hosts/claude/`
+- `exports/hosts/codex/`
+- `exports/hosts/gemini/`
+- `exports/hosts/cursor/`
+
+## Current commands
+
+- `wazir export build`
+- `wazir export --check`
+
+## What `build` does
+
+The compiler currently:
+
+- validates the manifest
+- validates canonical hook definitions
+- reads canonical role files
+- reads canonical workflow files
+- writes host-specific package files under `exports/hosts/*`
+- writes `host-package.json`
+- writes `export.manifest.json`
+- records source hashes for drift detection
+
+## What `--check` does
+
+The drift check:
+
+- verifies the generated package metadata exists for every host
+- verifies the listed generated files still exist
+- compares current source hashes against each host export manifest
+- fails non-zero when canonical sources changed after the last export
+
+## Current host package shapes
+
+Current generated highlights:
+
+- Claude: `CLAUDE.md`, `.claude/settings.json`, `.claude/agents/*`, `.claude/commands/*`
+- Codex: `AGENTS.md`
+- Gemini: `GEMINI.md`
+- Cursor: `.cursor/rules/wazir-core.mdc`, `.cursor/hooks.json`
+
+## Scope note
+
+The compiler generates the canonical host packages under `exports/hosts/*`.
+
+The only root host bootstrap retained is `.claude/settings.json`, which mirrors the generated Claude settings contract.
+
+---
+## Source: docs/reference/launch-checklist.md
+
+# Discovery and Launch Checklist
+
+End-to-end checklist for launching a Wazir release into the wild.
+
+---
+
+## 1. Pre-Launch Verification
+
+Complete these before any public announcement:
+
+- [ ] **npx works:** Run `npx @wazir-dev/cli --version` from a clean machine (no local clone).
+- [ ] **GitHub Release exists:** A tagged release with release notes is published on the repo.
+- [ ] **README polished:** README.md has clear install instructions, feature summary, and badges (npm version, license, CI status).
+- [ ] **CHANGELOG updated:** Latest version entry is present with all notable changes.
+- [ ] **CI green:** All tests and linting pass on the main branch.
+- [ ] **Marketplace configs published:** All automated channels from the marketplace listings guide are live (Claude Code Plugin).
+- [ ] **Host exports current:** `exports/hosts/` directories contain the latest generated configs for all supported hosts.
+- [ ] **License file present:** `LICENSE` matches the declared license in `package.json`.
+
+---
+
+## 2. Awesome List Submissions
+
+Submit pull requests to these curated lists (one PR per list, follow each repo's contributing guidelines):
+
+### awesome-claude-code
+- **Repo:** `github.com/anthropics/awesome-claude-code` (or the most-starred community fork)
+- **Section:** Tools / Plugins / Extensions
+- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 14 phases, and 308 expertise modules.`
+- **Tips:** Keep the description under 120 characters. Link directly to the repo.
+
+### awesome-ai-agents
+- **Repo:** `github.com/e2b-dev/awesome-ai-agents`
+- **Section:** Developer Tools / Coding Agents
+- **Entry format:** Follow the existing table format in the README.
+
+### awesome-llm-apps
+- **Repo:** `github.com/Shubhamsaboo/awesome-llm-apps`
+- **Section:** Developer Tools
+- **Entry format:** Follow the existing list format.
+
+---
+
+## 3. Hacker News "Show HN"
+
+### Timing
+- **Best days:** Tuesday through Thursday
+- **Best time:** 8:00-9:00 AM ET (when the US East Coast audience is waking up)
+- **Avoid:** Weekends, holidays, and days with major tech news
+
+### Title format
+```
+Show HN: Wazir – Engineering OS kit for AI coding agents (Claude, Codex, Gemini, Cursor)
+```
+
+### First comment
+Post a comment immediately after submission explaining:
+1. What problem Wazir solves (AI agents lack structured engineering workflows)
+2. How it works (10 canonical roles, 14-phase pipeline, 308 expertise modules)
+3. What makes it different (host-native, works across Claude/Codex/Gemini/Cursor)
+4. Quick install: `npx @wazir-dev/cli init`
+5. Invite feedback -- HN readers appreciate genuine requests for input
+
+### Guidelines
+- Do not ask for upvotes (against HN rules).
+- Respond to every comment within the first 2 hours.
+- Be honest about limitations and what is not yet built.
+
+---
+
+## 4. Dev.to Technical Post
+
+### Suggested outline
+
+**Title:** "How I Built an Engineering OS for AI Coding Agents"
+
+1. **Hook** -- The problem: AI agents write code but lack engineering discipline.
+2. **Architecture overview** -- 10 roles, 14 phases, expertise modules, quality gates.
+3. **Code walkthrough** -- Show a real workflow: how a feature moves from requirements through TDD to deployment.
+4. **Host-native approach** -- Explain why one kit works across Claude, Codex, Gemini, and Cursor.
+5. **Results** -- Concrete metrics or before/after comparisons.
+6. **Getting started** -- `npx @wazir-dev/cli init` with a 3-step quickstart.
+7. **Call to action** -- Star the repo, try it, file issues.
+
+### Tags
+`ai`, `productivity`, `devtools`, `opensource`
+
+### Tips
+- Include at least one diagram or screenshot.
+- Cross-post to your blog if you have one (Dev.to supports canonical URLs).
+- Respond to all comments within 24 hours.
+
+---
+
+## 5. Social Media
+
+### Twitter / X Thread
+
+Structure as a 5-7 tweet thread:
+
+1. **Hook tweet:** One-liner about the problem + link to repo.
+2. **What it is:** Brief description of Wazir.
+3. **Architecture:** 10 roles, 14 phases, 308 modules (include a diagram image).
+4. **Demo:** Short GIF or screenshot of a workflow in action.
+5. **Multi-host:** Works with Claude, Codex, Gemini, and Cursor.
+6. **Install:** `npx @wazir-dev/cli init`
+7. **Ask:** "What workflows would you add?" -- invite engagement.
+
+**Timing:** Post between 9-11 AM ET on weekdays.
+
+### LinkedIn
+
+- Write a single long-form post (not a thread).
+- Lead with the problem, not the product.
+- Include 3-5 bullet points on key features.
+- End with the install command and repo link.
+- Tag relevant people and companies (Anthropic, OpenAI, Google DeepMind).
+
+### Reddit
+
+Submit to these subreddits (read each sub's rules first):
+
+| Subreddit | Post type | Notes |
+|-----------|-----------|-------|
+| r/ClaudeAI | Link post | Flair as "Tool/Resource" if available |
+| r/LocalLLaMA | Text post | Emphasize the open-source, host-agnostic angle |
+| r/programming | Link post | Focus on engineering discipline, not AI hype |
+| r/devtools | Link post | Emphasize developer productivity |
+
+**Reddit guidelines:**
+- Do not post to multiple subreddits on the same day (looks spammy).
+- Space posts 1-2 days apart.
+- Engage genuinely with all comments.
+- Do not use marketing language -- be technical and direct.
+
+---
+
+## 6. Metrics to Track
+
+Monitor these metrics weekly for the first month, then monthly:
+
+### GitHub
+- **Stars:** Track weekly growth rate, not just total.
+- **Forks:** Indicator of serious users exploring the code.
+- **Issues opened:** Both bugs and feature requests signal engagement.
+- **Pull requests:** External PRs indicate community adoption.
+- **Clones and traffic:** Available in the repo Insights tab.
+
+### npm
+- **Weekly downloads:** Available at `npmjs.com/package/@wazir-dev/cli`.
+- **Download trend:** Use `npm-stat.com` for historical charts.
+- **Dependent packages:** Other packages that list Wazir as a dependency.
+
+### Marketplace
+- **Claude Code Plugin installs:** Check plugin analytics if available.
+- **MCP Registry page views:** Monitor via registry dashboard.
+- **Cursor Marketplace installs:** Available in the Cursor publisher dashboard.
+
+### Content
+- **HN points and comments:** Track within 24 hours of posting.
+- **Dev.to views, reactions, and comments:** Track within 1 week.
+- **Twitter impressions and engagement:** Track within 48 hours.
+- **Reddit upvotes and comments:** Track within 48 hours per subreddit.
+
+### Success benchmarks (first 30 days)
+| Metric | Target |
+|--------|--------|
+| GitHub stars | 100+ |
+| npm weekly downloads | 50+ |
+| Issues opened (external) | 10+ |
+| External PRs | 2+ |
+| HN points | 50+ |
+
+---
+## Source: docs/reference/marketplace-listings.md
+
+# Marketplace Listings Guide
+
+This guide covers every distribution channel for Wazir.
+
+---
+
+## Install Methods
+
+### npm (primary)
+
+```bash
+npx @wazir-dev/cli --help          # run directly
+npm install -g @wazir-dev/cli      # or install globally
+```
+
+- **Package:** [`@wazir-dev/cli`](https://www.npmjs.com/package/@wazir-dev/cli)
+
+### Homebrew (macOS)
+
+```bash
+brew tap MohamedAbdallah-14/Wazir
+brew install wazir
+```
+
+- **Tap repo:** [`homebrew-wazir`](https://github.com/MohamedAbdallah-14/homebrew-wazir)
+- **Formula source:** `homebrew/wazir.rb` in this repo
+
+### Claude Code Plugin
+
+Wazir ships as a Claude Code plugin. Users install in two steps:
+
+```bash
+# In Claude Code:
+/plugin marketplace add MohamedAbdallah-14/Wazir
+/plugin install wazir
+```
+
+- **Marketplace config:** `.claude-plugin/marketplace.json`
+- **Plugin manifest:** `.claude-plugin/plugin.json`
+- **Docs:** [Claude Code plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
+
+---
+
+## Host Exports
+
+Wazir generates host-native packages for each AI coding agent. After cloning and running `npx wazir export build`, deploy to your project:
+
+| Host | Deploy command |
+|------|---------------|
+| **Claude** | `cp -r exports/hosts/claude/.claude ~/your-project/ && cp exports/hosts/claude/CLAUDE.md ~/your-project/` |
+| **Codex** | `cp exports/hosts/codex/AGENTS.md ~/your-project/` |
+| **Gemini** | `cp exports/hosts/gemini/GEMINI.md ~/your-project/` |
+| **Cursor** | `cp -r exports/hosts/cursor/.cursor ~/your-project/` |
+
+---
+
+## MCP Registry
+
+Wazir is listed in the MCP Registry as a metadata entry.
+
+- **Config file:** `server.json` (repo root)
+- **Schema:** `https://registry.modelcontextprotocol.io/schema/server.json`
+
+---
+
+## Post-Publish Checklist
+
+Run through this checklist after every `npm publish`:
+
+- [ ] **npm:** Confirm package is live at `https://www.npmjs.com/package/@wazir-dev/cli`
+- [ ] **npx smoke test:** Run `npx @wazir-dev/cli --help` from a clean environment
+- [ ] **Claude Code Plugin:** Run `/plugin marketplace add MohamedAbdallah-14/Wazir` then `/plugin install wazir`
+- [ ] **GitHub Release:** Ensure a GitHub Release exists with tag matching the npm version
+- [ ] **Homebrew:** Update SHA256 in `homebrew/wazir.rb` and push to `homebrew-wazir` tap repo
+- [ ] **Host exports:** Run `npx wazir export --check` to verify no drift
+- [ ] **CHANGELOG:** Verify `CHANGELOG.md` is updated with the new version entry
+
+---
+## Source: docs/reference/release-process.md
+
+# Release Process
+
+## Tag Naming
+
+Wazir uses semantic versioning: `v{MAJOR}.{MINOR}.{PATCH}`
+
+Legacy tags (V5.1, V6.x, etc.) are historical artifacts and are ignored by validators.
+
+## Release Workflow
+
+1. Create `release/<version>` branch from `develop`
+2. Update `CHANGELOG.md`: move `[Unreleased]` entries to `[<version>] - YYYY-MM-DD`
+3. Add a fresh empty `[Unreleased]` section at the top
+4. Update version in `wazir.manifest.yaml` and `package.json`
+5. Commit: `chore: prepare release <version>`
+6. Merge to `main` with `--no-ff`
+7. Tag: `git tag -a v<version> -m "v<version>"`
+8. Merge `main` back to `develop` with `--no-ff`
+9. Delete the release branch
+
+## Hotfix Workflow
+
+1. Create `hotfix/<slug>` branch from `main`
+2. Fix the issue with conventional commits
+3. Update `CHANGELOG.md` with the fix under `[Unreleased]`
+4. Follow the same merge/tag/merge-back pattern as releases
+5. Delete the hotfix branch
+
+## Bootstrap (First Wazir Release)
+
+When no Wazir release tag exists yet:
+- Diff-aware changelog validation diffs against the initial commit or `develop` creation point
+- Legacy tags are not considered release boundaries
+- The first release tag will be `v1.0.0` (or `v0.1.0` if pre-stable)
+
+---
+## Source: docs/reference/roles-reference.md
+
+# Roles Reference
+
+This is the lookup reference for canonical roles, workflows, and their contracts.
+
+## Canonical roles
+
+| Role | Purpose |
+|------|---------|
+| `clarifier` | Resolves ambiguity before spec production |
+| `researcher` | Gathers source-backed findings and prior art |
+| `specifier` | Produces measurable specs with acceptance criteria |
+| `content-author` | Produces finalized i18n keys, microcopy, glossary, state coverage, and accessibility copy |
+| `designer` | Transforms approved spec into visual designs using open-pencil MCP tools. Produces `.fig` files, exported code scaffolds, and design tokens |
+| `planner` | Creates implementation plans from approved spec and designs |
+| `executor` | Implements the plan (orchestrator "Dev" phase) |
+| `verifier` | QA hard gate — always mandatory (orchestrator "QA" phase) |
+| `reviewer` | Adversarial quality review (orchestrator "Reviewer" phase) |
+| `learner` | Captures scoped learnings for future runs |
+
+## Canonical workflows
+
+| Workflow | Runs after | Description |
+|----------|-----------|-------------|
+| `clarify` | — | Resolve ambiguity |
+| `discover` | `clarify` | Gather research |
+| `specify` | `discover` | Produce spec |
+| `spec-challenge` | `specify` | Adversarial spec review |
+| `author` | `spec-challenge` | Content authoring |
+| `design` | `author` | Visual design from approved spec |
+| `design-review` | `design` | Validate designs against spec, accessibility, visual consistency |
+| `plan` | `design-review` | Create implementation plan |
+| `plan-review` | `plan` | Adversarial plan review |
+| `execute` | `plan-review` | Implement the plan |
+| `verify` | `execute` | QA hard gate |
+| `review` | `verify` | Adversarial quality review |
+| `learn` | `review` | Capture scoped learnings |
+| `prepare-next` | `learn` | Produce clean next-run handoff |
+
+## Role routing valid values
+
+- `executor` — implements the task (orchestrator "Dev" phase)
+- `reviewer` — adversarial quality review (orchestrator "Reviewer" phase)
+- `verifier` — QA hard gate, always mandatory (orchestrator "QA" phase)
+
+## Contract source files
+
+- Role contracts: `roles/<role-name>.md`
+- Workflow entrypoints: `workflows/<workflow-name>.md`
+- Manifest roster: `wazir.manifest.yaml`
+
+For conceptual understanding of how roles and workflows interact, see [Roles and Workflows concepts](../concepts/roles-and-workflows.md).
+
+## Context retrieval defaults
+
+Every role contract includes a `## Context retrieval` section specifying the default recall tier and fallback strategy. Agents should consult the individual role contracts for full details.
+
+| Role | Default tier | Strategy | Fallback |
+|------|-------------|----------|----------|
+| `learner` | L0 | Inventory scan via `recall --tier L0` | L0 fails -> try L1 -> L1 fails -> direct file read |
+| `clarifier` | L1 | Structural summaries via `recall --tier L1` | If recall fails, fall back to direct file reads |
+| `researcher` | L1 | Structural summaries via `recall --tier L1` | If recall fails, fall back to direct file reads |
+| `specifier` | L1 | Structural summaries via `recall --tier L1` | If recall fails, fall back to direct file reads |
+| `content-author` | L1 | Structural summaries via `recall --tier L1` | If recall fails, fall back to direct file reads |
+| `designer` | L1 | Structural summaries via `recall --tier L1` | If recall fails, fall back to direct file reads |
+| `planner` | L1 | Structural summaries via `recall --tier L1` | If recall fails, fall back to direct file reads |
+| `executor` | Direct read | Full source via `Read` tool or `recall file` (L2) | If index search fails, use grep or file-tree exploration |
+| `verifier` | Direct read | Full source via `Read` tool or `recall file` (L2) | If index search fails, use grep or file-tree exploration |
+| `reviewer` | L1 + escalation | Start with `recall --tier L1`; escalate to direct read for logic errors, security, or ambiguous summaries | If recall fails, fall back to direct file reads |
+
+**Tier token budgets:**
+- L0: ~100 tokens (one-line identifier summary)
+- L1: ~500-2k tokens (structural summary)
+- L2/Direct: full source content
+
+Roles that explore broadly (clarifier, researcher, planner) benefit most from L1 summaries. Roles that need exact source (executor, verifier) use direct reads. The reviewer uses L1 as a triage pass before targeted deep reads.
+
+See [Indexing and Recall](../concepts/indexing-and-recall.md) for full details on tiers and commands.
+
+---
+## Source: docs/reference/skills.md
+
+# Skills
+
+Wazir uses skills as reusable in-host procedures.
+
+The active thesis is:
+
+- use Wazir inside your AI host
+- keep the operating model in canonical repo skills
+
+## Active Skills
+
+These skills remain on the active surface:
+
+| Skill | Purpose |
+| --- | --- |
+| `wz:using-skills` | Ensures skill discovery happens before work starts |
+| `wz:brainstorming` | Turns briefings into approved designs before implementation |
+| `scan-project` | Builds a project profile from the repo and `input/`, with index build/refresh and `index stats` in the profile output |
+| `wz:writing-plans` | Produces execution-grade implementation plans |
+| `wz:debugging` | Runs a disciplined observe-hypothesize-test-fix loop with symbol-first exploration (index search-symbols, recall L1) in the OBSERVE phase |
+| `wz:humanize` | Detects and removes AI writing patterns from text artifacts via a 4-phase pipeline (Scan, Identify, Rewrite, Verify) |
+| `wz:tdd` | Enforces RED -> GREEN -> REFACTOR for implementation work |
+| `wz:verification` | Requires fresh proof before completion claims |
+| `wz:design` | Guides the designer role through open-pencil MCP workflow to produce design artifacts |
+| `prepare-next` | Produces a clean next-run handoff without auto-loading stale context |
+| `run-audit` | Runs a structured codebase audit producing source-backed findings with remediation |
+| `self-audit` | Runs a worktree-isolated audit-fix loop — validates, audits, fixes, verifies, and merges back only on green |
+
+## Rules
+
+- Skills must reference `input/`, canonical roles/workflows, or external state-root conventions.
+- Skills must not instruct users to run background services or wrapper scripts that are not part of the canonical workflow surface.
+- When a skill becomes contradictory to the current operating model, remove it from `skills/`.
+
+---
+## Source: docs/reference/templates.md
+
+# Templates
+
+Wazir keeps two active template classes:
+
+- `templates/artifacts/` for run outputs and handoffs
+- `templates/examples/` for schema-aligned example payloads
+
+## Artifact Templates
+
+Active artifact templates cover:
+
+- clarification
+- research
+- spec
+- spec challenge
+- implementation plan
+- plan review
+- execution notes
+- verification proof
+- review findings
+- learning proposal
+- accepted learning
+- next-run handoff
+
+Each template requires run metadata, sources, loop number, and approval status where applicable.
+
+## Example Payloads
+
+Schema-backed examples under `templates/examples/` exist to keep schemas, examples, and validation in sync.
+
+---
+## Source: docs/reference/tooling-cli.md
+
+# Wazir CLI
+
+The `wazir` CLI is minimal on purpose. It exists to validate and export the host-native OS kit.
+
+## Current command surface
+
+| Command | Status | Behavior |
+| --- | --- | --- |
+| `wazir validate manifest` | implemented | Validates `wazir.manifest.yaml` against its schema and checks required repo paths exist. |
+| `wazir validate hooks` | implemented | Validates canonical hook definitions against `schemas/hook.schema.json` and the manifest hook roster. |
+| `wazir validate docs` | implemented | Validates `docs/truth-claims.yaml`, checks documented command claims against the active CLI surface, and rejects broken local doc links. |
+| `wazir validate brand` | implemented | Enforces canonical product naming on the Wazir surface. |
+| `wazir validate runtime` | implemented | Rejects non-canonical runtime wrappers, repo-local task/state paths, and forbidden runtime-only package surfaces. |
+| `wazir validate branches` | implemented | Validates the current (or `--branch`-specified) branch name against the allowed git-flow patterns. |
+| `wazir validate commits` | implemented | Validates conventional commit format for commits in the range `--base..--head` (or auto-detected base to HEAD). |
+| `wazir validate changelog` | implemented | Validates `CHANGELOG.md` structure; with `--require-entries` and `--base`, enforces new entries since the base. |
+| `wazir validate docs-drift` | implemented | Detects when source files (roles, workflows, skills, hooks) change without corresponding documentation updates. Advisory by default; `--strict` exits non-zero on drift. |
+| `wazir validate artifacts` | reserved | Exits `2` until artifact-template and example validation expands. |
+| `wazir export build` | implemented | Generates host packages under `exports/hosts/*` from canonical sources. |
+| `wazir export --check` | implemented | Verifies generated host packages still match current canonical source hashes. |
+| `wazir index build` | implemented | Builds a local SQLite-backed index under the configured state root. |
+| `wazir index refresh` | implemented | Refreshes indexed files using stored content hashes. |
+| `wazir index stats` | implemented | Reports file, symbol, outline, and summary_counts for the current index. |
+| `wazir index summarize` | implemented | Generates L0/L1 heuristic summaries for all indexed files and symbols. |
+| `wazir index search-symbols` | implemented | Searches indexed symbol names. |
+| `wazir index get-symbol` | implemented | Returns a stored symbol record by name or ID. |
+| `wazir index get-file-outline` | implemented | Returns indexed outline entries for a file. |
+| `wazir recall file` | implemented | Returns an exact line-bounded slice from an indexed file. Supports `--tier L0\|L1` for summary recall. |
+| `wazir recall symbol` | implemented | Returns an exact slice for an indexed symbol match. Supports `--tier L0\|L1` for summary recall. |
+| `wazir doctor` | implemented | Validates the active repo surface for manifest, hooks, state-root policy, and host export directory presence. |
+| `wazir status` | implemented | Reads run status directly from `<state-root>/runs/<run-id>/status.json`. |
+| `wazir capture init` | implemented | Creates a run ledger with `status.json`, `events.ndjson`, and a captures directory under the configured state root. |
+| `wazir capture event` | implemented | Appends a run event and can update phase, status, and loop counts in `status.json`. |
+| `wazir capture route` | implemented | Reserves a run-local capture file path for large tool output. |
+| `wazir capture output` | implemented | Writes captured tool output to a run-local file and records a `post_tool_capture` event. |
+| `wazir capture summary` | implemented | Writes `summary.md` and records the chosen summary or handoff event. |
+| `wazir capture usage` | implemented | Generates a token savings report for a run, showing capture routing statistics and context window savings. |
+
+## Exit codes
+
+- `0`: requested check passed
+- `1`: invalid input or validation failure
+- `2`: command surface exists but the implementation is intentionally not complete yet
+
+## Root discovery
+
+The CLI resolves the project root by walking upward from the current working directory until it finds `wazir.manifest.yaml`. This keeps checks usable from nested directories inside the repo.
+
+## State-root override
+
+Indexing and recall commands accept `--state-root <path>` so operators can keep index state wherever they want. If omitted, Wazir uses the manifest default outside the repo.
+
+`wazir status` accepts the same override when reading run-local status files.
+
+`wazir capture *` accepts the same override when writing run-local status, events, summaries, and captured output files.
+
+`wazir export build` and `wazir export --check` work from the current project root and write under `exports/hosts/*`.
+
+## Run recovery
+
+`wazir capture init` writes the current run ID to `<state-root>/runs/latest` as a plain text pointer. On session start, an agent can read this file to determine if a prior run exists and resume it rather than starting fresh.
+
+This enables run continuity across context compaction boundaries. When a session is compacted, the new context can read `latest` and call `wazir status --run <id>` to load the prior run's state.
+
+If no `latest` file exists, the agent starts a new run via `capture init`.
+
+## Token savings
+
+Wazir reduces context window consumption through two mechanisms:
+
+**Capture routing.** `wazir capture route` and `wazir capture output` redirect large tool output to run-local files instead of the context window. The agent receives a file path reference (~50 tokens) instead of the full output (potentially thousands of tokens).
+
+**Tiered recall.** `wazir recall file` and `wazir recall symbol` support `--tier L0|L1` for summary-based recall:
+- L0 (~100 tokens): one-line identifier summary
+- L1 (~500-2k tokens): structural summary with signature, purpose, dependencies
+- L2 (default): full source slice
+
+Roles are assigned default tiers based on their needs. Exploration-heavy roles (clarifier, researcher, planner) use L1 by default. Implementation roles (executor, verifier) use direct reads. See [Indexing and Recall](../concepts/indexing-and-recall.md) for details.
+
+`wazir capture usage` generates a per-run token savings report showing how many tokens were saved by capture routing and tiered recall versus direct reads.
+
+## Current scope limits
+
+- The CLI is a validation and export tool with no background processes.
+- Validation is the first active capability because it prevents fake green states while the rest of the kit is still being rebuilt.
+- Reserved commands are documented here so adopters can tell the difference between real behavior and planned behavior.
+
+## Docs truth source
+
+Executable documentation claims are registered in:
+
+- `docs/truth-claims.yaml`
+
+`wazir validate docs` uses that file plus active markdown link checks to prevent stale command and path claims from silently drifting.
+
+---
+## Source: README.md
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo.svg">
+    <img alt="Wazir" src="assets/logo.svg" width="360">
+  </picture>
+</p>
+
+<h3 align="center">Wazir: engineering with itqan.</h3>
+
+<p align="center">
+  <a href="https://github.com/MohamedAbdallah-14/Wazir/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/MohamedAbdallah-14/Wazir/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@wazir-dev/cli"><img src="https://img.shields.io/npm/v/@wazir-dev/cli" alt="npm"></a>
+  <a href="https://github.com/MohamedAbdallah-14/Wazir/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js" alt="Node.js"></a>
+  <a href="https://codecov.io/gh/MohamedAbdallah-14/Wazir"><img src="https://codecov.io/gh/MohamedAbdallah-14/Wazir/graph/badge.svg" alt="codecov"></a>
+  <a href="https://github.com/MohamedAbdallah-14/Wazir/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude-supported-5436DA?logo=anthropic" alt="Claude">
+  <img src="https://img.shields.io/badge/Codex-supported-00A36C" alt="Codex">
+  <img src="https://img.shields.io/badge/Gemini-supported-4285F4?logo=google" alt="Gemini">
+  <img src="https://img.shields.io/badge/Cursor-supported-FF6B35" alt="Cursor">
+</p>
+
+<!-- Demo GIF: run assets/record-demo.sh to generate assets/demo.gif, then uncomment the img tag below -->
+<!-- <p align="center"><img src="assets/demo.gif" alt="Wazir Demo" width="700"></p> -->
+
+A host-native operating model for AI coding agents. Wazir gives Claude, Codex, Gemini, and Cursor a 14-phase delivery pipeline, 10 canonical roles with enforceable contracts, 3 adversarial review phases with 9 hard approval gates, and 261 curated expertise modules loaded automatically per task. No server. No wrapper. No custom orchestration.
+
+Install once. Your agent works the way your best engineer does.
+
+---
+
+## Table of Contents
+
+- [Why Wazir?](#why-wazir)
+- [Quick Start](#quick-start)
+- [The Pipeline](#the-pipeline)
+- [How It Works](#how-it-works)
+- [How Wazir Handles Complex Tasks](#how-wazir-handles-complex-tasks)
+- [Token Savings](#token-savings)
+- [What's Included](#whats-included)
+- [Compared to Other Tools](#compared-to-other-tools)
+- [Install](#install)
+- [Documentation](#documentation)
+- [Project Status](#project-status)
+- [Acknowledgments](#acknowledgments)
+- [Contributing](#contributing)
+- [License](#license)
+
+---
+
+## Why Wazir?
+
+AI coding agents fail the same five ways. Every time.
+
+**Ambiguous specs become wrong code.** The clarifier role escalates unresolved ambiguity instead of guessing. No spec ships until material questions get answers. Escalation is a required output, not an option.
+
+**Output quality varies randomly.** The reviewer role is never the phase author. Adversarial review runs at three chokepoints -- spec-challenge, design-review, and final review -- always by a different model or model family. Nine hard approval gates block advancement until artifacts pass.
+
+**Context floods the window.** A 4-layer composition engine assembles only the relevant expertise modules per role per phase from a library of 261 curated modules across 12 domains. Max 15 modules per dispatch, token budget enforced. Three-tier recall (L0/L1/direct read) lets exploration roles load structural summaries instead of full files. Result: 60-80% fewer tokens on exploration-heavy phases. Run `wazir capture usage` to measure it.
+
+**Good solutions vanish between sessions.** Proposed learnings start isolated. Only learnings that pass explicit review and scope-tagging get promoted into future runs. Stale or disproven learnings are archived. The system improves per-project without drifting.
+
+**Nothing prevents structural failures.** Seven hook contracts enforce protected paths (exit 42), loop caps (exit 43), and session observability. Hooks are enforcement, not suggestions.
+
+---
+
+## Quick Start
+
+**Step 1: Install**
+
+```bash
+/plugin marketplace add MohamedAbdallah-14/Wazir
+/plugin install wazir
+```
+
+**Step 2: Initialize**
+
+```bash
+/init-pipeline
+```
+
+**Step 3: Build something**
+
+Drop your requirements in the input directory or just tell the agent what you want:
+
+```
+/clarifier Build a REST API for managing tasks with authentication
+```
+
+That's it. The pipeline takes over -- clarifies your requirements, writes a spec, plans the work, implements with TDD, reviews, and learns for next time. You approve at the gates. Everything else is automatic.
+
+---
+
+## The Pipeline
+
+Every task flows through 14 phases. Three are adversarial review gates that block progress until the reviewer explicitly approves. Rejection loops back to the authoring phase.
+
+```mermaid
+graph LR
+    P0["0 clarify<br/><sub>clarifier</sub>"]
+    P1["1 discover<br/><sub>researcher</sub>"]
+    P2["2 specify<br/><sub>specifier</sub>"]
+    P3["3 spec-challenge<br/><sub>reviewer | APPROVAL GATE</sub>"]
+    P4["4 author<br/><sub>content-author</sub>"]
+    P5["5 design<br/><sub>designer</sub>"]
+    P6["6 design-review<br/><sub>reviewer | APPROVAL GATE</sub>"]
+    P7["7 plan<br/><sub>planner</sub>"]
+    P8["8 plan-review<br/><sub>reviewer | APPROVAL GATE</sub>"]
+    P9["9 execute<br/><sub>executor</sub>"]
+    P10["10 verify<br/><sub>verifier</sub>"]
+    P11["11 review<br/><sub>reviewer</sub>"]
+    P12["12 learn<br/><sub>learner</sub>"]
+    P13["13 prepare-next<br/><sub>learner</sub>"]
+
+    P0 --> P1 --> P2 --> P3
+    P3 -- approved --> P4 --> P5 --> P6
+    P3 -. rejected .-> P2
+    P6 -- approved --> P7 --> P8
+    P6 -. rejected .-> P5
+    P8 -- approved --> P9 --> P10 --> P11
+    P8 -. rejected .-> P7
+    P11 --> P12 --> P13
+
+    style P3 fill:#c62828,color:#fff
+    style P6 fill:#c62828,color:#fff
+    style P8 fill:#c62828,color:#fff
+```
+
+> **GATE** = Approval gate. The phase blocks until the reviewer explicitly approves. Rejection loops back to the authoring phase.
+
+---
+
+## How It Works
+
+Three concepts.
+
+**1 -- Roles are isolation boundaries, not personas.** Each of the 10 roles has defined inputs, allowed tools, required outputs, escalation rules, and failure conditions. An agent inside a role cannot write to protected paths, cannot skip required outputs, and must escalate when ambiguity conditions are met. The discipline is structural, not instructional. See [Roles & Workflows](docs/concepts/roles-and-workflows.md).
+
+**2 -- Phases are artifact checkpoints, not conversation stages.** Every phase consumes a named artifact from the previous phase and produces a named artifact for the next. Nothing flows through conversation history. A session can end, a new agent can pick up the artifacts, and delivery continues. The handoff is explicit, structured, and schema-validated against 18 JSON schemas. See [Architecture](docs/concepts/architecture.md).
+
+**3 -- The composition engine loads the right expert automatically.** A 4-layer system (always, auto, stacks, concerns) decides which of 261 expertise modules load into each role's context. The executor gets modules on how to build. The verifier gets modules on what to detect. The reviewer gets modules on what to flag. All resolved automatically from the task's declared stack and concerns. Max 15 modules per dispatch, token budget enforced.
+
+---
+
+## How Wazir Handles Complex Tasks
+
+Large coding tasks fail when agents lose track of quality. Wazir addresses this with three reinforcing mechanisms.
+
+**14-phase pipeline with 9 hard approval gates.** Every task passes through clarify, research, specify, design, plan, execute, verify, review, and learn. Nine transitions have hard blocking conditions. No phase is skipped, no shortcut taken. The pipeline is defined in `workflows/` and enforced by the orchestrator.
+
+**Adversarial review built in.** The reviewer role operates independently from the executor. It starts with structural summaries (L1 recall) to triage, then reads full source for logic errors, security concerns, or ambiguous code. Review criteria come from expertise modules, not guesswork.
+
+**TDD and verification-before-completion.** The executor writes failing tests before implementation (red-green-refactor). The verifier independently runs all tests, checks truth claims, and validates exports. No task completes until the verifier confirms all acceptance criteria pass. This catches regressions that the executor's own testing misses.
+
+The output is code held to the same standard a senior engineering team would enforce.
+
+---
+
+## Token Savings
+
+Wazir's tiered recall system loads the minimum context each role needs.
+
+| Tier | Tokens | Content | Used by |
+|------|--------|---------|---------|
+| L0 | ~100 | One-line identifier | learner (inventory scans) |
+| L1 | ~500-2k | Structural summary | clarifier, researcher, planner, reviewer (exploration) |
+| Direct read | Full file | Exact source lines | executor, verifier (implementation) |
+
+Capture routing redirects large tool output to run-local files. The agent gets a file path (~50 tokens) instead of the full output. Combined with tiered recall, this yields 60-80% token reduction on exploration-heavy phases.
+
+Run `wazir capture usage` at the end of a session to see the savings:
+
+```
+# Usage Report: run-20260316-091500-b3f7
+
+## Token Savings by Strategy
+| Strategy         | Raw (est. tokens) | After (est. tokens) | Avoided            |
+|------------------|--------------------|---------------------|--------------------|
+| Capture routing  |             36,000 |                  50 |             35,950 |
+| Context-mode     |             81,920 |               1,382 |             80,538 |
+| Compaction       |             80,000 |               5,000 |             75,000 |
+
+## "What If" Comparison
+| Scenario                          | Est. tokens consumed |
+|-----------------------------------|----------------------|
+| Without any savings strategies    |              197,920 |
+| With Wazir savings only           |               86,432 |
+| With Wazir + context-mode         |                6,432 |
+| **Actual savings**                | **96.8%**            |
+```
+
+---
+
+## What's Included
+
+**10 canonical role contracts.** Clarifier, researcher, specifier, content-author, designer, planner, executor, verifier, reviewer, learner. Each has enforceable inputs, outputs, and escalation rules. The spec-challenge phase adversarially reviews every spec before planning begins. [Roles reference](docs/reference/roles-reference.md)
+
+**Adversarial review at three chokepoints.** Spec-challenge, plan-review, and final review run by the reviewer role, never the phase author. Three review phases and nine hard approval gates span the 14-phase pipeline. Nothing advances without explicit clearance. [Architecture](docs/concepts/architecture.md)
+
+**261 curated expertise modules across 12 domains.** Loaded selectively per role per phase via a 4-layer composition engine. Max 15 modules per dispatch, token budget enforced. [Expertise index](docs/reference/expertise-index.md)
+
+**Three-tier recall for token savings.** L0 (~100 tokens), L1 (~500-2k tokens), direct read for full source. Symbol-first exploration searches the index before reading source. Capture routing redirects large tool output to files. Result: 60-80% token reduction on exploration-heavy phases, measured per-session by `wazir capture usage`. [Indexing and Recall](docs/concepts/indexing-and-recall.md)
+
+**Structured learning.** Proposed learnings require explicit review and scope tagging before promotion. Only learnings whose file patterns overlap the current task get injected into context. The system improves per-project without drifting.
+
+**7 hook contracts for structural guardrails.** These enforce protected path writes (exit 42), loop caps (exit 43), and session observability. [Hooks](docs/reference/hooks.md)
+
+**20 callable skills.** wz:tdd, wz:verification, wz:debugging, wz:scan-project, wz:writing-plans, and 14 more. Each enforces an exact procedure with evidence at each step. [Skills](docs/reference/skills.md)
+
+**Built-in text humanization.** The `wz:humanize` skill and 7 dedicated expertise modules automatically remove AI vocabulary patterns from generated text. The composition engine loads domain-specific rules per role: code rules for the executor (commit messages, comments), content rules for the content-author (microcopy, glossary), and technical-docs rules for the specifier, planner, reviewer, and learner. A 61-item vocabulary blacklist, 24-pattern sentence taxonomy, and two-pass self-audit checklist keep all output sounding like it was written by a person.
+
+**Content-author role before design.** This role produces finalized i18n keys, microcopy, glossary entries, state coverage, and accessibility copy before design begins.
+
+**Runs on 4 platforms.** `wazir export build` compiles canonical sources into native packages for Claude, Codex, Gemini, and Cursor. SHA-256 drift detection catches stale exports in CI. [Host exports](docs/reference/host-exports.md)
+
+---
+
+## Compared to Other Tools
+
+The AI coding tool space is fragmenting. Developers bolt together separate plugins for workflow management, specification, memory, output compression, and orchestration. Research shows this approach has a cost: tool selection accuracy drops to 13.6% when models face too many tools (Gan & Sun, 2025), and 20 tools can consume 62% of an 8k context window before the task even begins (PromptForward, 2025).
+
+Wazir takes a different path: one integrated operating model instead of many independent plugins.
+
+| Dimension | Wazir | [Superpowers](https://github.com/obra/superpowers) | [Spec-Kit](https://github.com/github/spec-kit) | [Micro-Agent](https://github.com/BuilderIO/micro-agent) | [Distill](https://github.com/samuelfaj/distill) | [Claude-Mem](https://github.com/thedotmack/claude-mem) | [OMC](https://github.com/yeachan-heo/oh-my-claudecode) |
+|---|---|---|---|---|---|---|---|
+| **Category** | Engineering OS | Skills framework | Spec toolkit | Code gen agent | Output compressor | Memory plugin | Orchestration layer |
+| **Scope** | Full lifecycle (14 phases) | Dev workflow (~20 skills) | Specify / Plan / Implement | Single-file TDD loop | CLI output compression | Session memory | Multi-agent orchestration |
+| **Enforced roles** | 10 canonical, contractual | None (skills only) | None | None | None | None | 32 agents (behavioral) |
+| **Phase model** | 14 explicit, artifact-gated | 7-step (advisory) | 3-step | 1 (generate/test) | N/A | N/A | 5-step pipeline |
+| **Adversarial review** | 3 gate phases | Code review skill | No | No | No | No | team-verify step |
+| **Context management** | L0/L1 tiered recall | None | None | None | LLM compression | Vector DB (ChromaDB) | Token routing |
+| **Schema validation** | 18 JSON schemas | No | No | No | No | No | No |
+| **Guardrails** | 7 hook contracts | None | None | None | None | 5 hooks (memory) | Agent tracking |
+| **External deps** | None (host-native) | None (prompt-only) | Python CLI | Node.js CLI | Node.js + LLM | ChromaDB, SQLite, Bun | tmux, exp. teams API |
+| **Host support** | Claude, Codex, Gemini, Cursor | Claude, Codex, Gemini, Cursor, OpenCode | Claude, Copilot, Gemini | Any LLM provider | Any LLM | Claude Code only | Claude Code (+ workers) |
+
+Each of these tools solves a real problem. Wazir's approach is to solve them together -- one system, shared context, structural enforcement -- instead of asking developers to wire separate plugins into a coherent workflow.
+
+**Research sources:** [RAG-MCP: Mitigating Prompt Bloat in LLM Tool Selection](https://arxiv.org/abs/2505.03275) (Gan & Sun, 2025). [MCP Overload: Why Your LLM Agent Doesn't Need 20 Tools](https://promptforward.dev/blog/mcp-overload) (PromptForward, 2025). [Less is More: Optimizing Function Calling for LLM Execution](https://arxiv.org/abs/2411.15399) (Paramanayakam et al., 2024). [Tool RAG: The Next Breakthrough in Scalable AI Agents](https://next.redhat.com/2025/11/26/tool-rag-the-next-breakthrough-in-scalable-ai-agents/) (Red Hat, 2025).
+
+---
+
+## Install
+
+**Claude Code plugin (recommended):**
+
+```bash
+/plugin marketplace add MohamedAbdallah-14/Wazir
+/plugin install wazir
+```
+
+The plugin loads skills, roles, and workflows into your Claude sessions. Done.
+
+**npm / Homebrew:**
+
+```bash
+npm install -g @wazir-dev/cli                                    # npm
+brew tap MohamedAbdallah-14/Wazir && brew install wazir    # Homebrew
+```
+
+**Deploy to your project:**
+
+| Host | Command |
+|------|---------|
+| **Claude** | `cp -r exports/hosts/claude/.claude ~/your-project/ && cp exports/hosts/claude/CLAUDE.md ~/your-project/` |
+| **Codex** | `cp exports/hosts/codex/AGENTS.md ~/your-project/` |
+| **Gemini** | `cp exports/hosts/gemini/GEMINI.md ~/your-project/` |
+| **Cursor** | `cp -r exports/hosts/cursor/.cursor ~/your-project/` |
+
+> npm/Homebrew users: clone the source and run `npx wazir export build` to generate host exports. See [Installation Guide](docs/getting-started/01-installation.md) for the full path.
+
+---
+
+## Documentation
+
+**For users:**
+
+| I want to... | Go to |
+|---|---|
+| Install and get started | [Installation](docs/getting-started/01-installation.md) |
+| Run my first task | [First Run](docs/getting-started/02-first-run.md) |
+| Understand the architecture | [Architecture](docs/concepts/architecture.md) |
+| Learn about roles and workflows | [Roles & Workflows](docs/concepts/roles-and-workflows.md) |
+
+**For contributors:**
+
+| I want to... | Go to |
+|---|---|
+| Set up for development | [CONTRIBUTING.md](CONTRIBUTING.md) |
+| Look up CLI commands | [CLI Reference](docs/reference/tooling-cli.md) |
+| Configure the manifest | [Configuration Reference](docs/reference/configuration-reference.md) |
+| Browse all documentation | [Documentation Hub](docs/README.md) |
+
+---
+
+## Project Status
+
+Wazir is in active early development (**v0.1.0**, pre-1.0-alpha).
+
+The pipeline, roles, and expertise modules are stable and used in production by the maintainers. The CLI, schemas, and hook contracts work. But this is early software -- APIs may change before 1.0.
+
+What's solid:
+- The 14-phase pipeline and 10 role contracts
+- 261 expertise modules across 12 domains
+- Host exports for Claude, Codex, Gemini, and Cursor
+- The composition engine and tiered recall system
+
+What may change:
+- CLI command surface and flags
+- Schema field names
+- Hook contract signatures
+- State directory structure
+
+Feedback and contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Acknowledgments
+
+Wazir builds on ideas and patterns from these projects:
+
+- **[superpowers](https://github.com/obra/superpowers)** by [@obra](https://github.com/obra) -- skill system architecture, bootstrap injection pattern, session-start hooks
+- **[context-mode](https://github.com/mksglu/context-mode)** -- context window optimization and sandbox execution patterns
+- **[spec-kit](https://github.com/github/spec-kit)** by GitHub -- specification-driven development patterns
+- **[oh-my-claudecode](https://github.com/yeachan-heo/oh-my-claudecode)** by [@yeachan-heo](https://github.com/yeachan-heo) -- Claude Code customization and extension patterns
+- **[micro-agent](https://github.com/BuilderIO/micro-agent)** by Builder.io -- test-driven code generation patterns
+- **[distill](https://github.com/samuelfaj/distill)** by [@samuelfaj](https://github.com/samuelfaj) -- CLI output compression for token savings
+- **[claude-mem](https://github.com/thedotmack/claude-mem)** by [@thedotmack](https://github.com/thedotmack) -- persistent memory patterns for coding agents
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, branch conventions, commit format, and contribution guidelines.
+
+---
+
+## License
+
+MIT -- see [LICENSE](LICENSE).
+
+---
+## Source: CONTRIBUTING.md
+
+# Contributing
+
+Wazir is a host-native engineering OS kit. Contributions that strengthen the product surface are welcome.
+
+## Ground rules
+
+- follow the architecture in `docs/concepts/architecture.md`
+- keep the product host-native — roles, workflows, skills, hooks, and host exports
+- prefer evidence:
+  - TDD for behavior changes
+  - verification commands before completion claims
+  - no fake green paths
+
+## Local setup
+
+1. Clone the repository and install dependencies:
+   ```bash
+   git clone https://github.com/MohamedAbdallah-14/Wazir.git
+   cd wazir
+   npm install
+   ```
+   You should see output ending with something like:
+   ```
+   added XX packages in Xs
+   ```
+2. Run the test suite:
+   ```bash
+   npm test
+   ```
+   Expected output:
+   ```
+   TAP version 13
+   # ... test descriptions ...
+   ok
+   ```
+   All tests must pass before you submit a PR.
+3. Regenerate host packages when export logic or canonical sources change:
+   ```bash
+   wazir export build
+   ```
+4. Check export drift:
+   ```bash
+   wazir export --check
+   ```
+5. Validate the project structure:
+   ```bash
+   wazir validate
+   ```
+
+## Testing expectations
+
+- **What to test:** Every behavior change, new CLI command, hook behavior, or schema change must have accompanying tests.
+- **How to run tests:**
+  ```bash
+  npm test              # run the full suite
+  ```
+- **Coverage:** Tests live alongside the code they verify. If you add a new module in `tooling/src/`, add a corresponding test in `tooling/test/`. If you add a new skill in `skills/`, include a test script or verification step in the skill directory.
+- **TDD is mandatory:** Write the failing test first, then implement the feature or fix.
+
+## Your first contribution
+
+New to Wazir? Start here:
+
+1. Browse issues labeled [`good first issue`](https://github.com/MohamedAbdallah-14/Wazir/labels/good%20first%20issue)
+2. Fork the repository and create a branch: `git checkout -b feat/your-change`
+3. Make your change, add tests, run `npm test`
+4. Open a pull request using the PR template
+
+### Good first issues
+
+Good first issues are small, well-scoped tasks that help you learn the codebase. They typically involve:
+
+- Fixing a typo or improving clarity in documentation
+- Adding a missing validation or error message to the CLI
+- Writing tests for an existing module that lacks coverage
+- Updating a role contract or workflow description to match current behavior
+
+Look for the `good first issue` label, and feel free to comment on the issue to claim it before starting work.
+
+Not sure where to start? Open a [Discussion](https://github.com/MohamedAbdallah-14/Wazir/discussions) and we'll help you find something.
+
+## Change expectations
+
+- keep docs current with the actual behavior you changed
+- update `CHANGELOG.md`
+- add or update tests for new CLI behavior, hook behavior, or schemas
+- avoid adding dependencies unless they materially reduce correctness risk
+
+## Pull requests
+
+- explain the problem, the change, and the verification you ran
+- call out any remaining gaps or follow-up work explicitly
+- if a review tool was unavailable, say so rather than implying review happened
+
+## PR review process
+
+1. **Automated checks:** When you open a PR, CI runs `npm test` and `wazir validate`. Both must pass before review begins.
+2. **Human review:** A maintainer will review your PR for correctness, test coverage, documentation, and alignment with the architecture.
+3. **Feedback:** If changes are requested, push additional commits to the same branch. Avoid force-pushing during review so that reviewers can see incremental changes.
+4. **Merge:** Once approved and all checks pass, a maintainer will merge your PR using a squash merge with a conventional commit message.
+5. **Timeline:** We aim to provide initial review feedback within a few days. If your PR has been open for more than a week without a response, feel free to leave a comment or ping in Discussions.
+
+---
+## Source: AGENTS.md
+
+# Wazir Agent Instructions
+
+## Role-Based Workflow System
+
+Wazir uses canonical roles and phased workflows. Role contracts are in `roles/`. Workflow definitions are in `workflows/`.
+
+### Canonical Roles
+
+1. **clarifier** — disambiguate intent, extract acceptance criteria
+2. **researcher** — gather evidence, prior art, domain context
+3. **specifier** — write precise specs from clarified requirements
+4. **designer** — produce architecture and interface designs
+5. **content-author** — create documentation, guides, and prose artifacts
+6. **planner** — break specs into ordered, testable tasks
+7. **executor** — implement code following the plan
+8. **verifier** — run tests, linting, and validation gates
+9. **reviewer** — final quality review against acceptance criteria
+10. **learner** — capture lessons learned and update knowledge base
+
+See `roles/` for full contracts. See `wazir.manifest.yaml` for the authoritative list.
+
+### Entering a Workflow
+
+1. **Clarifier:** read and follow `~/.claude/agents/clarifier.md` — tasks are in `input/`
+2. **Subsequent phases:** the workflow system assigns roles per phase. See `workflows/` for phase sequence.
+3. **Review:** read and follow `~/.claude/agents/reviewer.md` — run all review phases
+
+## Build Commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm install` | Install dependencies |
+| `npm test` | Run full test suite (node:test) |
+| `wazir validate` | Validate manifest, hooks, docs, brand, runtime, branches, commits, changelog |
+| `wazir doctor` | Check environment health |
+| `wazir export build` | Build host-native packages |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Usage / argument error |
+| 42 | Validation failure (non-fatal) |
+| 43 | Gate rejection (hard stop) |
+
+## Code Style
+
+- Pure JavaScript — no TypeScript, no JSX, no transpilation
+- Node.js >= 20
+- ES modules (`import` / `export`)
+- Test framework: `node:test` + `node:assert`
+- Zero runtime dependencies in the core kit
+
+### Test Pattern
+
+```js
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+
+describe('featureName', () => {
+  it('should behave correctly', () => {
+    const result = featureName();
+    assert.strictEqual(result, expected);
+  });
+});
+```
+
+## Project Structure
+
+| Directory | Purpose |
+|-----------|---------|
+| `roles/` | Canonical role contracts (one file per role) |
+| `workflows/` | Phase-based workflow definitions and entry points |
+| `expertise/` | Domain knowledge modules consumed by roles |
+| `skills/` | Reusable skill definitions (prefixed `wz:`) |
+| `hooks/` | Lifecycle hooks (pre-commit, pre-push, gates) |
+| `tooling/` | CLI source, tests, and internal utilities |
+| `exports/` | Generated host-native packages (do not edit) |
+| `templates/` | Scaffold and boilerplate templates |
+| `schemas/` | JSON / YAML schemas for validation |
+| `docs/` | Architecture docs, guides, and references |
+
+## Git Workflow
+
+- **Conventional commits:** `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
+- **Isolated feature branches** — never commit directly to `main`
+- **TDD cycle:** failing test -> implement -> verify -> commit
+
+## Boundaries
+
+- Never edit files in `exports/` directly — they are generated from canonical sources
+- Never modify pipeline input files — they are read-only task input
+- Never skip `wazir doctor` before starting work
+- Never add runtime dependencies to the core kit
+- Never use TypeScript, JSX, or any transpilation step
+- Never commit without running `npm test` first
+- Never bypass validation gates (`wazir validate`)
+
+## Review Mode
+
+This project uses Codex as a secondary reviewer. Review artifacts are in `tasks/opus/reviews/`.
+
+## Operating Constraints
+
+- Use `roles/` as the source of truth for role contracts
+- Keep default live run state outside the repo under `~/.wazir/projects/<project-slug>/`
+- Preserve evidence-first execution, TDD, verification, and conventional commits
+- Use isolated feature branches
+- Reference `wazir.manifest.yaml` for the project manifest and schema
+

@@ -1,0 +1,22 @@
+---
+description: TDD, verification, and quality enforcement rules
+alwaysApply: true
+---
+
+tdd:
+
+- Write the failing test first, then implement the minimal code to pass.
+- Red → Green → Refactor → Commit for every sub-task.
+- Never skip the red phase. If the test passes before implementation, the test is wrong.
+
+verification:
+
+- Every claim of completion must have concrete evidence — a command run and its actual output.
+- "It should work" is not verification. Run the command, capture the output.
+- The verifier independently runs all tests, checks truth claims, and validates exports.
+- No task completes until the verifier confirms all acceptance criteria pass.
+
+commits:
+
+- Use conventional commits: feat, fix, docs, test, refactor, chore.
+- Commit after every green test, not at the end.

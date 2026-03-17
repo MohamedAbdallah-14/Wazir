@@ -1,0 +1,21 @@
+---
+description: Core Wazir engineering rules — roles, workflows, TDD, verification
+alwaysApply: true
+---
+
+wazir-core:
+
+- Wazir is a host-native engineering OS kit for Claude, Codex, Gemini, and Cursor.
+- `roles/` defines canonical role contracts. Each role has defined inputs, outputs, escalation rules, and failure conditions.
+- `workflows/` defines phase entrypoints. Every task flows through 14 phases with 9 hard approval gates.
+- Default live run state lives outside the repo under `~/.wazir/projects/<project-slug>/`.
+- Generated host exports come from canonical sources. Run `wazir export build` to regenerate.
+- TDD, conventional commits, and verification-before-completion are mandatory.
+- Use isolated feature branches.
+
+key-references:
+
+- `wazir.manifest.yaml` — project manifest and schema
+- `docs/concepts/architecture.md` — system architecture
+- `docs/concepts/roles-and-workflows.md` — role and phase concepts
+- `docs/reference/roles-reference.md` — role and workflow lookup tables

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 100" role="img" aria-label="Wazir">
+  <title>Wazir</title>
+  <!-- Composition Star: two overlapping squares forming 8-pointed star (dark mode) -->
+  <!-- Square 1: Lightened Teal (visible on dark bg #0D1117) -->
+  <rect x="25" y="25" width="50" height="50" fill="#1A8A8A" />
+  <!-- Square 2: Lighter Warm Teal (kept bright for dark backgrounds) -->
+  <polygon points="50,14.64 85.36,50 50,85.36 14.64,50" fill="#8FBCBB" />
+  <!-- Overlap octagon: Mid-dark teal (drawn last, painter's model) -->
+  <polygon points="25,39.64 39.64,25 60.36,25 75,39.64 75,60.36 60.36,75 39.64,75 25,60.36" fill="#0D6060" />
+  <!-- Wordmark -->
+  <text x="110" y="62" fill="#F0F0F5"
+        font-family="'Inter','SF Pro Display','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif"
+        font-size="42" font-weight="700" letter-spacing="0.08em">WAZIR</text>
+</svg>

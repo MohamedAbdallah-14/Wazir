@@ -1,0 +1,79 @@
+{
+  "name": "@wazir-dev/cli",
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Host-native engineering OS kit for AI coding agents — roles, phases, expertise modules, quality gates for Claude, Codex, Gemini & Cursor",
+  "bin": {
+    "wazir": "tooling/src/cli.js"
+  },
+  "files": [
+    "tooling/src/",
+    "roles/",
+    "workflows/",
+    "skills/",
+    "schemas/",
+    "templates/",
+    "expertise/",
+    "hooks/",
+    "exports/",
+    "docs/",
+    "assets/",
+    "wazir.manifest.yaml",
+    "AGENTS.md",
+    "llms.txt",
+    "llms-full.txt",
+    "LICENSE",
+    "README.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "test": "npm run test:active",
+    "test:active": "node --test tooling/test/cli.test.js tooling/test/validate.test.js tooling/test/index.test.js tooling/test/doctor-status.test.js tooling/test/guard-hooks.test.js tooling/test/export.test.js tooling/test/capture.test.js tooling/test/schema-examples.test.js tooling/test/git-flow-docs.test.js tooling/test/role-contracts.test.js tooling/test/ci-workflow.test.js tooling/test/contributing.test.js tooling/test/author-artifact.test.js tooling/test/capture/usage.test.js tooling/test/docs-drift.test.js",
+    "test:coverage": "c8 npm run test:active",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MohamedAbdallah-14/Wazir.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MohamedAbdallah-14/Wazir/issues"
+  },
+  "homepage": "https://github.com/MohamedAbdallah-14/Wazir#readme",
+  "license": "MIT",
+  "keywords": [
+    "ai-agents",
+    "agentic-ai",
+    "workflow-automation",
+    "llm",
+    "developer-tools",
+    "claude",
+    "codex",
+    "cursor",
+    "agent-framework",
+    "tdd"
+  ],
+  "dependencies": {
+    "ajv": "^8.18.0",
+    "gray-matter": "^4.0.3",
+    "yaml": "^2.0.0"
+  },
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^12.0.6",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "c8": "^11.0.0",
+    "husky": "^9.1.7",
+    "semantic-release": "^25.0.3"
+  }
+}

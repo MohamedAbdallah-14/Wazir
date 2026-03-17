@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "beforeFileEdit": [
+      {
+        "command": "./hooks/protected-path-write-guard",
+        "matcher": "*.md|*.yaml|*.json"
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "./hooks/loop-cap-guard"
+      },
+      {
+        "command": "./hooks/session-start"
+      }
+    ]
+  }
+}

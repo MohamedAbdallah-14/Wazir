@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+set -e
+
+# Skip hooks: HUSKY=0 git push (for CI, Codex sandbox, or emergencies)
+
+# Validate branch name
+node tooling/src/cli.js validate branches
+
+# Validate commit messages
+node tooling/src/cli.js validate commits
+
+# Run tests
+npm test
