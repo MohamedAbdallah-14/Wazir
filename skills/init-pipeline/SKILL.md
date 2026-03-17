@@ -17,11 +17,11 @@ Run `which wazir` to check if the CLI is installed.
 >
 > **How would you like to install it?**
 >
-> 1. **npm** (Recommended) — `npm install -g wazir`
+> 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
 > 2. **Local link** — `npm link` from the Wazir project root
 > 3. **Skip** — Continue without the CLI (some features will be unavailable)
 
-If the user picks 1, run `npm install -g wazir` and verify with `wazir --version`.
+If the user picks 1, run `npm install -g @wazir-dev/cli` and verify with `wazir --version`.
 If the user picks 2, run `npm link` from the project root and verify.
 If the user picks 3, warn that `wazir capture`, `wazir validate`, and `wazir index` commands will not work, then continue.
 
@@ -39,9 +39,9 @@ Present this question:
 
 > **How should Wazir run in this project?**
 >
-> 1. **Claude only** (Recommended) — Everything runs in Claude Code. Single model, slash commands only.
-> 2. **Multi-model** — Still Claude Code, but routes tasks by complexity (Haiku for micro, Sonnet for standard, Opus for complex).
-> 3. **Multi-tool** — Claude Code + external tools for reviews.
+> 1. **Single model** (Recommended) — Everything runs in the current model. Single model, slash commands only.
+> 2. **Multi-model** — Still the current model, but routes tasks by complexity (Haiku for micro, Sonnet for standard, Opus for complex).
+> 3. **Multi-tool** — Current model + external tools for reviews.
 
 Wait for the user to answer before continuing.
 

@@ -84,7 +84,7 @@ function createDoctorFixture(options = {}) {
     export_targets: ['claude', 'codex'],
     required_hooks: ['session_start'],
     protected_paths: ['input'],
-    prohibited_terms: ['agent-os', 'daemon'],
+    prohibited_terms: ['banned-term'],
     adapters: {
       context_mode: {
         enabled_by_default: false,

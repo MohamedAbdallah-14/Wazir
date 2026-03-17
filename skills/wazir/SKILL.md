@@ -61,11 +61,11 @@ Run `which wazir` to check if the CLI is installed.
 >
 > **How would you like to install it?**
 >
-> 1. **npm** (Recommended) — `npm install -g wazir`
+> 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
 > 2. **Local link** — `npm link` from the Wazir project root
 > 3. **Skip** — Continue without the CLI (some features will be unavailable)
 
-If the user picks 1, run `npm install -g wazir` and verify with `wazir --version`.
+If the user picks 1, run `npm install -g @wazir-dev/cli` and verify with `wazir --version`.
 If the user picks 2, run `npm link` from the project root and verify.
 If the user picks 3, warn that `wazir capture`, `wazir validate`, and `wazir index` commands will not work, then continue.
 

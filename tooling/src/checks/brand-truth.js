@@ -7,17 +7,14 @@ const EXCLUDED_DOC_FILES = new Set([
 ]);
 
 const BRAND_PATTERNS = [
-  { label: 'Agent OS', regex: /\bAgent OS\b/g },
-  { label: 'agent-os', regex: /\bagent-os\b/g },
-  { label: 'Symphony', regex: /\bSymphony\b/g },
   { label: 'Wazir OS', regex: /\bWazir OS\b/g },
 ];
 
 function normalizeAllowedLegacyReferences(content) {
   return content
-    .replace(/archive\/legacy-agent-os\/[^\s)`]*/g, 'archive/<legacy>')
-    .replace(/archive\/v5\.1-agent-os-daemon\/[^\s)`]*/g, 'archive/<legacy>')
-    .replace(/migration\/v5\.1-agent-os-to-wazir\.md/g, 'migration/<legacy>');
+    .replace(/archive\/legacy-wazir\/[^\s)`]*/g, 'archive/<legacy>')
+    .replace(/archive\/v5\.1-wazir-daemon\/[^\s)`]*/g, 'archive/<legacy>')
+    .replace(/migration\/v5\.1-wazir-rename\.md/g, 'migration/<legacy>');
 }
 
 function walkMarkdownFiles(dirPath, files = []) {

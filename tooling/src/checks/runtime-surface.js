@@ -9,13 +9,9 @@ const EXCLUDED_DOC_FILES = new Set([
 ]);
 
 const FORBIDDEN_TEXT_PATTERNS = [
-  { label: '.agent-os path', regex: /\.agent-os\//g },
   { label: 'tasks/input path', regex: /\btasks\/input\//g },
   { label: 'tasks/clarified path', regex: /\btasks\/clarified\//g },
   { label: 'legacy run wrapper', regex: /\/run-(clarifier|orchestrator|opus-reviewer)\b/g },
-  { label: 'legacy daemon binary', regex: /\bagent-os-(daemon|run|review|orchestrate)\b/g },
-  { label: 'legacy npx invocation', regex: /\bnpx agent-os-[a-z-]+\b/g },
-  { label: 'daemon workflow config', regex: /daemon\/WORKFLOW\.md/g },
 ];
 
 const FORBIDDEN_DEPENDENCIES = new Set(['express', 'fastify', 'koa', 'socket.io']);
@@ -93,9 +89,9 @@ function collectRuntimeSurfaceFiles(projectRoot) {
 
 function normalizeAllowedLegacyReferences(content) {
   return content
-    .replace(/archive\/legacy-agent-os\/[^\s)`]*/g, 'archive/<legacy>')
-    .replace(/archive\/v5\.1-agent-os-daemon\/[^\s)`]*/g, 'archive/<legacy>')
-    .replace(/migration\/v5\.1-agent-os-to-wazir\.md/g, 'migration/<legacy>');
+    .replace(/archive\/legacy-wazir\/[^\s)`]*/g, 'archive/<legacy>')
+    .replace(/archive\/v5\.1-wazir-daemon\/[^\s)`]*/g, 'archive/<legacy>')
+    .replace(/migration\/v5\.1-wazir-rename\.md/g, 'migration/<legacy>');
 }
 
 function assertGlobalPatternConfiguration() {

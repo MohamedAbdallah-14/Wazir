@@ -92,11 +92,8 @@ protected_paths:
   - schemas
   - exports/hosts
 prohibited_terms:
-  - Agent OS
-  - daemon
   - HTTP control plane
   - web UI
-  - OpenAI Symphony
   - Elixir
 adapters:
   context_mode:

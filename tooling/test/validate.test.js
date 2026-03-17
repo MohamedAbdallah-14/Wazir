@@ -96,7 +96,7 @@ function createFixture(options = {}) {
     export_targets: options.hosts ?? ['claude'],
     required_hooks: options.requiredHooks ?? ['session_start'],
     protected_paths: ['input'],
-    prohibited_terms: ['Agent OS', 'daemon'],
+    prohibited_terms: ['banned-term'],
     adapters: {
       context_mode: {
         enabled_by_default: false,
@@ -315,7 +315,7 @@ describe('wazir validate command', () => {
 
     fs.writeFileSync(
       path.join(fixtureRoot, 'roles', 'clarifier.md'),
-      '# Clarifier\n\nThis role still calls itself Agent OS.\n',
+      '# Clarifier\n\nThis role still uses a banned-term reference.\n',
     );
 
     try {
@@ -323,7 +323,7 @@ describe('wazir validate command', () => {
 
       assert.strictEqual(result.exitCode, 1);
       assert.match(result.stderr, /prohibited term/i);
-      assert.match(result.stderr, /Agent OS/i);
+      assert.match(result.stderr, /banned-term/i);
     } finally {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
     }
@@ -336,7 +336,7 @@ describe('wazir validate command', () => {
 
     fs.writeFileSync(
       path.join(fixtureRoot, 'roles', 'clarifier.md'),
-      '# Clarifier\n\nThis role documents daemonize behavior without using the standalone banned term.\n',
+      '# Clarifier\n\nThis role documents banned-terminology without using the standalone banned term.\n',
     );
 
     try {
@@ -353,7 +353,7 @@ describe('wazir validate command', () => {
 
     fs.writeFileSync(
       path.join(fixtureRoot, 'docs', 'overview.md'),
-      '# Overview\n\nThis active guide still calls the product Agent OS.\n',
+      '# Overview\n\nThis active guide still calls the product Wazir OS.\n',
     );
 
     try {
@@ -361,7 +361,7 @@ describe('wazir validate command', () => {
 
       assert.strictEqual(result.exitCode, 1);
       assert.match(result.stderr, /brand truth validation failed/i);
-      assert.match(result.stderr, /Agent OS/i);
+      assert.match(result.stderr, /Wazir OS/i);
     } finally {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
     }
@@ -372,19 +372,19 @@ describe('wazir validate command', () => {
 
     fs.writeFileSync(
       path.join(fixtureRoot, 'CHANGELOG.md'),
-      '# Changelog\n\nLegacy Agent OS naming leaked into the active changelog.\n',
+      '# Changelog\n\nLegacy Wazir OS naming leaked into the active changelog.\n',
     );
     fs.writeFileSync(
       path.join(fixtureRoot, 'expertise', 'review-notes.md'),
-      '# Review Notes\n\nKeep Wazir focused and do not call it Symphony.\n',
+      '# Review Notes\n\nDo not call it Wazir OS either.\n',
     );
 
     try {
       const result = runCli(['validate', 'brand'], { cwd: fixtureRoot });
 
       assert.strictEqual(result.exitCode, 1);
-      assert.match(result.stderr, /CHANGELOG\.md: contains forbidden brand term "Agent OS"/i);
-      assert.match(result.stderr, /expertise\/review-notes\.md: contains forbidden brand term "Symphony"/i);
+      assert.match(result.stderr, /CHANGELOG\.md: contains forbidden brand term "Wazir OS"/i);
+      assert.match(result.stderr, /expertise\/review-notes\.md: contains forbidden brand term "Wazir OS"/i);
     } finally {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
     }
@@ -415,19 +415,19 @@ describe('wazir validate command', () => {
     fs.mkdirSync(path.join(fixtureRoot, 'tooling', 'src', 'checks'), { recursive: true });
     fs.writeFileSync(
       path.join(fixtureRoot, 'tooling', 'src', 'checks', 'custom-check.js'),
-      'export const note = ".agent-os/state.sqlite is forbidden on the active surface."; \n',
+      'export const note = "tasks/input/state.sqlite is forbidden on the active surface."; \n',
     );
     fs.writeFileSync(
       path.join(fixtureRoot, 'CHANGELOG.md'),
-      '# Changelog\n\nRemoved old tasks/input/ guidance from the active docs.\n',
+      '# Changelog\n\nRemoved old tasks/clarified/ guidance from the active docs.\n',
     );
 
     try {
       const result = runCli(['validate', 'runtime'], { cwd: fixtureRoot });
 
       assert.strictEqual(result.exitCode, 1);
-      assert.match(result.stderr, /tooling\/src\/checks\/custom-check\.js: contains forbidden runtime-surface pattern ".agent-os path"/i);
-      assert.match(result.stderr, /CHANGELOG\.md: contains forbidden runtime-surface pattern "tasks\/input path"/i);
+      assert.match(result.stderr, /tooling\/src\/checks\/custom-check\.js: contains forbidden runtime-surface pattern "tasks\/input path"/i);
+      assert.match(result.stderr, /CHANGELOG\.md: contains forbidden runtime-surface pattern "tasks\/clarified path"/i);
     } finally {
       fs.rmSync(fixtureRoot, { recursive: true, force: true });
     }
@@ -456,11 +456,11 @@ describe('wazir validate command', () => {
     fs.mkdirSync(path.join(fixtureRoot, 'tooling', 'src', 'checks'), { recursive: true });
     fs.writeFileSync(
       path.join(fixtureRoot, 'tooling', 'src', 'checks', 'runtime-surface.js'),
-      'export const patterns = [".agent-os/", "tasks/input/"]; \n',
+      'export const patterns = [".wazir/", "tasks/input/"]; \n',
     );
     fs.writeFileSync(
       path.join(fixtureRoot, 'tooling', 'src', 'checks', 'brand-truth.js'),
-      'export const legacy = ["archive/v5.1-agent-os-daemon/README.md"]; \n',
+      'export const legacy = ["archive/v5.1-wazir-daemon/README.md"]; \n',
     );
 
     try {
@@ -771,7 +771,7 @@ describe('indexing-and-recall.md documents tiered context loading', () => {
 
   test('does not use prohibited terms', () => {
     const content = fs.readFileSync(docPath, 'utf8');
-    const prohibited = ['Agent OS', 'daemon', 'HTTP control plane', 'web UI', 'OpenAI Symphony', 'Elixir'];
+    const prohibited = ['HTTP control plane', 'web UI', 'Elixir'];
     for (const term of prohibited) {
       assert.ok(!content.includes(term), `doc must not use prohibited term: "${term}"`);
     }

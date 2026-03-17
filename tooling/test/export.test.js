@@ -100,7 +100,7 @@ function createExportFixture() {
     export_targets: ['claude', 'codex', 'gemini', 'cursor'],
     required_hooks: ['session_start', 'protected_path_write_guard', 'loop_cap_guard'],
     protected_paths: ['input', 'exports/hosts'],
-    prohibited_terms: ['agent-os', 'daemon'],
+    prohibited_terms: ['banned-term'],
     adapters: {
       context_mode: {
         enabled_by_default: false,

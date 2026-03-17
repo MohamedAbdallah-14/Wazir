@@ -29,7 +29,7 @@ Before starting any implementation, verify all of the following:
 - [ ] **Node.js >= 20.0.0** installed
 - [ ] **`npm test` passes on the clean branch** with zero failures
 - [ ] **`wazir export --check` passes** on the clean branch (no pre-existing drift)
-- [ ] **All 13 task spec files reviewed** in `.agent-os/tasks/clarified/` (004-016)
+- [ ] **All 13 task spec files reviewed** in `.wazir/tasks/clarified/` (004-016)
 - [ ] **`tooling/src/capture/command.js` imports confirmed:** `fs` (line 1) and `path` (line 2) are already imported -- no additional module imports needed for task 006
 - [ ] **`tooling/test/capture.test.js` fixture pattern confirmed:** `createCaptureFixture()` provides `fixtureRoot`, `stateRoot`, and `cleanup()` -- new tests must use unique run IDs
 - [ ] **`tooling/test/role-contracts.test.js` is in `test:active`** -- confirmed, so workflow and role structural tests can be added there without new test file registration
