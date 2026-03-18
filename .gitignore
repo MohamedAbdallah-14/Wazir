@@ -5,7 +5,7 @@ Thumbs.db
 # Editor
 .idea/
 .vscode/
-.cursor/hooks/state/
+.cursor/
 *.swp
 *.swo
 
@@ -17,7 +17,7 @@ dist/
 coverage/
 
 # Wazir runtime state (generated per-run, never committed)
-.agent-os/
+.wazir/
 .wazir-state/
 .worktrees/
 tasks/

@@ -49,7 +49,7 @@ protected_paths:
   - input
   - exports/hosts
 prohibited_terms:
-  - agent-os
+  - legacy-name
 adapters:
   context_mode:
     enabled_by_default: false

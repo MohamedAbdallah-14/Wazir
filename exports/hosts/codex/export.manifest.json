@@ -1,7 +1,7 @@
 {
   "host": "codex",
   "source_hashes": {
-    "wazir.manifest.yaml": "2a57e262d071283504311ead7daaa8444c0c1895243f048036f79c501dfa4356",
+    "wazir.manifest.yaml": "ae49e943639828932d5289f34f2994f1efb67df4f552f5bfabbb1c823b662e43",
     "roles/clarifier.md": "1135b98d548937b5009bd77d292ceee29f806acc9cae245e5e18ccb8be05173e",
     "roles/content-author.md": "cc20b80bd70ab68b3239a9cf56bf1ffc2c06843d38afc6b190844b35a1d73c3e",
     "roles/designer.md": "8a0a9846965aa03ac00d0d71cde58f529aa8fb79908a481cb8ca3ff09d5af8df",

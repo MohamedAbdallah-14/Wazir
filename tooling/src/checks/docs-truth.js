@@ -5,7 +5,7 @@ import { readJsonFile, readYamlFile } from '../loaders.js';
 import { validateAgainstSchema } from '../schema-validator.js';
 import { SUPPORTED_COMMAND_SUBJECTS } from './command-registry.js';
 
-const EXCLUDED_DOC_DIRS = new Set(['daemon', 'plans', 'research', 'audit']);
+const EXCLUDED_DOC_DIRS = new Set(['plans', 'research', 'audit']);
 
 function walkMarkdownFiles(dirPath, files = []) {
   for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {

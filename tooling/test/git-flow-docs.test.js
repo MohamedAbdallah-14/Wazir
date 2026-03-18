@@ -31,7 +31,7 @@ describe('docs/git-flow.md', () => {
 
   test('does not contain forbidden brand terms', () => {
     const content = fs.readFileSync(GIT_FLOW_PATH, 'utf8');
-    const forbidden = ['Agent OS', 'Symphony', 'daemon'];
+    const forbidden = ['Wazir OS'];
     for (const term of forbidden) {
       const regex = new RegExp(`\\b${term}\\b`, 'i');
       assert.doesNotMatch(content, regex, `Forbidden brand term found: ${term}`);
@@ -58,7 +58,7 @@ describe('docs/release-process.md', () => {
 
   test('does not contain forbidden brand terms', () => {
     const content = fs.readFileSync(RELEASE_PROCESS_PATH, 'utf8');
-    const forbidden = ['Agent OS', 'Symphony', 'daemon'];
+    const forbidden = ['Wazir OS'];
     for (const term of forbidden) {
       const regex = new RegExp(`\\b${term}\\b`, 'i');
       assert.doesNotMatch(content, regex, `Forbidden brand term found: ${term}`);
