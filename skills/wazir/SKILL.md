@@ -150,11 +150,21 @@ parallel_backend: none                 # none | claude_teams (future: subagents,
 
 # Phase policy (system-decided, not user-facing)
 phase_policy:
-  discover: { enabled: true, reason: "feature intent requires research" }
-  design: { enabled: true, reason: "new UI component" }
-  spec-challenge: { enabled: true, passes: 2, reason: "standard depth" }
-  author: { enabled: false, reason: "no i18n or seed data needed" }
-  plan-review: { enabled: true, passes: 1 }
+  discover:       { enabled: true, loop_cap: 10 }
+  clarify:        { enabled: true, loop_cap: 10 }
+  specify:        { enabled: true, loop_cap: 10 }
+  spec-challenge: { enabled: true, loop_cap: 10 }
+  author:         { enabled: false, loop_cap: 10 }
+  design:         { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }
+  plan:           { enabled: true, loop_cap: 10 }
+  plan-review:    { enabled: true, loop_cap: 10 }
+  execute:        { enabled: true, loop_cap: 10 }
+  verify:         { enabled: true, loop_cap: 5 }
+  review:         { enabled: true, loop_cap: 10 }
+  learn:          { enabled: false, loop_cap: 5 }
+  prepare_next:   { enabled: false, loop_cap: 5 }
+  run_audit:      { enabled: false, loop_cap: 10 }
 
 # Research
 research_topics: []                    # populated by researcher phase
@@ -176,15 +186,15 @@ Map intent + depth to applicable phases. The system decides — the user does NO
 |-------|--------|-------|
 | **Core** (always run) | `clarify`, `verify`, `review` | Never skipped |
 | **Adaptive** (run when evidence says so) | `discover`, `design`, `author`, `specify` | Skipped for bugfix/docs/spike at quick depth |
-| **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `design-review` | Single-pass at quick, multi-pass at deep |
+| **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `design-review` | Loop cap controls iteration depth |
 
 Log skip decisions to the run's `run-config.yaml` with reasons:
 
 ```yaml
 phase_policy:
-  discover: { enabled: true }
-  design: { enabled: false, reason: "bugfix intent — no design needed" }
-  spec-challenge: { enabled: true, passes: 1, reason: "quick depth" }
+  discover:       { enabled: true, loop_cap: 10 }
+  design:         { enabled: false, loop_cap: 10, reason: "bugfix intent — no design needed" }
+  spec-challenge: { enabled: true, loop_cap: 10 }
 ```
 
 ### Confidence Gate
@@ -192,7 +202,7 @@ phase_policy:
 After building the run config, evaluate confidence:
 
 - **High confidence** (clear intent, depth set, no ambiguity) — show a one-line summary and proceed:
-  > **Running: standard depth, feature, sequential. 11 of 14 phases. Proceeding...**
+  > **Running: standard depth, feature, sequential. 11 of 15 phases. Proceeding...**
 
 - **Low confidence** (ambiguous intent, unclear scope) — show the full plan and ask:
   > **Here's the run plan:**
@@ -205,11 +215,13 @@ After building the run config, evaluate confidence:
   > 1. **Yes, proceed** (Recommended)
   > 2. **No, let me adjust**
 
-## Step 4: Run Clarifier
+## Step 4: Run Pipeline Phases
 
-### Source Capture
+The full pipeline runs these phases in order. Each phase produces an artifact that must pass its review loop before flowing to the next phase. Review mode is always passed explicitly (`--mode`) -- no auto-detection.
 
-Before invoking the clarifier, instruct the researcher to capture all referenced sources locally:
+### 4a: Source Capture
+
+Before invoking the clarifier, capture all referenced sources locally:
 
 - Fetch all URLs referenced in `.wazir/input/` briefing files
 - Save fetched content to `.wazir/runs/<run-id>/sources/`
@@ -238,46 +250,115 @@ Before invoking the clarifier, instruct the researcher to capture all referenced
 
 Research briefs produced by the researcher must reference local paths (`sources/src-001-...`) instead of live URLs. The original URL is preserved in the manifest for provenance. Failures are recorded explicitly — never silently skipped.
 
-### Clarifier Invocation
+### 4b: Clarify (clarifier role)
 
-Invoke the `clarifier` skill.
+Invoke the clarifier skill for Phase 1A.
+Produces clarification artifact.
+Review: clarification-review loop (`--mode clarification-review`, spec/clarification dimensions).
+Pass count: quick=3, standard=5, deep=7. No extension.
+Checkpoint: user approves clarification.
 
-This runs the full Phase 0 + Phase 1 pipeline:
-- Phase 0: Research (autonomous — skipped if depth=quick and intent=bugfix)
-- Phase 1A: Clarify (autonomous)
-- Phase 1A+: Spec Harden (passes determined by depth)
-- Phase 1B: Brainstorm (interactive — **will pause for user approval**. If `team_mode: parallel`, uses structured dialogue with Free Thinker + Grounder + Synthesizer agents)
-- Phase 1C: Plan (task generation)
+### 4c: Research (researcher role via discover workflow)
 
-**Resume detection:** If `.wazir/runs/latest/clarified/` already has task specs and an execution plan, ask:
+Clarifier delegates to discover workflow (researcher role).
+Produces research artifact.
+Review: research-review loop (`--mode research-review`, research dimensions).
+Pass count: quick=3, standard=5, deep=7. No extension.
+Skip condition: depth=quick AND intent=bugfix.
 
-> **Clarification was already completed. What would you like to do?**
->
-> 1. **Skip to execution** (Recommended) — Use existing task specs
-> 2. **Re-run clarifier** — Start fresh
+### 4d: Specify (specifier role)
 
-## Step 5: Run Executor
+Delegate to specify workflow.
+Specifier produces measurable spec from clarification + research.
+Review: spec-challenge loop (`--mode spec-challenge`, spec/clarification dimensions).
+Pass count: quick=3, standard=5, deep=7. No extension.
+Checkpoint: user approves spec.
 
-Invoke the `executor` skill.
+### 4d.5: Author (content-author role) [ADAPTIVE]
 
-This runs Phase 2: autonomous execution with the composition engine, TDD, and quality gates.
+Enabled when `phase_policy.author.enabled = true` (default: false).
+Content-author writes non-code content artifacts.
+Approval gate: human approval required (not a review loop).
+Skip condition: disabled by default. Enable for content-heavy projects.
+
+### 4e: Brainstorm (designer role)
+
+Invoke brainstorming skill for Phase 1B.
+Interactive -- pauses for user approval of design concept.
+After user approval: design-review loop (`--mode design-review`,
+canonical design-review dimensions: spec coverage, design-spec consistency,
+accessibility, visual consistency, exported-code fidelity).
+Pass count: quick=3, standard=5, deep=7. No extension.
+Skip condition: intent=bugfix/docs.
+
+### 4f: Plan (planner role via wz:writing-plans)
+
+Delegate to `wz:writing-plans`.
+Planner produces execution plan and task specs.
+Review: plan-review loop (`--mode plan-review`, plan dimensions).
+Pass count: quick=3, standard=5, deep=7. No extension.
+Checkpoint: user approves plan.
+
+### 4g: Execute (executor role)
+
+Invoke executor skill for Phase 2.
+Per-task review: task-review loop (`--mode task-review --task-id <NNN>`,
+5 task-execution dimensions) before each commit.
+Review logs: `execute-task-<NNN>-review-pass-<N>.md`
+Cap tracking: `wazir capture loop-check --task-id <NNN>`
+Codex error handling: non-zero exit -> codex-unavailable, self-review only.
+NOTE: per-task review is NOT the final review.
 
 If `team_mode: parallel` in run-config, the executor spawns Agent Teams for independent tasks. Otherwise, tasks run sequentially.
 
-**Resume detection:** If `.wazir/runs/latest/artifacts/` has completed artifacts, ask:
+### 4h: Verify (verifier role)
 
-> **Some tasks are already completed. What would you like to do?**
+Deterministic verification of execution claims.
+Not a review loop -- produces proof, not findings.
+
+### 4i: Final Review (reviewer role in final mode)
+
+Invoke reviewer skill with `--mode final`.
+7-dimension scored review (correctness, completeness, wiring, verification,
+drift, quality, documentation). Score 0-70.
+This IS the scored final review gate.
+
+### 4j: Learn (learner role) [ADAPTIVE]
+
+Enabled when `phase_policy.learn.enabled = true` (default: false).
+Extract durable learnings from the completed run.
+No review loop. Learnings require explicit scope tags.
+Skip condition: disabled by default. Enable for retrospective runs.
+
+### 4k: Prepare Next (planner role) [ADAPTIVE]
+
+Enabled when `phase_policy.prepare_next.enabled = true` (default: false).
+Prepare context and handoff for the next run.
+No review loop. No implicit carry-forward of unapproved learnings.
+Skip condition: disabled by default.
+
+`run_audit` is NOT part of the pipeline flow -- it is an on-demand standalone phase invoked separately.
+
+### Resume Detection
+
+If the run has partial progress, detect the latest completed phase and resume:
+
+- If clarification exists but no spec: resume at 4d (specify)
+- If spec exists but no design: resume at 4e (brainstorm)
+- If design exists but no plan: resume at 4f (plan)
+- If plan exists but no task artifacts: resume at 4g (execute)
+- If task artifacts exist but no verification: resume at 4h (verify)
+- If verification exists: resume at 4i (final review)
+
+Present resume options:
+
+> **Previous progress detected (completed through [phase]).**
 >
-> 1. **Resume** (Recommended) — Continue from where it left off
-> 2. **Start fresh** — Re-run all tasks from scratch
+> **What would you like to do?**
+> 1. **Resume from [next phase]** (Recommended)
+> 2. **Start fresh** — Re-run all phases from scratch
 
-## Step 6: Run Reviewer
-
-Invoke the `reviewer` skill.
-
-This runs Phase 3: final scoring across 7 dimensions, produces a verdict.
-
-## Step 7: Present Results
+## Step 5: Present Results
 
 After the reviewer completes, present the verdict and offer next steps with numbered options:
 
@@ -364,7 +445,7 @@ After the audit completes:
 > 2. **Generate a fix plan** — turn findings into implementation tasks
 > 3. **Run the pipeline on the fix plan** — generate plan, then execute and review fixes
 
-If the user picks option 3, save the findings as the briefing and run the normal pipeline (Steps 3-7) with intent = `bugfix`.
+If the user picks option 3, save the findings as the briefing and run the normal pipeline (Steps 3-5) with intent = `bugfix`.
 
 ---
 

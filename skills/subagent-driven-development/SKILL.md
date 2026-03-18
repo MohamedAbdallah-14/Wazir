@@ -45,6 +45,7 @@ digraph process {
 
     subgraph cluster_per_task {
         label="Per Task";
+        "Capture PRE_TASK_SHA" [shape=box];
         "Dispatch implementer subagent (./implementer-prompt.md)" [shape=box];
         "Implementer subagent asks questions?" [shape=diamond];
         "Answer questions, provide context" [shape=box];
@@ -63,7 +64,8 @@ digraph process {
     "Dispatch final code reviewer subagent for entire implementation" [shape=box];
     "Use wz:finishing-a-development-branch" [shape=box style=filled fillcolor=lightgreen];
 
-    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Dispatch implementer subagent (./implementer-prompt.md)";
+    "Read plan, extract all tasks with full text, note context, create TodoWrite" -> "Capture PRE_TASK_SHA";
+    "Capture PRE_TASK_SHA" -> "Dispatch implementer subagent (./implementer-prompt.md)";
     "Dispatch implementer subagent (./implementer-prompt.md)" -> "Implementer subagent asks questions?";
     "Implementer subagent asks questions?" -> "Answer questions, provide context" [label="yes"];
     "Answer questions, provide context" -> "Implementer subagent implements, tests, commits, self-reviews";
@@ -78,11 +80,31 @@ digraph process {
     "Code quality reviewer subagent approves?" -> "Implementer subagent fixes quality issues" [label="no"];
     "Implementer subagent fixes quality issues" -> "Dispatch code quality reviewer subagent (./code-quality-reviewer-prompt.md)";
     "Mark task complete in TodoWrite" -> "More tasks remain?";
-    "More tasks remain?" -> "Dispatch implementer subagent (./implementer-prompt.md)" [label="yes"];
+    "More tasks remain?" -> "Capture PRE_TASK_SHA" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
     "Dispatch final code reviewer subagent for entire implementation" -> "Use wz:finishing-a-development-branch";
 }
 ```
+
+### Code Review Scoping
+
+The implementer subagent commits before review. The spec reviewer and code quality reviewer must use `codex review --base <pre-task-sha>` to scope their review to the task's changes. Capture `PRE_TASK_SHA=$(git rev-parse HEAD)` before dispatching the implementer.
+
+### Review Loop Alignment
+
+Both review stages follow the review loop pattern in `docs/reference/review-loop-pattern.md` with explicit `--mode task-review`:
+- **Spec compliance review:** Uses spec dimensions with `--mode task-review`
+- **Code quality review:** Uses 5 task-execution dimensions with `--mode task-review`
+
+Review logs use task-scoped filenames: `execute-task-<NNN>-review-pass-<N>.md`
+
+Each review stage respects the loop cap via `wazir capture loop-check --task-id <NNN>`. If the cap is reached (exit 43), escalate to the controller (you) for a decision.
+
+### Codex Error Handling
+
+If codex exits non-zero during review, log the error, mark the pass as codex-unavailable, and use self-review findings only. Do not treat a Codex failure as a clean pass.
+
+**Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/`.
 
 ## Prompt Templates
 
@@ -137,6 +159,7 @@ digraph process {
 - Let implementer self-review replace actual review (both are needed)
 - **Start code quality review before spec compliance is PASS** (wrong order)
 - Move to next task while either review has open issues
+- **Review the wrong diff -- always scope to the current task's changes using --base**
 
 **If subagent asks questions:**
 - Answer clearly and completely

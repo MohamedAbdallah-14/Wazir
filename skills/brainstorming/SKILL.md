@@ -12,8 +12,8 @@ Rules:
 1. Do not write implementation code before the design is reviewed with the operator.
 2. Ask clarifying questions only when the ambiguity changes scope, architecture, or acceptance criteria.
 3. Propose 2-3 approaches with trade-offs and a recommendation.
-4. Write the approved design to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
-5. Hand off to `wz:writing-plans` after approval.
+4. Write the approved design to `.wazir/runs/latest/clarified/design.md` (if inside a pipeline run) or `docs/plans/YYYY-MM-DD-<topic>-design.md` (if standalone).
+5. After user approves the design concept, the reviewer role runs the design-review loop with `--mode design-review` using canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. The designer resolves any findings. If the design-review loop completes all passes clean, hand off to `wz:writing-plans`. Planning does not start until design-review is complete.
 
 Required outputs:
 
@@ -74,4 +74,4 @@ The Synthesizer produces the design document following the same format as single
 - Open questions or resolved assumptions
 - Explicit recommendation and rejected alternatives
 
-The Synthesizer then writes the design to `docs/plans/YYYY-MM-DD-<topic>-design.md` and hands off to `wz:writing-plans`.
+The Synthesizer then writes the design to `.wazir/runs/latest/clarified/design.md` (if inside a pipeline run) or `docs/plans/YYYY-MM-DD-<topic>-design.md` (if standalone) and submits design for design-review loop (`--mode design-review`). After design-review is complete, hands off to `wz:writing-plans`.

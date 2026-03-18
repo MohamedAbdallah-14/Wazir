@@ -7,7 +7,7 @@ description: Use when completing tasks, implementing major features, or before m
 
 Dispatch wz:code-reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
 
-**Core principle:** Review early, review often.
+**Core principle:** Review early, review often. Review follows the loop pattern in `docs/reference/review-loop-pattern.md`. Dispatch the reviewer with explicit `--mode` and depth-aware loop parameters.
 
 ## When to Request Review
 
@@ -23,15 +23,28 @@ Dispatch wz:code-reviewer subagent to catch issues before they cascade. The revi
 
 ## How to Request
 
-**1. Get git SHAs:**
+**1. Get git SHAs and scope the review:**
+
+Use `--uncommitted` for uncommitted changes, `--base <sha>` for committed changes.
+
 ```bash
+# For committed changes:
 BASE_SHA=$(git rev-parse HEAD~1)  # or origin/main
 HEAD_SHA=$(git rev-parse HEAD)
+codex review --base $BASE_SHA
+
+# For uncommitted changes:
+codex review --uncommitted
 ```
 
-**2. Dispatch code-reviewer subagent:**
+**2. Dispatch code-reviewer subagent with loop config:**
 
 Use Task tool with wz:code-reviewer type, fill template at `./code-reviewer.md`
+
+Include explicit loop parameters:
+- `--mode` (e.g., `task-review`, `final`)
+- Depth-aware dimensions and cap from `phase_policy`
+- Review pass number (for log filenames)
 
 **Placeholders:**
 - `{WHAT_WAS_IMPLEMENTED}` - What you just built
@@ -39,12 +52,17 @@ Use Task tool with wz:code-reviewer type, fill template at `./code-reviewer.md`
 - `{BASE_SHA}` - Starting commit
 - `{HEAD_SHA}` - Ending commit
 - `{DESCRIPTION}` - Brief summary
+- `{REVIEW_MODE}` - Explicit review mode (e.g., task-review)
 
 **3. Act on feedback:**
 - Fix Critical issues immediately
 - Fix Important issues before proceeding
 - Note Minor issues for later
 - Push back if reviewer is wrong (with reasoning)
+
+### Codex Error Handling
+
+If codex exits non-zero during review, log the error, mark the pass as codex-unavailable, and use self-review findings only. Do not treat a Codex failure as a clean pass.
 
 ## Example
 
@@ -56,12 +74,13 @@ You: Let me request code review before proceeding.
 BASE_SHA=$(git log --oneline | grep "Task 1" | head -1 | awk '{print $1}')
 HEAD_SHA=$(git rev-parse HEAD)
 
-[Dispatch wz:code-reviewer subagent]
+[Dispatch wz:code-reviewer subagent with --mode task-review]
   WHAT_WAS_IMPLEMENTED: Verification and repair functions for conversation index
   PLAN_OR_REQUIREMENTS: Task 2 from docs/plans/deployment-plan.md
   BASE_SHA: a7981ec
   HEAD_SHA: 3df7661
   DESCRIPTION: Added verifyIndex() and repairIndex() with 4 issue types
+  REVIEW_MODE: task-review
 
 [Subagent returns]:
   Strengths: Clean architecture, real tests
@@ -82,7 +101,7 @@ You: [Fix progress indicators]
 - Fix before moving to next task
 
 **Executing Plans:**
-- Review after each batch (3 tasks)
+- Review after each task (per-task review checkpoint)
 - Get feedback, apply, continue
 
 **Ad-Hoc Development:**
@@ -96,6 +115,7 @@ You: [Fix progress indicators]
 - Ignore Critical issues
 - Proceed with unfixed Important issues
 - Argue with valid technical feedback
+- Dispatch review without explicit `--mode`
 
 **If reviewer wrong:**
 - Push back with technical reasoning

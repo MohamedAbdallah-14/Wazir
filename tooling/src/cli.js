@@ -8,6 +8,7 @@ import { runValidateCommand } from './commands/validate.js';
 import { runDoctorCommand } from './doctor/command.js';
 import { runExportCommand as runGeneratedExportCommand } from './export/command.js';
 import { runIndexCommand } from './index/command.js';
+import { runInitCommand } from './init/command.js';
 import { runRecallCommand } from './recall/command.js';
 import { runStatusCommand } from './status/command.js';
 
@@ -16,6 +17,7 @@ const COMMAND_FAMILIES = [
   'validate',
   'doctor',
   'index',
+  'init',
   'recall',
   'status',
   'capture'
@@ -26,6 +28,7 @@ const COMMAND_HANDLERS = {
   validate: runValidateCommand,
   doctor: runDoctorCommand,
   index: runIndexCommand,
+  init: runInitCommand,
   recall: runRecallCommand,
   status: runStatusCommand,
   capture: runCaptureCommand,
@@ -63,7 +66,7 @@ export function renderHelp() {
   ].join('\n');
 }
 
-export function main(argv = process.argv.slice(2)) {
+export async function main(argv = process.argv.slice(2)) {
   const parsed = parseArgs(argv);
 
   if (parsed.help || !parsed.command) {
@@ -86,7 +89,7 @@ export function main(argv = process.argv.slice(2)) {
   let result;
 
   try {
-    result = handler(parsed);
+    result = await handler(parsed);
   } catch (error) {
     console.error(error.message);
     return 1;
@@ -112,5 +115,7 @@ function isDirectExecution() {
 }
 
 if (isDirectExecution()) {
-  process.exitCode = main();
+  main().then((code) => {
+    process.exitCode = code;
+  });
 }

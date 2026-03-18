@@ -23,6 +23,10 @@ On entering this phase, run:
 - research artifact
 - cited findings
 
+## Review Loop
+
+Research artifact is reviewed by the reviewer role using the review loop pattern (`docs/reference/review-loop-pattern.md`) with research dimensions (coverage, source quality, relevance, gaps, contradictions). The reviewer is invoked with `--mode research-review`. The researcher resolves findings. Research does not flow to specify until all review passes complete.
+
 ## Approval Gate
 
 - no formal approval gate, but unsupported research cannot flow forward

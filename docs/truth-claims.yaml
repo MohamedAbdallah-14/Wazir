@@ -184,6 +184,12 @@
   subject: wazir capture usage
   verifier: command_registry
   required: true
+- id: command-capture-loop-check
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir capture loop-check
+  verifier: command_registry
+  required: true
 - id: command-validate-branches
   file: docs/reference/tooling-cli.md
   claim_type: command

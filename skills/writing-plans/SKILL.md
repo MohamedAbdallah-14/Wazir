@@ -11,9 +11,12 @@ Inputs:
 - current repo state
 - relevant research findings
 
-Output:
+Output path:
 
-- one implementation plan in `docs/plans/YYYY-MM-DD-<topic>-implementation.md`
+- **Inside a pipeline run** (`.wazir/runs/latest/` exists): write to `.wazir/runs/latest/clarified/execution-plan.md` and task specs to `.wazir/runs/latest/tasks/task-NNN/spec.md`
+- **Standalone** (no active run): write to `docs/plans/YYYY-MM-DD-<topic>-implementation.md`
+
+To detect: check if `.wazir/runs/latest/clarified/` exists. If yes, use run paths.
 
 The plan must include:
 
@@ -25,6 +28,28 @@ The plan must include:
 
 Rules:
 
-- do not write repo-local task files outside the plan directory
-- do not rely on retired `run-*` workflow wrappers
+- do not write implementation code during planning
 - make the plan detailed enough that another weak model can execute it without inventing missing steps
+- each task spec must have testable acceptance criteria, not vague descriptions
+
+## Plan Review Loop
+
+After writing the plan, the reviewer role runs the plan-review loop with `--mode plan-review` using plan dimensions (see `workflows/plan-review.md` and `docs/reference/review-loop-pattern.md`).
+
+The planner resolves findings from each pass. The loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7). No extension.
+
+For non-code artifacts (the plan itself), Codex review uses stdin pipe:
+
+```
+cat <plan-path> | codex exec "Review this implementation plan focusing on [dimension]..."
+```
+
+`codex review` is used only for code artifacts, not plans.
+
+Codex error handling: if `codex` exits non-zero, log the error, mark the pass as `codex-unavailable`, and use self-review findings only. Never treat a Codex failure as a clean pass.
+
+Loop depth follows the project's depth config (quick/standard/deep).
+
+Standalone mode: if no `.wazir/runs/latest/` exists, artifacts go to `docs/plans/` and review logs go alongside (`docs/plans/YYYY-MM-DD-<topic>-review-pass-N.md`). Loop cap guard is not invoked in standalone mode.
+
+After the loop completes, present findings summary and wait for user approval before completing.

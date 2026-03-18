@@ -11,6 +11,14 @@ Code review requires technical evaluation, not emotional performance.
 
 **Core principle:** Verify before implementing. Ask before assuming. Technical correctness over social comfort.
 
+## Loop Tracking
+
+When receiving review findings, the fix-and-re-review cycle follows the review loop pattern:
+- **Pipeline mode** (`.wazir/runs/latest/` exists): track iterations via `wazir capture loop-check`. If the cap is reached (exit 43), escalate to the user with current state and evidence.
+- **Standalone mode** (no `.wazir/runs/latest/`): the loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7) with no cap guard. Track iteration count manually.
+
+Reference `docs/reference/review-loop-pattern.md` for the full loop contract.
+
 ## The Response Pattern
 
 ```

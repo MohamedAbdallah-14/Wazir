@@ -32,6 +32,10 @@ On entering this phase, run:
 On completing this phase, run:
 `wazir capture event --run <run-id> --event phase_exit --phase <phase-name> --status completed`
 
+## Relationship to Review Loops
+
+Verification is invoked per-task during execution, not as a review loop. It produces deterministic proof, not adversarial findings.
+
 ## Failure Conditions
 
 - stale or partial verification

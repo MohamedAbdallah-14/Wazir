@@ -16,7 +16,9 @@ import {
   writeStatus,
   writeSummary,
 } from './store.js';
+import { readRunConfig, getPhaseLoopCap } from './run-config.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
+import { evaluateLoopCapGuard } from '../guards/loop-cap-guard.js';
 
 function formatResult(payload, options = {}) {
   if (options.json) {
@@ -68,6 +70,7 @@ function resolveCaptureContext(parsed, context = {}) {
       'capture-path',
       'command',
       'exit-code',
+      'task-id',
     ],
   });
   const stateRoot = resolveStateRoot(projectRoot, manifest, {
@@ -346,6 +349,84 @@ function handleUsage(parsed, context = {}) {
   };
 }
 
+function handleLoopCheck(parsed, context = {}) {
+  const { stateRoot, options } = resolveCaptureContext(parsed, context);
+
+  requireOption(options, 'run', 'Usage: wazir capture loop-check --run <id> --phase <phase> --loop-count <n> [--task-id <id>] [--state-root <path>] [--json]');
+  requireOption(options, 'phase', 'Usage: wazir capture loop-check --run <id> --phase <phase> --loop-count <n> [--task-id <id>] [--state-root <path>] [--json]');
+  requireOption(options, 'loopCount', 'Usage: wazir capture loop-check --run <id> --phase <phase> --loop-count <n> [--task-id <id>] [--state-root <path>] [--json]');
+
+  const runPaths = getRunPaths(stateRoot, options.run);
+
+  // Standalone mode: if status.json doesn't exist, allow (exit 0)
+  if (!fs.existsSync(runPaths.statusPath)) {
+    const notice = 'loop-check: standalone mode (no status.json), allowing.\n';
+    return {
+      exitCode: 0,
+      stdout: options.json ? `${JSON.stringify({ allowed: true, reason: 'standalone mode' }, null, 2)}\n` : '',
+      stderr: options.json ? '' : notice,
+    };
+  }
+
+  // Record the event and update loop count in status.json
+  const status = readStatus(runPaths);
+  const loopCount = parsePositiveInteger(options.loopCount, '--loop-count');
+  const loopPhase = options.phase;
+  const loopKey = options.taskId ? `${loopPhase}:${options.taskId}` : loopPhase;
+
+  status.phase_loop_counts = {
+    ...(status.phase_loop_counts ?? {}),
+    [loopKey]: loopCount,
+  };
+
+  const event = createBaseEvent('loop_iteration', {
+    run_id: options.run,
+    phase: loopPhase,
+    status: status.status,
+    loop_count: loopCount,
+    loop_key: loopKey,
+  });
+
+  if (options.taskId) {
+    event.task_id = options.taskId;
+  }
+
+  status.updated_at = event.created_at;
+  status.last_event = 'loop_iteration';
+
+  appendEvent(runPaths, event);
+  writeStatus(runPaths, status);
+
+  // Read run-config for loop_cap
+  const runConfig = readRunConfig(runPaths);
+  const loopCap = getPhaseLoopCap(runConfig, loopPhase);
+
+  // Evaluate the guard
+  const guardResult = evaluateLoopCapGuard({
+    run_id: options.run,
+    phase: loopKey,
+    state_root: stateRoot,
+    loop_cap: loopCap,
+  });
+
+  if (!guardResult.allowed) {
+    return {
+      exitCode: 43,
+      stderr: `${guardResult.reason}\n`,
+      stdout: options.json ? `${JSON.stringify(guardResult, null, 2)}\n` : '',
+    };
+  }
+
+  return formatResult({
+    run_id: options.run,
+    phase: loopPhase,
+    loop_key: loopKey,
+    loop_count: loopCount,
+    loop_cap: loopCap,
+    allowed: true,
+  }, { json: options.json });
+}
+
 export function runCaptureCommand(parsed, context = {}) {
   try {
     switch (parsed.subcommand) {
@@ -361,10 +442,12 @@ export function runCaptureCommand(parsed, context = {}) {
         return handleSummary(parsed, context);
       case 'usage':
         return handleUsage(parsed, context);
+      case 'loop-check':
+        return handleLoopCheck(parsed, context);
       default:
         return {
           exitCode: 1,
-          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage> ...\n',
+          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check> ...\n',
         };
     }
   } catch (error) {

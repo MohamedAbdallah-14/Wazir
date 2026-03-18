@@ -30,6 +30,7 @@ Default approach: recall L1 (structural summaries)
 - clarification artifact
 - unresolved questions list
 - scope summary with cited sources
+- emits clarification artifact for reviewer loops
 
 ## Escalation Rules
 
@@ -40,3 +41,5 @@ Default approach: recall L1 (structural summaries)
 - leaves material ambiguity unresolved without escalation
 - mutates `input/`
 - invents constraints or facts without evidence
+- self-reviews own output instead of delegating to reviewer
+- performs research inline instead of delegating to discover workflow

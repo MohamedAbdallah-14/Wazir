@@ -31,6 +31,7 @@ Default approach: recall L1 (structural summaries)
 - research artifact with citations
 - finding summaries linked to sources
 - open risks and unknowns
+- submits research artifact for reviewer evaluation before it flows downstream
 
 ## Escalation Rules
 
@@ -41,3 +42,4 @@ Default approach: recall L1 (structural summaries)
 - unsupported claims
 - stale or missing citations
 - substituting confidence for evidence
+- research artifact used downstream without passing review

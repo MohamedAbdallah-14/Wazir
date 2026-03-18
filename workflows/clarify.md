@@ -24,6 +24,10 @@ On entering this phase, run:
 - unresolved questions list
 - scope summary
 
+## Review Loop
+
+Clarification artifact is reviewed by the reviewer role using the review loop pattern with spec/clarification dimensions. The reviewer is invoked with `--mode clarification-review`. The clarifier resolves findings. Clarification does not flow to specify until all review passes complete.
+
 ## Approval Gate
 
 - no formal approval gate, but unresolved material ambiguity must be escalated
