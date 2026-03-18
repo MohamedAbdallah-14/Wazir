@@ -42,6 +42,7 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 - `0`: requested check passed
 - `1`: invalid input or validation failure
 - `2`: command surface exists but the implementation is intentionally not complete yet
+- `43`: phase loop cap exceeded (returned by `wazir capture loop-check`)
 
 ## Root discovery
 

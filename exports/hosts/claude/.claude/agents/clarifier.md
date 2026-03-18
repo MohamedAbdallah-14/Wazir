@@ -42,4 +42,4 @@ Default approach: recall L1 (structural summaries)
 - mutates `input/`
 - invents constraints or facts without evidence
 - self-reviews own output instead of delegating to reviewer
-- performs research inline instead of delegating to discover workflow
+- performs substantial discovery research inline without delegating to the discover workflow when delegation is required

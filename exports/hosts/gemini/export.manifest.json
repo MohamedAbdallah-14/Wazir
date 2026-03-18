@@ -2,7 +2,7 @@
   "host": "gemini",
   "source_hashes": {
     "wazir.manifest.yaml": "ae49e943639828932d5289f34f2994f1efb67df4f552f5bfabbb1c823b662e43",
-    "roles/clarifier.md": "22ca12715102d5ca5679208e6a86710af72ef832e6017eaa52c0b26126180a59",
+    "roles/clarifier.md": "1e1b8a2c05f1070fdcef485963cfcbffff62c4b2703a8d73fe51ac52d056e573",
     "roles/content-author.md": "cc20b80bd70ab68b3239a9cf56bf1ffc2c06843d38afc6b190844b35a1d73c3e",
     "roles/designer.md": "76cff5bda82975cfb4074de71681e7c8ba284e2e49d0cc98f90208642fef74fc",
     "roles/executor.md": "874625f62fb4bcce70c3d1554152e0e2cd3345cfe34220eec9fa0027b19c750c",
@@ -14,7 +14,7 @@
     "roles/verifier.md": "ce8e200439190643a02ffe31f72e4b4ec319ccff9f0841cc3138eb517af5fed3",
     "workflows/author.md": "81844443743540b21dd990fa93e59d8898216e498acde920e7007f8b81cef107",
     "workflows/clarify.md": "6db1bc65a61e3227649ed65f15de9a88500ea4239b388918c82d474ef92f0030",
-    "workflows/design-review.md": "3aa190da1ed6f2a50b80fedcff421c98c2432ae824a7dabe85cafadf2bcf565c",
+    "workflows/design-review.md": "96e454283af28f02a4d7b03f4edfa5c00d02107fcfa3d0c8f19e640f56027845",
     "workflows/design.md": "7f69758b22f88c12d16846ac1dd444f4e178ab116559ef9f2f26f6daa1a10d62",
     "workflows/discover.md": "0696add486f739a46ed4c2b71b67bdda3ab9fea2d1395e662191282529ed21d2",
     "workflows/execute.md": "33428704476877b2c8cf34c6eda3a56d1fd71e8bbea0f05c122bb3da2c6475a6",

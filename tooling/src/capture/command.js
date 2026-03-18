@@ -401,7 +401,10 @@ function handleLoopCheck(parsed, context = {}) {
   const runConfig = readRunConfig(runPaths);
   const loopCap = getPhaseLoopCap(runConfig, loopPhase);
 
-  // Evaluate the guard
+  // Evaluate the guard using loopKey (task-scoped or phase-scoped).
+  // Cap is per-phase but counts are per-task — each task gets its own
+  // budget up to the phase cap. This is intentional: task-scoped tracking
+  // prevents parallel tasks from sharing a single counter.
   const guardResult = evaluateLoopCapGuard({
     run_id: options.run,
     phase: loopKey,

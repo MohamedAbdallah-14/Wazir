@@ -41,7 +41,7 @@ On completing this phase, run:
 
 ## Loop Structure
 
-Follows the review loop pattern in `docs/reference/review-loop-pattern.md` with the canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The designer role resolves findings. Fires after user approves the design concept in brainstorming. Pass count determined by depth. No extension.
+Follows the review loop pattern in `docs/reference/review-loop-pattern.md` with the canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The designer role resolves findings. Starts when the approved design artifact enters the `design_review` phase. Pass count determined by depth. No extension.
 
 ## Failure Conditions
 
