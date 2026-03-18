@@ -7,7 +7,7 @@ description: Use when you have a written implementation plan to execute in a sep
 
 ## Overview
 
-Load plan, review critically, execute all tasks, report when complete.
+Load plan, review critically, execute all tasks with per-task review checkpoints, report when complete.
 
 **Announce at start:** "I'm using the executing-plans skill to implement this plan."
 
@@ -27,7 +27,18 @@ For each task:
 1. Mark as in_progress
 2. Follow each step exactly (plan has bite-sized steps)
 3. Run verifications as specified
-4. Mark as completed
+4. Review BEFORE marking complete (per-task review, 5 task-execution dimensions):
+   - Run task-review loop with `--mode task-review`
+   - Use `codex review --uncommitted` for uncommitted changes, or `codex review --base <sha>` if already committed
+   - Codex error handling: if codex exits non-zero, log the error, mark the pass as codex-unavailable, and use self-review findings only. Do not treat a Codex failure as a clean pass.
+   - Resolve all findings before proceeding
+   - Log to: `.wazir/runs/latest/reviews/execute-task-<NNN>-review-pass-<N>.md`
+   - Cap tracking: `wazir capture loop-check --task-id <NNN>`
+   - This is NOT the final scored review -- it is a per-task gate using 5 task-execution dimensions
+   - See `docs/reference/review-loop-pattern.md` for the full review loop contract
+5. Only after review passes: mark as completed, commit
+
+**Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/` alongside the artifact. The loop runs for `pass_counts[depth]` passes with no cap guard.
 
 ### Step 3: Complete Development
 
@@ -58,9 +69,11 @@ After all tasks complete and verified:
 - Review plan critically first
 - Follow plan steps exactly
 - Don't skip verifications
+- Don't skip per-task review -- it catches issues before they cascade to later tasks
 - Reference skills when plan says to
 - Stop when blocked, don't guess
 - Never start implementation on main/master branch without explicit user consent
+- Review loop pattern: see `docs/reference/review-loop-pattern.md`
 
 ## Integration
 

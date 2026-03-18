@@ -520,3 +520,196 @@ describe('capture handler wiring', () => {
     }
   });
 });
+
+describe('loop-check', () => {
+  function writeRunConfig(stateRoot, runId, yamlContent) {
+    const runRoot = path.join(stateRoot, 'runs', runId);
+    fs.mkdirSync(runRoot, { recursive: true });
+    fs.writeFileSync(path.join(runRoot, 'run-config.yaml'), yamlContent);
+  }
+
+  test('loop-check within cap', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-within';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarify', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      writeRunConfig(fixture.stateRoot, runId, 'phase_policy:\n  clarify: { enabled: true, loop_cap: 10 }\n');
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '1', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: ${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.allowed, true);
+      assert.strictEqual(payload.loop_cap, 10);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('loop-check at cap', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-at';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarify', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      // Pre-set phase_loop_counts to 10 in status.json so the guard sees count=10
+      const statusPath = path.join(fixture.stateRoot, 'runs', runId, 'status.json');
+      const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+      status.phase_loop_counts = { clarify: 10 };
+      fs.writeFileSync(statusPath, JSON.stringify(status, null, 2));
+
+      writeRunConfig(fixture.stateRoot, runId, 'phase_policy:\n  clarify: { enabled: true, loop_cap: 10 }\n');
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '10', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 43, `expected exit 43 but got ${result.exitCode}: stdout=${result.stdout} stderr=${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.allowed, false);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('loop-check over cap', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-over';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarify', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      writeRunConfig(fixture.stateRoot, runId, 'phase_policy:\n  clarify: { enabled: true, loop_cap: 10 }\n');
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '11', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 43, `expected exit 43 but got ${result.exitCode}: stdout=${result.stdout} stderr=${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.allowed, false);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('loop-check standalone mode', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-standalone';
+      // Do NOT init a run — no status.json exists
+      // Just ensure the run directory exists so the CLI can resolve paths
+      const runRoot = path.join(fixture.stateRoot, 'runs', runId);
+      fs.mkdirSync(runRoot, { recursive: true });
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '5', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: ${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.allowed, true);
+      assert.strictEqual(payload.reason, 'standalone mode');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('loop-check with --task-id', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-taskid';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarify', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      writeRunConfig(fixture.stateRoot, runId, 'phase_policy:\n  clarify: { enabled: true, loop_cap: 10 }\n');
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '3', '--task-id', 'task-42', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: ${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.loop_key, 'clarify:task-42');
+
+      // Verify the status.json also has the composite key
+      const statusPath = path.join(fixture.stateRoot, 'runs', runId, 'status.json');
+      const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+      assert.strictEqual(status.phase_loop_counts['clarify:task-42'], 3);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('loop-check without --task-id', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-notaskid';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarify', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      writeRunConfig(fixture.stateRoot, runId, 'phase_policy:\n  clarify: { enabled: true, loop_cap: 10 }\n');
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '2', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: ${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.loop_key, 'clarify');
+
+      // Verify the status.json key is just the phase (no task-id suffix)
+      const statusPath = path.join(fixture.stateRoot, 'runs', runId, 'status.json');
+      const status = JSON.parse(fs.readFileSync(statusPath, 'utf8'));
+      assert.strictEqual(status.phase_loop_counts['clarify'], 2);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('loop-check missing run-config.yaml', () => {
+    const fixture = createCaptureFixture();
+    try {
+      const runId = 'run-lc-noconfig';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarify', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      // Do NOT create run-config.yaml — should fall back to default cap of 10
+
+      const result = runCli(
+        ['capture', 'loop-check', '--run', runId, '--phase', 'clarify', '--loop-count', '1', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: ${result.stderr}`);
+      const payload = JSON.parse(result.stdout);
+      assert.strictEqual(payload.allowed, true);
+      assert.strictEqual(payload.loop_cap, 10, 'should use default cap of 10 when run-config.yaml is missing');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+});

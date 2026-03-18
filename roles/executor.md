@@ -31,6 +31,7 @@ Default approach: direct file read (full content)
 - code and docs changes
 - execution notes
 - verification evidence
+- submits per-task output for review before commit
 
 ## Git-Flow Responsibilities
 
@@ -53,3 +54,4 @@ All text outputs (code comments, commit messages, PR descriptions, CHANGELOG ent
 - unwired paths
 - fake tests
 - writes to protected paths outside approved flows
+- commits before review passes

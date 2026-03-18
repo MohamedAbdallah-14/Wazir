@@ -24,6 +24,10 @@ On entering this phase, run:
 - acceptance criteria
 - assumptions and non-goals
 
+## Review Loop
+
+Spec artifact is reviewed via the spec-challenge workflow (`workflows/spec-challenge.md`) using the review loop pattern with spec dimensions. The reviewer is invoked with `--mode spec-challenge`. The specifier resolves findings.
+
 ## Approval Gate
 
 - explicit human approval required before planning

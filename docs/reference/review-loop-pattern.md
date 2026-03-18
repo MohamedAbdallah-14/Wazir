@@ -1,0 +1,429 @@
+# Review Loop Pattern Reference
+
+Canonical reference for the review loop pattern used across all Wazir pipeline phases. Skills and workflows link to this document rather than embedding loop logic inline.
+
+---
+
+## Core Principle: Producer-Reviewer Separation
+
+The producer skill (clarifier, planner, designer, etc.) **emits** an artifact and calls for review. The **reviewer role** owns the review loop. The producer receives findings and resolves them. No role reviews its own output.
+
+```
+Producer emits artifact
+  -> Reviewer runs review loop (N passes, Codex if available)
+  -> Findings returned to producer
+  -> Producer fixes and resubmits
+  -> Loop until all passes exhausted or cap reached
+  -> Escalate to user if cap exceeded
+```
+
+When Codex is available, the reviewer role delegates to `codex review` as a secondary input while maintaining its own independent primary verdict.
+
+---
+
+## Per-Task Review vs Final Review
+
+These are two structurally different constructs:
+
+| | Per-Task Review | Final Review |
+|---|---|---|
+| **When** | During execution, after each task | After all execution + verification complete |
+| **Dimensions** | 5 task-execution dims (correctness, tests, wiring, drift, quality) | 7 scored dims (correctness, completeness, wiring, verification, drift, quality, documentation) |
+| **Scope** | Single task's uncommitted changes | Entire implementation vs spec/plan |
+| **Output** | Pass/fix loop, no score | Scored verdict (0-70), PASS/FAIL |
+| **Workflow** | Inline in execution flow | `workflows/review.md` |
+| **Skill** | `wz:reviewer` in `task-review` mode | `wz:reviewer` in `final` mode |
+| **Log filename** | `<phase>-task-<NNN>-review-pass-<N>.md` | `final-review.md` |
+
+---
+
+## Standalone Mode
+
+When no `.wazir/runs/latest/` directory exists (standalone skill invocation outside a pipeline run):
+
+1. **Review loops still run** -- the review logic is embedded in the skill, not dependent on run state.
+2. **Artifact location** -- artifacts live in `docs/plans/`. This is the canonical standalone artifact path.
+3. **Review log location** -- review logs go alongside the artifact: `docs/plans/YYYY-MM-DD-<topic>-review-pass-<N>.md`. No temp dir.
+4. **Loop cap is SKIPPED entirely** -- no `wazir capture loop-check` call. The loop runs for exactly `pass_counts[depth]` passes (3/5/7) and stops. No cap guard, no fallback constant.
+5. **`wazir capture loop-check`** -- not invoked in standalone mode. The standalone detection happens before the cap guard call.
+
+Detection logic:
+
+```
+if .wazir/runs/latest/ exists:
+  run_mode = "pipeline"
+  log_dir = .wazir/runs/latest/reviews/
+  cap_guard = wazir capture loop-check (full guard)
+else:
+  run_mode = "standalone"
+  artifact_dir = docs/plans/
+  log_dir = docs/plans/  (alongside artifact)
+  cap_guard = none (depth pass count is the only limit)
+```
+
+---
+
+## Review Loop Pseudocode
+
+```
+review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
+
+  # options.mode      -- explicit review mode (required)
+  # options.task_id   -- task identifier for task-scoped reviews (optional)
+
+  # Standalone detection
+  run_mode = detect_run_mode()  # "pipeline" or "standalone"
+
+  # Fixed pass counts -- no extension
+  pass_counts = { quick: 3, standard: 5, deep: 7 }
+  total_passes = pass_counts[depth]
+
+  # Depth-aware dimension subsets (coverage contract)
+  depth_dimensions = {
+    quick:    dimensions[0:3],     # first 3 dimensions only
+    standard: dimensions[0:5],     # first 5
+    deep:     dimensions,          # all available
+  }
+  active_dims = depth_dimensions[depth]
+
+  codex_available = check_codex()  # which codex && codex --version
+
+  for pass_number in 0..total_passes-1:
+
+    # --- Cap guard check (pipeline mode only, before each pass) ---
+    if run_mode == "pipeline":
+      loop_check_args = "--run <run-id> --phase <phase> --loop-count <pass_number+1>"
+      if options.task_id:
+        loop_check_args += " --task-id <task_id>"
+      wazir capture loop-check $loop_check_args
+      # loop-check wraps: event capture + evaluateLoopCapGuard
+      # If loop_cap_guard fires (exit 43), stop immediately:
+      if last_exit_code == 43:
+        log("Loop cap reached for phase: <phase>. Escalating to user.")
+        escalate_to_user(evidence_gathered_so_far)
+        return { pass_count: pass_number, escalated: true }
+    # Standalone mode: no cap guard. Loop runs for total_passes and stops.
+
+    dimension = active_dims[pass_number % len(active_dims)]
+
+    # --- Primary review (reviewer role, not producer) ---
+    # Mode is always explicit -- passed by caller via options.mode
+    findings = self_review(artifact_path, focus=dimension, mode=options.mode)
+
+    # --- Secondary review (Codex, if available) ---
+    if codex_available:
+      codex_exit_code, codex_output = run_codex_review(artifact_path, dimension)
+      if codex_exit_code != 0:
+        # Codex failed -- log error, fall back to self-review for this pass
+        log_error("Codex exited " + codex_exit_code + ": " + codex_output.stderr)
+        mark_pass_codex_unavailable(pass_number)
+        # Do NOT treat Codex failure as clean. Self-review findings stand alone.
+      else:
+        codex_findings = parse(codex_output.stdout)
+        merge(findings, codex_findings, preserve_attribution=true)
+
+    # --- Log the review pass ---
+    if run_mode == "pipeline":
+      if options.task_id:
+        log_path = .wazir/runs/latest/reviews/<phase>-task-<task_id>-review-pass-<N>.md
+      else:
+        log_path = .wazir/runs/latest/reviews/<phase>-review-pass-<N>.md
+      log(pass_number+1, dimension, findings) -> log_path
+    else:
+      log_path = docs/plans/YYYY-MM-DD-<topic>-review-pass-<N>.md
+      log(pass_number+1, dimension, findings) -> log_path
+
+    if findings.has_issues:
+      # --- Fix inline, do NOT return ---
+      producer_fix(artifact_path, findings)
+      # Continue to next pass -- the fix will be re-reviewed
+
+  return { pass_count: total_passes, issues_found, issues_fixed, remaining, attributions }
+```
+
+Key properties of this pseudocode:
+
+1. **Fixed pass counts** -- Quick is exactly 3, standard exactly 5, deep exactly 7. No `max_passes = min_passes + 3`. No clean-streak early-exit. No extension.
+2. **Task-scoped log filenames** -- `<phase>-task-<NNN>-review-pass-<N>.md` for per-task reviews, preventing log clobbering in parallel mode.
+3. **Task-scoped loop cap keys** -- `--task-id` flag on `loop-check` so each task gets its own counter in `phase_loop_counts`.
+4. **Explicit review mode** -- `options.mode` is always passed by the caller. No auto-detection.
+5. **Codex error handling** -- non-zero exit is logged, pass marked `codex-unavailable`, self-review findings used alone. Never treated as clean.
+6. **Standalone mode** -- uses `docs/plans/` for artifacts and logs. No temp dir. No cap guard at all.
+
+---
+
+## Codex Error Handling Contract
+
+```
+run_codex_review(artifact_path, dimension):
+  CODEX_MODEL = read_config('.wazir/state/config.json', '.multi_tool.codex.model') or "gpt-5.4"
+
+  if is_code_artifact:
+    cmd = codex review -c model="$CODEX_MODEL" --uncommitted --title "..." "Review for [dimension]..."
+    # or: codex review -c model="$CODEX_MODEL" --base <sha> for committed changes
+  else:
+    cmd = cat <artifact_path> | codex exec -c model="$CODEX_MODEL" "Review this [type] for [dimension]..."
+
+  result = execute(cmd, timeout=120s, capture_stderr=true)
+
+  if result.exit_code != 0:
+    return (result.exit_code, { stderr: result.stderr, stdout: "" })
+    # Caller handles: log error, mark codex-unavailable, use self-review only
+
+  return (0, { stdout: result.stdout, stderr: result.stderr })
+```
+
+Rules:
+
+- If Codex exits non-zero, log the full stderr.
+- Mark the pass as `codex-unavailable` in the review log metadata.
+- Fall back to self-review for that pass only. Do not skip the pass.
+- Do not retry Codex on the same pass. If Codex fails on pass 2, pass 3 still tries Codex (transient failures recover).
+- Never treat a Codex failure as a clean review pass.
+
+---
+
+## Codex Availability Probe
+
+Before any Codex call, verify availability once at loop start:
+
+```bash
+which codex >/dev/null 2>&1 && codex --version >/dev/null 2>&1
+```
+
+If the probe fails, set `codex_available = false` for the entire loop. Fall back to self-review only. Never error out.
+
+Per-invocation failures (Codex available but a single call fails) are handled separately by the error contract above.
+
+---
+
+## Codex Artifact-Scoped Review
+
+Never use `codex review` for non-code artifacts (specs, plans, designs). Instead, pipe the artifact content via stdin:
+
+```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+cat .wazir/runs/latest/clarified/spec-hardened.md | \
+  codex exec -c model="$CODEX_MODEL" "Review this specification for: [dimension]. Be specific, cite sections. Say CLEAN if no issues." \
+  2>&1 | tee .wazir/runs/latest/reviews/spec-challenge-review-pass-N.md
+```
+
+For code artifacts, use `codex review -c model="$CODEX_MODEL" --uncommitted` (or `--base` for committed changes). See the next section for details.
+
+---
+
+## Code Review Scoping
+
+**Rule: review BEFORE commit.**
+
+For each task during execution:
+
+1. Implement the task (changes are uncommitted).
+2. Review the uncommitted changes using the **5 task-execution dimensions** (NOT the 7 final-review dimensions):
+   ```bash
+   CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+   codex review -c model="$CODEX_MODEL" --uncommitted --title "Task NNN: <summary>" \
+     "Review against acceptance criteria: <criteria>" \
+     2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
+   ```
+3. Fix any findings (still uncommitted).
+4. Re-review until all passes exhausted or cap reached.
+5. **Only after review passes:** commit with conventional commit format.
+
+**If changes are already committed** (e.g., subagent workflow where the implementer subagent commits before review):
+
+```bash
+# Capture the SHA before the task starts
+PRE_TASK_SHA=$(git rev-parse HEAD)
+
+# ... subagent implements and commits ...
+
+# Review the committed changes against the pre-task baseline
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <summary>" \
+  "Review against acceptance criteria: <criteria>" \
+  2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
+```
+
+---
+
+## Dimension Sets
+
+### Research Dimensions (5)
+
+1. **Coverage** -- all briefing topics researched
+2. **Source quality** -- authoritative, current sources
+3. **Relevance** -- research answers the actual questions
+4. **Gaps** -- missing info that blocks later phases
+5. **Contradictions** -- conflicting sources identified
+
+### Spec/Clarification Dimensions (5)
+
+1. **Completeness** -- all requirements covered
+2. **Testability** -- each criterion verifiable
+3. **Ambiguity** -- no dual-interpretation statements
+4. **Assumptions** -- hidden assumptions explicit
+5. **Scope creep** -- nothing beyond briefing
+
+### Design-Review Dimensions (5)
+
+Matches canonical `workflows/design-review.md`:
+
+1. **Spec coverage** -- does the design address every acceptance criterion with a visual component?
+2. **Design-spec consistency** -- does the design introduce anything not in the spec? (scope creep check)
+3. **Accessibility** -- color contrast ratios (WCAG 2.1 AA), focus states, touch target sizes (44x44px minimum)
+4. **Visual consistency** -- design tokens form a coherent system, dark/light mode alignment
+5. **Exported-code fidelity** -- do exported scaffolds match the designs? Mismatches are failures here, not implementation concerns.
+
+### Plan Dimensions (7)
+
+1. **Completeness** -- all design decisions mapped to tasks
+2. **Ordering** -- dependencies correct, parallelizable identified
+3. **Atomicity** -- each task fits one session
+4. **Testability** -- concrete verification per task
+5. **Edge cases** -- error paths covered
+6. **Security** -- auth, injection, data exposure
+7. **Integration** -- tasks connect end-to-end
+
+### Task Execution Dimensions (5)
+
+Used for per-task review during execution:
+
+1. **Correctness** -- code matches spec
+2. **Tests** -- real tests, not mocked/faked
+3. **Wiring** -- all paths connected
+4. **Drift** -- matches task spec
+5. **Quality** -- naming, error handling
+
+### Final Review Dimensions (7)
+
+Used for `workflows/review.md` scored gate:
+
+1. **Correctness** -- does the code do what the spec says?
+2. **Completeness** -- are all acceptance criteria met?
+3. **Wiring** -- are all paths connected end-to-end?
+4. **Verification** -- is there evidence (tests, type checks) for each claim?
+5. **Drift** -- does the implementation match the approved plan?
+6. **Quality** -- code style, naming, error handling, security
+7. **Documentation** -- changelog entries, commit messages, comments
+
+The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. `workflows/review.md` is not modified by this pattern.
+
+---
+
+## Per-Depth Coverage Contract
+
+| Depth | Research | Spec | Design-Review | Plan | Task Execution | Final Review |
+|-------|----------|------|---------------|------|----------------|--------------|
+| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
+| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
+| Deep | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-7, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
+
+Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 7 dimensions -- it is a gate, not a loop.
+
+---
+
+## Loop Cap Configuration
+
+The `phase_policy` section of `run-config.yaml` controls which phases are enabled and sets an absolute safety ceiling per phase. Only two fields exist: `enabled` and `loop_cap`. There is no `passes` field -- depth determines pass counts (3/5/7), not phase policy.
+
+```yaml
+phase_policy:
+  discover:       { enabled: true, loop_cap: 10 }
+  clarify:        { enabled: true, loop_cap: 10 }
+  specify:        { enabled: true, loop_cap: 10 }
+  spec-challenge: { enabled: true, loop_cap: 10 }
+  author:         { enabled: false, loop_cap: 10 }
+  design:         { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }
+  plan:           { enabled: true, loop_cap: 10 }
+  plan-review:    { enabled: true, loop_cap: 10 }
+  execute:        { enabled: true, loop_cap: 10 }
+  verify:         { enabled: true, loop_cap: 5 }
+  review:         { enabled: true, loop_cap: 10 }
+  learn:          { enabled: false, loop_cap: 5 }
+  prepare_next:   { enabled: false, loop_cap: 5 }
+  run_audit:      { enabled: false, loop_cap: 10 }
+```
+
+**`loop_cap`** is an absolute safety ceiling that prevents runaway loops regardless of depth. It is checked by `wazir capture loop-check` in pipeline mode. It is NOT the same as pass count (which is determined by depth: 3/5/7). Example: depth=deep gives 7 passes, but if `loop_cap: 5`, the cap guard fires at pass 5 and escalates. This is intentional -- the operator can constrain expensive phases.
+
+**Adaptive phases** (`author`, `learn`, `prepare_next`, `run_audit`) default to `enabled: false`. They are activated by explicit operator config or intent detection. They do not participate in the standard review loop pattern because:
+
+- `author` has a human approval gate, not an iterative review loop.
+- `learn` extracts learnings from the completed run -- it is post-execution housekeeping.
+- `prepare_next` prepares context for the next run -- it is a handoff phase.
+- `run_audit` is an on-demand standalone audit, not part of the main pipeline flow.
+
+---
+
+## Reviewer Mode Table
+
+The reviewer skill operates in different modes depending on the phase. **Mode is always explicit** -- the caller passes `--mode <mode>`. There is no auto-detection based on artifact availability.
+
+| Mode | Invoked during | Prerequisites | Dimensions | Output |
+|------|---------------|---------------|------------|--------|
+| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
+| `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Findings with severity, no score |
+| `design-review` | After design approval | Design artifact, approved spec, accessibility guidelines | 5 design-review dims (canonical) | Findings with severity (blocking/advisory) |
+| `plan-review` | After planning | Draft plan, approved spec, design artifact | 7 plan dims | Findings with severity, no score |
+| `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA) | 5 task-execution dims | Pass/fail per task, no score |
+| `research-review` | During discover | Research artifact | 5 research dims | Findings with severity, no score |
+| `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Findings with severity, no score |
+
+If `--mode` is not provided, the reviewer asks the user which review to run. Auto-detection based on artifact availability is NOT used -- it causes ambiguity in resumed/multi-phase runs where stale artifacts from prior phases exist.
+
+Each caller is responsible for passing the correct mode:
+
+- Clarifier passes `--mode clarification-review` after Phase 1A
+- Discover workflow passes `--mode research-review` after research
+- Specifier flow passes `--mode spec-challenge` after specify
+- Brainstorming passes `--mode design-review` after user approval
+- Writing-plans passes `--mode plan-review` after planning
+- Executor passes `--mode task-review` for each task
+- `/wazir` runner passes `--mode final` for the final review gate
+
+---
+
+## Codex Prompt Templates
+
+All Codex invocations read the model from config with a fallback:
+
+```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+```
+
+### Artifact Review (specs, plans, designs via stdin)
+
+Use this template with `codex exec` for non-code artifacts piped via stdin:
+
+```bash
+cat <artifact_path> | codex exec -c model="$CODEX_MODEL" \
+  "You are reviewing a [ARTIFACT_TYPE] for the Wazir engineering OS.
+Focus on [DIMENSION]: [dimension description].
+Rules: cite specific sections, be actionable, say CLEAN if no issues.
+Do NOT load or invoke any skills. Do NOT read the codebase.
+Review ONLY the content provided via stdin."
+```
+
+Replace `[ARTIFACT_TYPE]` with: `specification`, `implementation plan`, `design document`, `research brief`, or `clarification`.
+Replace `[DIMENSION]` and `[dimension description]` with the current review pass dimension from the relevant dimension set above.
+
+### Code Review (diffs via --uncommitted or --base)
+
+Use this template with `codex review` for code changes:
+
+```bash
+codex review -c model="$CODEX_MODEL" --uncommitted --title "Task NNN: <summary>" \
+  "Review the code changes for [DIMENSION]: [dimension description].
+Check against acceptance criteria: [criteria].
+Flag: correctness issues, missing tests, unwired paths, drift from spec.
+Do NOT load or invoke any skills."
+```
+
+For committed changes, replace `--uncommitted` with `--base <sha>`.
+Replace `[DIMENSION]`, `[dimension description]`, and `[criteria]` with the task-specific values from the execution plan and spec.

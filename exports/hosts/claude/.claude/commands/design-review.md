@@ -39,6 +39,10 @@ On rejection: `wazir capture event --run <run-id> --event gate_rejected --phase 
 On completing this phase, run:
 `wazir capture event --run <run-id> --event phase_exit --phase <phase-name> --status completed`
 
+## Loop Structure
+
+Follows the review loop pattern in `docs/reference/review-loop-pattern.md` with the canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The designer role resolves findings. Starts when the approved design artifact enters the `design_review` phase. Pass count determined by depth. No extension.
+
 ## Failure Conditions
 
 - vague findings without visual evidence

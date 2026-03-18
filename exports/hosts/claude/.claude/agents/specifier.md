@@ -31,6 +31,9 @@ Default approach: recall L1 (structural summaries)
 - spec artifact
 - measurable acceptance criteria
 - explicit non-goals and assumptions
+- emits spec artifact for spec-challenge review loop
+
+Spec is not approved until it survives the spec-challenge loop owned by the reviewer role.
 
 ## Writing Quality
 

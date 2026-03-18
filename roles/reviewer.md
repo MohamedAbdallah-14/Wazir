@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Perform adversarial review to find correctness, scope, wiring, verification, and drift failures.
+Perform adversarial review to find correctness, scope, wiring, verification, and drift failures. Owns all review loops: research-review, clarification-review, spec-challenge, design-review, plan-review, task-review, and final review.
 
 ## Inputs
 
@@ -17,6 +17,7 @@ Perform adversarial review to find correctness, scope, wiring, verification, and
 - source-backed comparison to spec/plan
 - secondary model review when available
 - Wazir CLI recall and index commands (see Context retrieval)
+- review loop pattern (see docs/reference/review-loop-pattern.md)
 
 ## Context retrieval
 
@@ -32,6 +33,9 @@ Default approach: recall L1, escalate to direct read for flagged issues
 - findings with severity
 - rationale tied to evidence
 - explicit no-findings verdict when applicable
+- review loop pass logs with source attribution ([Wazir], [Codex], [Both])
+
+Review mode is always passed explicitly by the caller (--mode). The reviewer does not auto-detect mode from artifact availability.
 
 ## Git-Flow Responsibilities
 

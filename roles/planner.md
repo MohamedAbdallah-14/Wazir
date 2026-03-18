@@ -32,6 +32,9 @@ Default approach: recall L1 (structural summaries)
 - implementation plan artifact
 - ordered task list
 - verification plan per section
+- emits plan artifact for plan-review loop
+
+Plan is not approved until it survives the plan-review loop owned by the reviewer role.
 
 ## Git-Flow Responsibilities
 

@@ -37,6 +37,10 @@ On rejection: `wazir capture event --run <run-id> --event gate_rejected --phase 
 On completing this phase, run:
 `wazir capture event --run <run-id> --event phase_exit --phase <phase-name> --status completed`
 
+## Loop Structure
+
+Follows the review loop pattern in `docs/reference/review-loop-pattern.md` with plan dimensions. The planner role resolves findings. Pass count determined by depth. No extension.
+
 ## Failure Conditions
 
 - sequence gaps survive review

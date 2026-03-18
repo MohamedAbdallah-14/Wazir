@@ -25,6 +25,10 @@ On entering this phase, run:
 - implementation plan artifact
 - ordered tasks and verification steps
 
+## Review Loop
+
+Plan artifact is reviewed via the plan-review workflow (`workflows/plan-review.md`) using the review loop pattern with plan dimensions. The reviewer is invoked with `--mode plan-review`.
+
 ## Approval Gate
 
 - explicit human approval required before execution

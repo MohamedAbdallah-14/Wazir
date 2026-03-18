@@ -43,7 +43,17 @@ Follow this order:
 
    Apply the minimum corrective change, then rerun the failing check and the relevant broader verification set.
 
-Rules:
+## Loop Cap Awareness
+
+Debugging loops respect the loop cap when running inside a pipeline:
+- **Pipeline mode** (`.wazir/runs/latest/` exists): use `wazir capture loop-check` to track iteration count. If the cap is reached (exit 43), escalate to the user with all evidence collected so far.
+- **Standalone mode** (no `.wazir/runs/latest/`): the loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7) with no cap guard. Track iteration count manually.
+
+In standalone mode, any debug logs go to `docs/plans/` alongside the artifact.
+
+See `docs/reference/review-loop-pattern.md` for cap guard integration.
+
+## Rules
 
 - change one thing at a time
 - keep evidence for each failed hypothesis

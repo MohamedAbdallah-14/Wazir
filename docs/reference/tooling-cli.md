@@ -35,12 +35,14 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 | `wazir capture output` | implemented | Writes captured tool output to a run-local file and records a `post_tool_capture` event. |
 | `wazir capture summary` | implemented | Writes `summary.md` and records the chosen summary or handoff event. |
 | `wazir capture usage` | implemented | Generates a token savings report for a run, showing capture routing statistics and context window savings. |
+| `wazir capture loop-check` | implemented | Records a loop iteration event and evaluates the loop cap guard. Exits 43 if the phase loop cap is exceeded. Accepts `--task-id` for task-scoped cap tracking. In standalone mode (no status.json), exits 0. |
 
 ## Exit codes
 
 - `0`: requested check passed
 - `1`: invalid input or validation failure
 - `2`: command surface exists but the implementation is intentionally not complete yet
+- `43`: phase loop cap exceeded (returned by `wazir capture loop-check`)
 
 ## Root discovery
 

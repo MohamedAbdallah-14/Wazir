@@ -34,6 +34,10 @@ If either check fails:
 - code and docs changes
 - execution notes
 
+## Per-Task Review
+
+Each task's output is reviewed using the review loop pattern with the 5 task-execution dimensions (correctness, tests, wiring, drift, quality). The reviewer is invoked with `--mode task-review --task-id <NNN>`. This is NOT the final review -- it is a per-task gate. Review happens BEFORE commit. Review logs use task-scoped filenames: `<phase>-task-<NNN>-review-pass-<N>.md`. See `docs/reference/review-loop-pattern.md` for code review scoping rules.
+
 ## Approval Gate
 
 - no new scope without explicit approval
