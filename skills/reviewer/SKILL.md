@@ -25,6 +25,10 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 
 Each mode follows the review loop pattern in `docs/reference/review-loop-pattern.md`. Pass counts are fixed by depth (quick=3, standard=5, deep=7). No extension.
 
+### CHANGELOG Enforcement
+
+In `task-review` and `final` modes, flag missing CHANGELOG entries for user-facing changes as **[warning]** severity. User-facing changes include new features, behavior changes, and bug fixes visible to users. Internal changes (refactors, tooling, tests) do not require CHANGELOG entries.
+
 ## Prerequisites
 
 Prerequisites depend on the review mode:
@@ -82,13 +86,17 @@ If `codex` is in `multi_tool.tools`:
 
 1. Run Codex review against the current changes:
    ```bash
-   codex review --uncommitted --title "Wazir review: <brief summary>" \
+   CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+   CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+   codex review -c model="$CODEX_MODEL" --uncommitted --title "Wazir review: <brief summary>" \
      "Review against these acceptance criteria: <paste criteria from spec>" \
      2>&1 | tee .wazir/runs/latest/reviews/codex-review.md
    ```
    Or if changes are committed:
    ```bash
-   codex review --base <base-branch> --title "Wazir review: <brief summary>" \
+   CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+   CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+   codex review -c model="$CODEX_MODEL" --base <base-branch> --title "Wazir review: <brief summary>" \
      "Review against these acceptance criteria: <paste criteria from spec>" \
      2>&1 | tee .wazir/runs/latest/reviews/codex-review.md
    ```
@@ -101,7 +109,7 @@ If `codex` is in `multi_tool.tools`:
 **Code review scoping by mode:**
 - Use `--uncommitted` when reviewing uncommitted changes (`task-review` mode).
 - Use `--base <sha>` when reviewing committed changes.
-- Use `codex exec` with stdin pipe for non-code artifacts (`spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes).
+- Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes).
 - See `docs/reference/review-loop-pattern.md` for code review scoping rules.
 
 ### Gemini Review

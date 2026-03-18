@@ -156,11 +156,13 @@ Key properties of this pseudocode:
 
 ```
 run_codex_review(artifact_path, dimension):
+  CODEX_MODEL = read_config('.wazir/state/config.json', '.multi_tool.codex.model') or "gpt-5.4"
+
   if is_code_artifact:
-    cmd = codex review --uncommitted --title "..." "Review for [dimension]..."
-    # or: codex review --base <sha> for committed changes
+    cmd = codex review -c model="$CODEX_MODEL" --uncommitted --title "..." "Review for [dimension]..."
+    # or: codex review -c model="$CODEX_MODEL" --base <sha> for committed changes
   else:
-    cmd = cat <artifact_path> | codex exec "Review this [type] for [dimension]..."
+    cmd = cat <artifact_path> | codex exec -c model="$CODEX_MODEL" "Review this [type] for [dimension]..."
 
   result = execute(cmd, timeout=120s, capture_stderr=true)
 
@@ -197,15 +199,17 @@ Per-invocation failures (Codex available but a single call fails) are handled se
 
 ## Codex Artifact-Scoped Review
 
-Never use `codex review --uncommitted` for non-code artifacts (specs, plans, designs). Instead, pipe the artifact content via stdin:
+Never use `codex review` for non-code artifacts (specs, plans, designs). Instead, pipe the artifact content via stdin:
 
 ```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
 cat .wazir/runs/latest/clarified/spec-hardened.md | \
-  codex exec "Review this specification for: [dimension]. Be specific, cite sections. Say CLEAN if no issues." \
+  codex exec -c model="$CODEX_MODEL" "Review this specification for: [dimension]. Be specific, cite sections. Say CLEAN if no issues." \
   2>&1 | tee .wazir/runs/latest/reviews/spec-challenge-review-pass-N.md
 ```
 
-For code artifacts, use `codex review --uncommitted` (or `--base` for committed changes). See the next section for details.
+For code artifacts, use `codex review -c model="$CODEX_MODEL" --uncommitted` (or `--base` for committed changes). See the next section for details.
 
 ---
 
@@ -218,7 +222,9 @@ For each task during execution:
 1. Implement the task (changes are uncommitted).
 2. Review the uncommitted changes using the **5 task-execution dimensions** (NOT the 7 final-review dimensions):
    ```bash
-   codex review --uncommitted --title "Task NNN: <summary>" \
+   CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+   codex review -c model="$CODEX_MODEL" --uncommitted --title "Task NNN: <summary>" \
      "Review against acceptance criteria: <criteria>" \
      2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
    ```
@@ -235,7 +241,9 @@ PRE_TASK_SHA=$(git rev-parse HEAD)
 # ... subagent implements and commits ...
 
 # Review the committed changes against the pre-task baseline
-codex review --base $PRE_TASK_SHA --title "Task NNN: <summary>" \
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <summary>" \
   "Review against acceptance criteria: <criteria>" \
   2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
 ```
@@ -377,3 +385,45 @@ Each caller is responsible for passing the correct mode:
 - Writing-plans passes `--mode plan-review` after planning
 - Executor passes `--mode task-review` for each task
 - `/wazir` runner passes `--mode final` for the final review gate
+
+---
+
+## Codex Prompt Templates
+
+All Codex invocations read the model from config with a fallback:
+
+```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+```
+
+### Artifact Review (specs, plans, designs via stdin)
+
+Use this template with `codex exec` for non-code artifacts piped via stdin:
+
+```bash
+cat <artifact_path> | codex exec -c model="$CODEX_MODEL" \
+  "You are reviewing a [ARTIFACT_TYPE] for the Wazir engineering OS.
+Focus on [DIMENSION]: [dimension description].
+Rules: cite specific sections, be actionable, say CLEAN if no issues.
+Do NOT load or invoke any skills. Do NOT read the codebase.
+Review ONLY the content provided via stdin."
+```
+
+Replace `[ARTIFACT_TYPE]` with: `specification`, `implementation plan`, `design document`, `research brief`, or `clarification`.
+Replace `[DIMENSION]` and `[dimension description]` with the current review pass dimension from the relevant dimension set above.
+
+### Code Review (diffs via --uncommitted or --base)
+
+Use this template with `codex review` for code changes:
+
+```bash
+codex review -c model="$CODEX_MODEL" --uncommitted --title "Task NNN: <summary>" \
+  "Review the code changes for [DIMENSION]: [dimension description].
+Check against acceptance criteria: [criteria].
+Flag: correctness issues, missing tests, unwired paths, drift from spec.
+Do NOT load or invoke any skills."
+```
+
+For committed changes, replace `--uncommitted` with `--base <sha>`.
+Replace `[DIMENSION]`, `[dimension description]`, and `[criteria]` with the task-specific values from the execution plan and spec.

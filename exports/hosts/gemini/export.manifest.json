@@ -27,7 +27,7 @@
     "workflows/spec-challenge.md": "dc99137c28c49a6f8312924709afb6077754d128e90466dc911150ce15737897",
     "workflows/specify.md": "53b84e74871f6dbd93cae22a881cc5907e398b29501d0a1fa08c7ed69df705cb",
     "workflows/verify.md": "45f9c189520dfe9d24c0bc340a15e6a80c988fca1b84dc187627032a6dbaee16",
-    "hooks/definitions/loop_cap_guard.yaml": "143ecda8f47dd299182dfe9cea2fb3f15a82a8d1f179b100a9e539d83f639b57",
+    "hooks/definitions/loop_cap_guard.yaml": "f0fd220e028ab6fad3d8fd650602884fe500ca4899eff6e428cf217af058618d",
     "hooks/definitions/post_tool_capture.yaml": "a773cd6e18972dee8eef3b7cb06fd1d319a71de4588897cebfbe643f6781a3b2",
     "hooks/definitions/pre_compact_summary.yaml": "daa0175d79f3e0127c5ce86a7a2f8df0be3f58b5c94fe749da715a17c7b2d04e",
     "hooks/definitions/pre_tool_capture_route.yaml": "3c2663380ff3cd09f09de5b96bcf6123266fa74d8a03dfb2d6fbe40a43fb13cf",

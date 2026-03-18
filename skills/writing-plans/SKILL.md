@@ -40,11 +40,13 @@ The planner resolves findings from each pass. The loop runs for `pass_counts[dep
 
 For non-code artifacts (the plan itself), Codex review uses stdin pipe:
 
-```
-cat <plan-path> | codex exec "Review this implementation plan focusing on [dimension]..."
+```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+cat <plan-path> | codex exec -c model="$CODEX_MODEL" "Review this implementation plan focusing on [dimension]..."
 ```
 
-`codex review` is used only for code artifacts, not plans.
+`codex review -c model="$CODEX_MODEL"` is used only for code artifacts, not plans.
 
 Codex error handling: if `codex` exits non-zero, log the error, mark the pass as `codex-unavailable`, and use self-review findings only. Never treat a Codex failure as a clean pass.
 

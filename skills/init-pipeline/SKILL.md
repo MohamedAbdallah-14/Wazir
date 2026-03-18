@@ -23,6 +23,8 @@ Run `which wazir` to check if the CLI is installed.
 > 2. **Local link** — `npm link` from the Wazir project root
 > 3. **Skip** — Continue without the CLI (some features will be unavailable)
 
+Wait for the user to answer before continuing.
+
 If the user picks 1, run `npm install -g @wazir-dev/cli` and verify with `wazir --version`.
 If the user picks 2, run `npm link` from the project root and verify.
 If the user picks 3, warn that `wazir capture`, `wazir validate`, and `wazir index` commands will not work, then continue to the manual steps below.
@@ -57,7 +59,7 @@ Only ask this if the user selected option 3:
 
 > **Which external tools should Wazir use for reviews?**
 >
-> 1. **Codex** — Send reviews to OpenAI Codex
+> 1. **Codex** (Recommended) — Send reviews to OpenAI Codex
 > 2. **Gemini** — Send reviews to Google Gemini
 > 3. **Both** — Use Codex and Gemini as secondary reviewers
 

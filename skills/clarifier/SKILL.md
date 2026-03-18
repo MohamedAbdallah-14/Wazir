@@ -122,19 +122,28 @@ Present the changes made during hardening:
 
 ## Phase 1B: Brainstorm (interactive — always pauses)
 
-Invoke the `brainstorming` skill and follow it.
+Invoke the `brainstorming` skill (`wz:brainstorming`) and follow it.
 
 This phase explores design approaches:
 1. Propose 2-3 viable approaches with explicit trade-offs
 2. For each approach: effort estimate, risk assessment, what it enables/prevents
 3. Recommend one approach with rationale
 
-If `team_mode: parallel` in config, use Claude Code Agent Teams with `TeamCreate` to spawn a structured dialogue:
-- **Free Thinker** — generates creative approaches without self-censoring
-- **Grounder** — challenges each approach with practical concerns
-- **Synthesizer** — merges the dialogue into actionable options
+If `team_mode: parallel` in config, the brainstorming skill activates its
+**Agent Teams Structured Dialogue** mode:
 
-The user communicates via `SendMessage` to the team.
+1. Checks that `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled (falls back
+   to single-agent brainstorming if not)
+2. Creates a team via `TeamCreate` (`wazir-brainstorm-<concept-slug>`)
+3. Spawns three teammates via `Agent` with `team_name`:
+   - **Free Thinker** — proposes creative directions via `SendMessage`
+   - **Grounder** — challenges each direction with practical concerns via `SendMessage`
+   - **Synthesizer** — observes silently, writes the design document on convergence
+4. You (the Arbiter) coordinate the dialogue, signal convergence, and clean up
+   with `TeamDelete`
+
+See `skills/brainstorming/SKILL.md` "Team Mode: Agent Teams Structured Dialogue"
+for full spawn prompts, convergence criteria, and constraints.
 
 ### Checkpoint 1B: Design Approval
 

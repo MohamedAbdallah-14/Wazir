@@ -32,7 +32,8 @@ For each task:
 3. **Verify** — run tests, type checks, linting as appropriate
 4. **Review BEFORE commit** (per-task review, NOT final review):
    - Reviewer runs task-review loop with `--mode task-review` using 5 task-execution dimensions (correctness, tests, wiring, drift, quality)
-   - Uses `codex review --uncommitted` for the current task's changes
+   - Reads the Codex model from config: `CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null); CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}`
+   - Uses `codex review -c model="$CODEX_MODEL" --uncommitted` for the current task's changes
    - Codex error handling: if codex exits non-zero, log error, mark pass as `codex-unavailable`, use self-review only for that pass. Do NOT treat a Codex failure as a clean review. Do NOT skip the pass. The next pass still attempts Codex (transient failures may recover).
    - Executor resolves findings, reviewer re-reviews
    - Loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7). No extension.
@@ -41,9 +42,10 @@ For each task:
    - See `docs/reference/review-loop-pattern.md` for full protocol
    - NOTE: this is the per-task review (5 dims), not the final scored review (7 dims) which runs later in `/wazir:reviewer --mode final`
 5. **Commit** — only after review passes, commit with conventional commit format: `<type>(<scope>): <description>`
-6. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
+6. **CHANGELOG** — if the change is user-facing (new feature, behavior change, bug fix visible to users), update `CHANGELOG.md` `[Unreleased]` section. If not user-facing (refactor, internal tooling, tests), skip.
+7. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
 
-Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. Code review scoping: review uncommitted changes before commit. If changes are already committed (subagent workflow), use `codex review --base <pre-task-sha>`.
+Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. Code review scoping: review uncommitted changes before commit. If changes are already committed (subagent workflow), use `codex review -c model="$CODEX_MODEL" --base <pre-task-sha>`.
 
 If `team_mode: parallel` in config, spawn Agent Teams for independent tasks. Otherwise, tasks run sequentially.
 

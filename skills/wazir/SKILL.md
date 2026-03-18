@@ -63,13 +63,45 @@ Run `which wazir` to check if the CLI is installed.
 >
 > 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
 > 2. **Local link** — `npm link` from the Wazir project root
-> 3. **Skip** — Continue without the CLI (some features will be unavailable)
 
 If the user picks 1, run `npm install -g @wazir-dev/cli` and verify with `wazir --version`.
 If the user picks 2, run `npm link` from the project root and verify.
-If the user picks 3, warn that `wazir capture`, `wazir validate`, and `wazir index` commands will not work, then continue.
+
+The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution. There is no skip option.
 
 **If installed**, run `wazir doctor --json` to verify repo health.
+
+If doctor reports unhealthy:
+> **Repo health check failed:** [details from doctor output]
+> Fix issues before running the pipeline.
+
+Stop. Do NOT continue the pipeline until the health check passes.
+
+### Branch Check
+
+Run `wazir validate branches` to check the current git branch.
+
+- If on `main` or `develop`:
+  > You're on **[branch]**. The pipeline requires a feature branch.
+  >
+  > 1. **Create feat/<slug>** (Recommended) — branch from current
+  > 2. **Continue on [branch]** — not recommended for feature/refactor work
+
+  Wait for the user to answer before continuing.
+
+- If branch name is invalid (not `feat/`, `fix/`, `chore/`, etc.): warn but continue.
+
+### Index Check
+
+```bash
+INDEX_STATS=$(wazir index stats --json 2>/dev/null)
+FILE_COUNT=$(echo "$INDEX_STATS" | jq -r '.file_count // 0')
+if [ "$FILE_COUNT" -eq 0 ]; then
+  wazir index build && wazir index summarize --tier all
+else
+  wazir index refresh
+fi
+```
 
 ### Pipeline Init Check
 
@@ -88,6 +120,12 @@ ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
 ```
 
 If a previous completed run exists (check for a `completed_at` field in the previous `latest` run's `run-config.yaml`), record its `run_id` as `parent_run_id` in the new run's config.
+
+After creating the run directory, initialize event capture:
+
+```bash
+wazir capture init --run <run-id> --phase clarify --status starting
+```
 
 ## Step 3: Pre-Flight Configuration
 
@@ -252,13 +290,25 @@ Research briefs produced by the researcher must reference local paths (`sources/
 
 ### 4b: Clarify (clarifier role)
 
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase clarify --status in_progress
+```
+
 Invoke the clarifier skill for Phase 1A.
 Produces clarification artifact.
 Review: clarification-review loop (`--mode clarification-review`, spec/clarification dimensions).
 Pass count: quick=3, standard=5, deep=7. No extension.
 Checkpoint: user approves clarification.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase clarify --status completed
+```
+
 ### 4c: Research (researcher role via discover workflow)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase discover --status in_progress
+```
 
 Clarifier delegates to discover workflow (researcher role).
 Produces research artifact.
@@ -266,7 +316,15 @@ Review: research-review loop (`--mode research-review`, research dimensions).
 Pass count: quick=3, standard=5, deep=7. No extension.
 Skip condition: depth=quick AND intent=bugfix.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase discover --status completed
+```
+
 ### 4d: Specify (specifier role)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase specify --status in_progress
+```
 
 Delegate to specify workflow.
 Specifier produces measurable spec from clarification + research.
@@ -274,14 +332,30 @@ Review: spec-challenge loop (`--mode spec-challenge`, spec/clarification dimensi
 Pass count: quick=3, standard=5, deep=7. No extension.
 Checkpoint: user approves spec.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase specify --status completed
+```
+
 ### 4d.5: Author (content-author role) [ADAPTIVE]
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase author --status in_progress
+```
 
 Enabled when `phase_policy.author.enabled = true` (default: false).
 Content-author writes non-code content artifacts.
 Approval gate: human approval required (not a review loop).
 Skip condition: disabled by default. Enable for content-heavy projects.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase author --status completed
+```
+
 ### 4e: Brainstorm (designer role)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase design --status in_progress
+```
 
 Invoke brainstorming skill for Phase 1B.
 Interactive -- pauses for user approval of design concept.
@@ -291,7 +365,15 @@ accessibility, visual consistency, exported-code fidelity).
 Pass count: quick=3, standard=5, deep=7. No extension.
 Skip condition: intent=bugfix/docs.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase design --status completed
+```
+
 ### 4f: Plan (planner role via wz:writing-plans)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase plan --status in_progress
+```
 
 Delegate to `wz:writing-plans`.
 Planner produces execution plan and task specs.
@@ -299,7 +381,22 @@ Review: plan-review loop (`--mode plan-review`, plan dimensions).
 Pass count: quick=3, standard=5, deep=7. No extension.
 Checkpoint: user approves plan.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase plan --status completed
+```
+
 ### 4g: Execute (executor role)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase execute --status in_progress
+```
+
+**Pre-execution gate** — run before the first task:
+
+```bash
+wazir validate manifest && wazir validate hooks
+# If either fails, stop and report the failure. Do NOT proceed to task execution.
+```
 
 Invoke executor skill for Phase 2.
 Per-task review: task-review loop (`--mode task-review --task-id <NNN>`,
@@ -311,17 +408,37 @@ NOTE: per-task review is NOT the final review.
 
 If `team_mode: parallel` in run-config, the executor spawns Agent Teams for independent tasks. Otherwise, tasks run sequentially.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase execute --status completed
+```
+
 ### 4h: Verify (verifier role)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase verify --status in_progress
+```
 
 Deterministic verification of execution claims.
 Not a review loop -- produces proof, not findings.
 
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase verify --status completed
+```
+
 ### 4i: Final Review (reviewer role in final mode)
+
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase review --status in_progress
+```
 
 Invoke reviewer skill with `--mode final`.
 7-dimension scored review (correctness, completeness, wiring, verification,
 drift, quality, documentation). Score 0-70.
 This IS the scored final review gate.
+
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase review --status completed
+```
 
 ### 4j: Learn (learner role) [ADAPTIVE]
 
@@ -402,6 +519,15 @@ After the reviewer completes, present the verdict and offer next steps with numb
 > [full findings]
 >
 > Something fundamental went wrong. Review the findings above and decide how to proceed.
+
+### Run Summary
+
+After presenting results (regardless of verdict), capture the run summary:
+
+```bash
+wazir capture summary --run <run-id>
+wazir status --run <run-id> --json
+```
 
 ## Error Handling
 
