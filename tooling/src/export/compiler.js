@@ -140,6 +140,10 @@ function renderCursorHooks() {
         command: './hooks/loop-cap-guard',
       },
       {
+        name: 'context-mode-router',
+        command: './hooks/context-mode-router',
+      },
+      {
         name: 'session-start',
         command: './hooks/session-start',
       },

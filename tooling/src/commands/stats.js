@@ -34,8 +34,10 @@ function buildStatsPayload(usage) {
   const totalBytesAvoided = (cr.raw_bytes ?? 0) - (cr.summary_bytes ?? 0) + (iq.bytes_avoided ?? 0);
 
   const crRawTokens = crTokensSaved + estimateTokens(cr.summary_bytes ?? 0);
-  const withoutSavings = crRawTokens + cmRawTokens + (co.pre_compaction_tokens_est ?? 0);
-  const withAll = estimateTokens(cr.summary_bytes ?? 0) + cmAfterTokens + (co.post_compaction_tokens_est ?? 0);
+  const iqRawTokens = estimateTokens(iq.total_raw_bytes ?? 0);
+  const iqAfterTokens = estimateTokens(iq.total_summary_bytes ?? 0);
+  const withoutSavings = crRawTokens + cmRawTokens + (co.pre_compaction_tokens_est ?? 0) + iqRawTokens;
+  const withAll = estimateTokens(cr.summary_bytes ?? 0) + cmAfterTokens + (co.post_compaction_tokens_est ?? 0) + iqAfterTokens;
   const savingsRatio = withoutSavings > 0
     ? `${((1 - withAll / withoutSavings) * 100).toFixed(1)}%`
     : '0.0%';

@@ -17,6 +17,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Accepted learnings injected into clarifier context (top 10 by confidence, scope-matched)
 - Prepare-next skill produces structured handoff document
 
+### Fixed
+- Router logs now write to manifest-derived state root instead of `_default` (Codex P1)
+- Routing log replay scoped to current run via timestamp filtering (Codex P2)
+- Index-query savings now computed from avoided bytes, not raw bytes (Codex P2)
+- Index-query savings included in savings-ratio denominator (Codex P2)
+- Cursor export now includes context-mode-router hook (Codex P2)
+
 ### Added
 - Core review loop pattern across all pipeline phases with Codex CLI integration
 - `wazir capture loop-check` CLI subcommand with task-scoped cap tracking and run-config loader

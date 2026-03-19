@@ -220,8 +220,8 @@ describe('recordIndexQuery', () => {
       assert.strictEqual(iq.count, 1);
       assert.strictEqual(iq.total_raw_bytes, 5000);
       assert.strictEqual(iq.total_summary_bytes, 200);
-      assert.strictEqual(iq.estimated_tokens_saved, estimateTokens(5000));
       assert.strictEqual(iq.bytes_avoided, 4800);
+      assert.strictEqual(iq.estimated_tokens_saved, estimateTokens(4800));
     } finally {
       cleanup();
     }
@@ -248,8 +248,8 @@ describe('recordIndexQuery', () => {
       assert.strictEqual(iq.count, 2);
       assert.strictEqual(iq.total_raw_bytes, 10000);
       assert.strictEqual(iq.total_summary_bytes, 500);
-      assert.strictEqual(iq.estimated_tokens_saved, estimateTokens(10000));
       assert.strictEqual(iq.bytes_avoided, 9500);
+      assert.strictEqual(iq.estimated_tokens_saved, estimateTokens(9500));
     } finally {
       cleanup();
     }

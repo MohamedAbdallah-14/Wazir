@@ -211,8 +211,8 @@ export function recordIndexQuery(runPaths, { query, file_count_in_results, media
   iq.count += 1;
   iq.total_raw_bytes += rawBytes;
   iq.total_summary_bytes += summary_bytes;
-  iq.estimated_tokens_saved = estimateTokens(iq.total_raw_bytes);
   iq.bytes_avoided = iq.total_raw_bytes - iq.total_summary_bytes;
+  iq.estimated_tokens_saved = estimateTokens(iq.bytes_avoided);
 
   writeUsageAtomic(runPaths, usage);
 }
@@ -233,6 +233,17 @@ export function consumeRoutingLog(runPaths) {
 
   const usage = readUsage(runPaths);
 
+  // Determine run start time for scoping log entries to this run
+  let runStartTime = null;
+  try {
+    const configPath = path.join(runPaths.runRoot, 'run-config.yaml');
+    if (fs.existsSync(configPath)) {
+      const configRaw = fs.readFileSync(configPath, 'utf8');
+      const match = configRaw.match(/created_at:\s*["']?([^"'\n]+)/);
+      if (match) runStartTime = new Date(match[1].trim()).toISOString();
+    }
+  } catch { /* fall through — include all entries if no config */ }
+
   // Ensure routing section exists (for older usage.json files)
   if (!usage.routing) {
     usage.routing = {
@@ -243,7 +254,7 @@ export function consumeRoutingLog(runPaths) {
     };
   }
 
-  // Reset counts before re-aggregating from the full log
+  // Reset counts before re-aggregating (scoped to this run)
   usage.routing.total_commands = 0;
   usage.routing.context_mode_routed = 0;
   usage.routing.passthrough = 0;
@@ -259,6 +270,9 @@ export function consumeRoutingLog(runPaths) {
     } catch {
       continue; // skip malformed lines
     }
+
+    // Scope to current run: skip entries before this run started
+    if (runStartTime && entry.ts && entry.ts < runStartTime) continue;
 
     usage.routing.total_commands += 1;
 
