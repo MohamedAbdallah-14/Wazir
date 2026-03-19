@@ -42,7 +42,7 @@ The planner who closes a run is often the same role that will open the next one.
 
 One of:
 
-1. **Full completion** — All 14 phases are done, review is accepted, learnings are proposed. Prepare the next feature's starting point.
+1. **Full completion** — All 4 phases are done, review is accepted, learnings are proposed. Prepare the next feature's starting point.
 2. **Partial completion** — The session is ending before the pipeline finishes. Prepare a mid-pipeline handoff so the next session can resume.
 3. **Slice boundary** — The approved plan is being executed in multiple slices. Prepare the handoff between slices.
 

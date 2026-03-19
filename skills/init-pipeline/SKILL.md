@@ -24,7 +24,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 
 Run `which wazir` to check if the CLI is installed.
 
-**If installed** — run `wazir init` and let it handle the interactive setup (arrow-key selection). If the pipeline was already initialized, use `wazir init --force` to reinitialize. Once it completes, skip to Step 9 (Confirm).
+**If installed** — run `wazir init` and let it handle the interactive setup. If the pipeline was already initialized, use `wazir init --force` to reinitialize. Once it completes, skip to Step 5 (Confirm).
 
 **If not installed**, present:
 
@@ -38,11 +38,7 @@ Run `which wazir` to check if the CLI is installed.
 
 Wait for the user to answer before continuing.
 
-If the user picks 1, run `npm install -g @wazir-dev/cli` and verify with `wazir --version`.
-If the user picks 2, run `npm link` from the project root and verify.
-If the user picks 3, warn that `wazir capture`, `wazir validate`, and `wazir index` commands will not work, then continue to the manual steps below.
-
-After installing, run `wazir init` and let it handle the rest. Skip to Step 9.
+After installing, run `wazir init` and let it handle the rest. Skip to Step 5.
 
 ## Step 0.5: Detect context-mode MCP
 
@@ -51,17 +47,15 @@ After CLI check, detect if the context-mode MCP plugin is installed by checking 
 - `mcp__plugin_context-mode_context-mode__fetch_and_index`
 - `mcp__plugin_context-mode_context-mode__search`
 
-Additionally, check if `mcp__plugin_context-mode_context-mode__execute_file` is available (optional, used for Codex output extraction in Item 17).
+Additionally, check if `mcp__plugin_context-mode_context-mode__execute_file` is available (optional).
 
-Store in config as an object (not a bare boolean):
+Store in config as an object:
 ```json
 "context_mode": {
   "enabled": true,
   "has_execute_file": true
 }
 ```
-
-If none of the three core tools are found, set `"context_mode": { "enabled": false }`.
 
 This detection runs silently — no user prompt needed.
 
@@ -76,8 +70,6 @@ mkdir -p .wazir/input .wazir/state .wazir/runs
 ```
 
 ## Step 2: Choose Pipeline Mode
-
-Present this question:
 
 > **How should Wazir run in this project?**
 >
@@ -97,61 +89,29 @@ Only ask this if the user selected option 3:
 > 2. **Gemini** — Send reviews to Google Gemini
 > 3. **Both** — Use Codex and Gemini as secondary reviewers
 
-Wait for the user to answer before continuing.
+### Step 3.5: Codex Model (conditional)
 
-## Step 3.5: Codex Model (conditional)
-
-Only ask this if Codex was selected in Step 3:
+Only ask this if Codex was selected:
 
 > **Which Codex model should Wazir use?**
 >
-> 1. **gpt-5.3-codex-spark** (Recommended) — Fast, good for review loops and grounder work
-> 2. **gpt-5.4** — Slower, deeper analysis for complex reviews
->
-> *You can change this later in `.wazir/state/config.json` under `multi_tool.codex.model`.*
+> 1. **gpt-5.3-codex-spark** (Recommended) — Fast, good for review loops
+> 2. **gpt-5.4** — Slower, deeper analysis
 
-Wait for the user to answer before continuing.
-
-## Step 4: Default Depth
-
-> **What default depth should runs use?**
->
-> 1. **Quick** — Minimal research, single-pass review, fast execution. Good for small fixes and config changes.
-> 2. **Standard** (Recommended) — Balanced research, multi-pass hardening, full review. Good for most features.
-> 3. **Deep** — Extended research, thorough hardening, strict review thresholds. Good for complex or security-critical work.
->
-> *This sets the project default. Individual runs can override via inline modifiers (e.g. `/wazir quick ...`).*
-
-Wait for the user to answer before continuing.
-
-## Step 5: Default Intent
-
-> **What kind of work does this project mostly involve?**
->
-> 1. **Feature** (Recommended) — New functionality or enhancement
-> 2. **Bugfix** — Fix broken behavior
-> 3. **Refactor** — Restructure without changing behavior
-> 4. **Docs** — Documentation only
-> 5. **Spike** — Research and exploration, no production code
->
-> *This sets the project default. Individual runs can override via inline modifiers or when intent is obvious from the request.*
-
-Wait for the user to answer before continuing.
-
-## Step 6: Write Config
+## Step 4: Write Config
 
 Create/update `.wazir/state/config.json`:
 
 - Set `model_mode` to the selected mode (`claude-only`, `multi-model`, or `multi-tool`)
-- If `multi-tool`, set `multi_tool.tools` to the selected tools (e.g. `["codex"]`, `["gemini"]`, or `["codex", "gemini"]`)
-- Set `default_depth` to the selected depth (`quick`, `standard`, or `deep`)
-- Set `default_intent` to the selected intent (`feature`, `bugfix`, `refactor`, `docs`, or `spike`)
+- If `multi-tool`, set `multi_tool.tools` to the selected tools
+- Set `default_depth` to `standard` (override per-run via inline modifiers)
+- Set `default_intent` to `feature` (inferred per-run from request text)
 - Set `team_mode` to `sequential`
 - Set `parallel_backend` to `none`
 - If Codex selected, set `multi_tool.codex.model` to the chosen model
-- Set `context_mode` to the detected value from Step 0.5 (object: `{ "enabled": true|false, "has_execute_file": true|false }`)
+- Set `context_mode` to the detected value from Step 0.5
 
-Example for claude-only with defaults:
+Example for claude-only:
 ```json
 {
   "model_mode": "claude-only",
@@ -172,46 +132,31 @@ Example for multi-tool:
       "model": "gpt-5.3-codex-spark"
     }
   },
-  "default_depth": "deep",
+  "default_depth": "standard",
   "default_intent": "feature",
   "team_mode": "sequential",
   "parallel_backend": "none"
 }
 ```
 
-## Step 7: Runtime-Specific Setup
+## Step 4.5: Runtime-Specific Setup
 
 Based on `multi_tool.tools`:
 
-- If **codex** is selected: Create `AGENTS.md` in project root:
-  ```
-  # Wazir Pipeline
+- If **codex** selected: Create `AGENTS.md` in project root
+- If **gemini** selected: Create `GEMINI.md` in project root
+- If **both**: Create both files
 
-  Agent protocols are at `~/.claude/agents/` (global).
+## Step 5: Confirm
 
-  ## Running the Pipeline
-  1. Clarifier: read and follow `~/.claude/agents/clarifier.md` — tasks are in `.wazir/input/`
-  2. Orchestrator: read and follow `~/.claude/agents/orchestrator.md` — start from task 1
-  3. Opus Reviewer: read and follow `~/.claude/agents/opus-reviewer.md` — run all phases
-
-  ## Review Mode
-  This project uses Codex as a secondary reviewer. Review artifacts are in `.wazir/reviews/`.
-  ```
-
-- If **gemini** is selected: Create `GEMINI.md` in project root with the same content adapted for Gemini.
-
-- If **both**: Create both files.
-
-## Step 8: Confirm
-
-List all files created and show the selected mode. Then present:
+List all files created and show the selected mode:
 
 > **Pipeline initialized. You can now use:**
 >
-> - `/wazir <your request>` — Run the full pipeline end-to-end
-> - `/clarifier` — Run Phase 0 + Phase 1 only (research, clarify, plan)
-> - `/executor` — Run Phase 2 only (autonomous execution)
-> - `/reviewer` — Run Phase 3 only (final review and scoring)
+> - `/wazir <your request>` — Run the full pipeline (Init → Clarifier → Executor → Final Review)
+> - `/clarifier` — Run clarification only (research, clarify, brainstorm, plan)
+> - `/executor` — Run execution only (implement approved plan)
+> - `/reviewer` — Run final review only (review + learn + prepare next)
 
 ## Interaction Rules
 

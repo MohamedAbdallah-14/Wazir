@@ -528,8 +528,8 @@ describe('manifest declares designer role and design workflows', () => {
     assert.ok(manifest.roles.includes('designer'), 'designer role missing');
     assert.ok(manifest.workflows.includes('design'), 'design workflow missing');
     assert.ok(manifest.workflows.includes('design_review'), 'design_review workflow missing');
-    assert.ok(manifest.phases.includes('design'), 'design phase missing');
-    assert.ok(manifest.phases.includes('design_review'), 'design_review phase missing');
+    assert.ok(manifest.phases.includes('clarifier'), 'clarifier phase missing');
+    assert.ok(manifest.phases.includes('executor'), 'executor phase missing');
     assert.ok(manifest.adapters.open_pencil, 'open_pencil adapter missing');
   });
 });

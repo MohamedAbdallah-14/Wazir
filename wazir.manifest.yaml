@@ -47,20 +47,10 @@ workflows:
   - prepare_next
   - run_audit
 phases:
-  - clarify
-  - discover
-  - specify
-  - spec_challenge
-  - author
-  - design
-  - design_review
-  - plan
-  - plan_review
-  - execute
-  - verify
-  - review
-  - learn
-  - prepare_next
+  - init
+  - clarifier
+  - executor
+  - final_review
 roles:
   - clarifier
   - researcher

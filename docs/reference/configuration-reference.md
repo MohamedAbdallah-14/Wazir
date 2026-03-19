@@ -133,15 +133,23 @@ Out of scope for this manifest check:
 
 Maintainers are responsible for policing those surfaces with the separate docs-truth, runtime-surface, and repository review checks.
 
-## Workflows vs phases
+## Phases vs workflows
 
-- `phases` are the core lifecycle states of the operating model.
-- `workflows` are the canonical callable or review-gated entrypoints that drive those phases.
+The pipeline has **4 phases** (Init, Clarifier, Executor, Final Review) and **15 workflows** (atomic units within those phases).
 
-They overlap heavily, but they are not identical:
+- **Phases** are the top-level pipeline stages. Event capture and tracking use phase names: `init`, `clarifier`, `executor`, `final_review`.
+- **Workflows** are the canonical callable or review-gated entrypoints that run within phases. Each workflow can be independently enabled/disabled via `workflow_policy` in run-config.
 
-- `spec_challenge`, `plan_review`, and `prepare_next` are workflows that sit between or around the core execution phases.
-- Validators and exports should treat manifest-declared workflows as the canonical workflow file roster.
+| Phase | Workflows |
+|-------|-----------|
+| Init | (inline — no workflow files) |
+| Clarifier | clarify, discover, specify, spec_challenge, author, design, design_review, plan, plan_review |
+| Executor | execute, verify |
+| Final Review | review, learn, prepare_next |
+
+`run_audit` is a standalone on-demand workflow, not part of the main pipeline flow.
+
+Validators and exports should treat manifest-declared workflows as the canonical workflow file roster.
 
 ## Hook configuration
 

@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+- Restructured pipeline from 14 micro-phases to 4 main phases: Init, Clarifier, Executor, Final Review
+- Removed depth and intent questions from pipeline init — depth defaults to standard (override via inline modifiers), intent inferred from request keywords
+- Enabled learn + prepare-next workflows by default (part of Final Review phase)
+- Renamed `phase_policy` to `workflow_policy` in run-config (legacy name still supported)
+- Pipeline init no longer asks about Agent Teams — always sequential
+- Input directory (`input/`) now scanned automatically at startup
+
 ### Added
 - Core review loop pattern across all pipeline phases with Codex CLI integration
 - `wazir capture loop-check` CLI subcommand with task-scoped cap tracking and run-config loader

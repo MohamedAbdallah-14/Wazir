@@ -343,10 +343,11 @@ Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7
 
 ## Loop Cap Configuration
 
-The `phase_policy` section of `run-config.yaml` controls which phases are enabled and sets an absolute safety ceiling per phase. Only two fields exist: `enabled` and `loop_cap`. There is no `passes` field -- depth determines pass counts (3/5/7), not phase policy.
+The `workflow_policy` section of `run-config.yaml` (legacy: `phase_policy`) controls which workflows are enabled and sets an absolute safety ceiling per workflow. Only two fields exist: `enabled` and `loop_cap`. There is no `passes` field -- depth determines pass counts (3/5/7), not workflow policy.
 
 ```yaml
-phase_policy:
+workflow_policy:
+  # Clarifier phase workflows
   discover:       { enabled: true, loop_cap: 10 }
   clarify:        { enabled: true, loop_cap: 10 }
   specify:        { enabled: true, loop_cap: 10 }
@@ -356,21 +357,24 @@ phase_policy:
   design-review:  { enabled: true, loop_cap: 10 }
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
+  # Executor phase workflows
   execute:        { enabled: true, loop_cap: 10 }
   verify:         { enabled: true, loop_cap: 5 }
   review:         { enabled: true, loop_cap: 10 }
-  learn:          { enabled: false, loop_cap: 5 }
-  prepare_next:   { enabled: false, loop_cap: 5 }
+  learn:          { enabled: true, loop_cap: 5 }
+  prepare_next:   { enabled: true, loop_cap: 5 }
   run_audit:      { enabled: false, loop_cap: 10 }
 ```
 
 **`loop_cap`** is an absolute safety ceiling that prevents runaway loops regardless of depth. It is checked by `wazir capture loop-check` in pipeline mode. It is NOT the same as pass count (which is determined by depth: 3/5/7). Example: depth=deep gives 7 passes, but if `loop_cap: 5`, the cap guard fires at pass 5 and escalates. This is intentional -- the operator can constrain expensive phases.
 
-**Adaptive phases** (`author`, `learn`, `prepare_next`, `run_audit`) default to `enabled: false`. They are activated by explicit operator config or intent detection. They do not participate in the standard review loop pattern because:
+**Adaptive workflows** (`author`, `run_audit`) default to `enabled: false`. They are activated by explicit operator config or intent detection.
 
+**Post-run workflows** (`learn`, `prepare_next`) default to `enabled: true`. They run as part of the Final Review phase:
+
+- `learn` extracts durable learnings from review findings -- recurring findings become accepted learnings.
+- `prepare_next` prepares context and handoff for the next run.
 - `author` has a human approval gate, not an iterative review loop.
-- `learn` extracts learnings from the completed run -- it is post-execution housekeeping.
-- `prepare_next` prepares context for the next run -- it is a handoff phase.
 - `run_audit` is an on-demand standalone audit, not part of the main pipeline flow.
 
 ---

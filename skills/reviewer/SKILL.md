@@ -18,9 +18,11 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 4. Maximum 10 direct file reads without a justifying index query
 5. If no index exists: `wazir index build && wazir index summarize --tier all`
 
-Run Phase 3 (Review) for the current project.
+Run the Final Review phase — or any review mode invoked by other phases.
 
 The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
+
+**Key principle for `final` mode:** Compare implementation against the **ORIGINAL INPUT** (briefing + input files), NOT the task specs. The executor's per-task reviewer already validated against task specs — that concern is covered. The final reviewer catches drift: does what we built match what the user actually asked for?
 
 **Reviewer-owned responsibilities** (callers must NOT replicate these):
 1. **Codex integration** — the reviewer runs `codex exec` / `codex review` calls, handles errors, and manages fallback to self-review
@@ -68,13 +70,15 @@ Prerequisites depend on the review mode:
 
 ## Review Process (`final` mode)
 
+**Input:** Read the ORIGINAL user input (`.wazir/input/briefing.md`, `input/` directory files) and compare against what was built. This catches intent drift that task-level review misses.
+
 Perform adversarial review across 7 dimensions:
 
-1. **Correctness** — Does the code do what the spec says?
-2. **Completeness** — Are all acceptance criteria met?
+1. **Correctness** — Does the code do what the original input asked for?
+2. **Completeness** — Are all requirements from the original input met?
 3. **Wiring** — Are all paths connected end-to-end?
 4. **Verification** — Is there evidence (tests, type checks) for each claim?
-5. **Drift** — Does the implementation match the approved plan?
+5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT)
 6. **Quality** — Code style, naming, error handling, security
 7. **Documentation** — Changelog entries, commit messages, comments
 
@@ -214,6 +218,26 @@ All required fields per `schemas/phase-report.schema.json`:
 | `decisions` | array | yes | Scope/approach decisions made |
 | `verdict_recommendation` | object | no | Gating verdict based on `config/gating-rules.yaml` |
 
+## Post-Review: Learn (final mode only)
+
+After the final review verdict, extract durable learnings:
+
+1. Scan all review findings from this run (internal + Codex, across all phases)
+2. Identify patterns — findings that recur across 2+ review passes or match findings from prior runs
+3. Propose learnings to `memory/learnings/proposed/` using the learning proposal template
+4. Each learning gets scope tags (roles, stacks, concerns), evidence, and confidence level
+5. Learnings require explicit user review before acceptance — no auto-apply
+
+This is how Wazir evolves: recurring review findings become accepted learnings injected into future executor context.
+
+## Post-Review: Prepare Next (final mode only)
+
+After learning extraction, prepare for the next run:
+
+1. Write handoff document at `.wazir/runs/<run-id>/handoff.md`
+2. Record what was completed, what's pending, open bugs
+3. Archive large intermediate artifacts that won't be needed
+
 ## Done
 
 Present the verdict and offer next steps:
@@ -221,6 +245,9 @@ Present the verdict and offer next steps:
 > **Review complete: [VERDICT] ([score]/70)**
 >
 > [Score breakdown and findings summary]
+>
+> **Learnings proposed:** [count] (see `memory/learnings/proposed/`)
+> **Handoff:** `.wazir/runs/<run-id>/handoff.md`
 >
 > **What would you like to do?**
 > 1. **Create a PR** (if PASS)

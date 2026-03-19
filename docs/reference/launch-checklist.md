@@ -26,7 +26,7 @@ Submit pull requests to these curated lists (one PR per list, follow each repo's
 ### awesome-claude-code
 - **Repo:** `github.com/anthropics/awesome-claude-code` (or the most-starred community fork)
 - **Section:** Tools / Plugins / Extensions
-- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 14 phases, and 308 expertise modules.`
+- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 4 phases (15 workflows), and 308 expertise modules.`
 - **Tips:** Keep the description under 120 characters. Link directly to the repo.
 
 ### awesome-ai-agents
@@ -75,7 +75,7 @@ Post a comment immediately after submission explaining:
 **Title:** "How I Built an Engineering OS for AI Coding Agents"
 
 1. **Hook** -- The problem: AI agents write code but lack engineering discipline.
-2. **Architecture overview** -- 10 roles, 14 phases, expertise modules, quality gates.
+2. **Architecture overview** -- 10 roles, 4 phases (15 workflows), expertise modules, quality gates.
 3. **Code walkthrough** -- Show a real workflow: how a feature moves from requirements through TDD to deployment.
 4. **Host-native approach** -- Explain why one kit works across Claude, Codex, Gemini, and Cursor.
 5. **Results** -- Concrete metrics or before/after comparisons.
@@ -100,7 +100,7 @@ Structure as a 5-7 tweet thread:
 
 1. **Hook tweet:** One-liner about the problem + link to repo.
 2. **What it is:** Brief description of Wazir.
-3. **Architecture:** 10 roles, 14 phases, 308 modules (include a diagram image).
+3. **Architecture:** 10 roles, 4 phases (15 workflows), 308 modules (include a diagram image).
 4. **Demo:** Short GIF or screenshot of a workflow in action.
 5. **Multi-host:** Works with Claude, Codex, Gemini, and Cursor.
 6. **Install:** `npx @wazir-dev/cli init`
