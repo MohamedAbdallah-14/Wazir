@@ -53,6 +53,9 @@ suite via schema-backed example fixtures in `templates/examples/`.
 | `docs-claim.schema.json` | Docs Truth Claim | `validate docs` + `docs/truth-claims.yaml` |
 | `proposed-learning.schema.json` | Proposed Learning | `learner` role output |
 | `accepted-learning.schema.json` | Accepted Learning | `learn` workflow approval |
+| `author-artifact.schema.json` | Author Artifact | `content-author` role output |
+| `usage.schema.json` | Usage Report | `capture usage` output |
+| `phase-report.schema.json` | Phase Report | Phase completion summary |
 
 ---
 

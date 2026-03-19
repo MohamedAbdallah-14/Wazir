@@ -167,5 +167,5 @@ produce plausible-looking output that silently fails to meet requirements.
 |---|---|
 | `expertise/index.yaml` | Machine-readable module registry with phase metadata |
 | `expertise/index.md` | Human-readable semantic map and reading guide |
-| `expertise/PROGRESS.md` | Authoring history: 32 modules, 255 total files, completion dates |
+| `expertise/PROGRESS.md` | Authoring history: 32 research batches, completion dates |
 | `expertise/README.md` | Directory contract: what is and is not allowed here |

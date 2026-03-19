@@ -1,6 +1,6 @@
 # Wazir — Complete Documentation
 
-> Generated: 2026-03-19T16:04:44Z
+> Generated: 2026-03-19T16:28:21Z
 
 ---
 ## Source: docs/concepts/architecture.md
