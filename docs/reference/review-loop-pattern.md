@@ -134,9 +134,24 @@ review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
       log(pass_number+1, dimension, findings) -> log_path
 
     if findings.has_issues:
-      # --- Fix inline, do NOT return ---
+      # --- Fix and re-submit (MANDATORY) ---
+      # The producer MUST fix findings and the reviewer MUST re-review.
+      # "Fix and continue without re-review" is EXPLICITLY PROHIBITED.
       producer_fix(artifact_path, findings)
       # Continue to next pass -- the fix will be re-reviewed
+
+  # --- Post-loop: escalation if issues remain ---
+  if remaining.has_issues:
+    # Cap reached with unresolved findings. Present to user:
+    # 1. Approve with known issues (Recommended if non-blocking)
+    # 2. Fix manually and re-run
+    # 3. Abort
+    escalate_to_user(remaining, options=[
+      "approve-with-issues",
+      "fix-manually-and-rerun",
+      "abort"
+    ])
+    # User decides. If approved, log "user-approved-with-issues" in final pass file.
 
   return { pass_count: total_passes, issues_found, issues_fixed, remaining, attributions }
 ```
