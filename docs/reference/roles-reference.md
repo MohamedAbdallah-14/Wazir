@@ -35,6 +35,7 @@ This is the lookup reference for canonical roles, workflows, and their contracts
 | `review` | `verify` | Adversarial quality review |
 | `learn` | `review` | Capture scoped learnings |
 | `prepare-next` | `learn` | Produce clean next-run handoff |
+| `run-audit` | (standalone) | Structured codebase audit with source-backed findings |
 
 ## Role routing valid values
 
