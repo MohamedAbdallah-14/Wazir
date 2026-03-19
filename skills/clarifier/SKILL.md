@@ -123,7 +123,13 @@ Present the full clarification to the user:
 > 2. **Needs changes** — [user provides corrections]
 > 3. **Missing important context** — [user adds information]
 
-**Wait for the user to answer before continuing.** If the user provides corrections, update the clarification and re-present.
+**Wait for the user to answer before continuing.** If the user provides corrections:
+
+**Feedback routing:** Ask "Is this a plan correction or a new requirement?"
+- **Plan correction** (wording fixes, reordering, detail adjustments that don't change WHAT we're building) → append to `.wazir/runs/latest/clarified/user-feedback.md` with a timestamp. This file is run-scoped and starts empty on new runs.
+- **New requirement** (scope-changing feedback — new features, missing capabilities, "we also need X") → append to `.wazir/input/briefing.md` under `## User Additions`. This persists across runs.
+
+Update the clarification and re-present.
 
 ---
 
