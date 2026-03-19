@@ -29,7 +29,7 @@
   ],
   "scripts": {
     "test": "npm run test:active",
-    "test:active": "node --test tooling/test/cli.test.js tooling/test/validate.test.js tooling/test/index.test.js tooling/test/doctor-status.test.js tooling/test/guard-hooks.test.js tooling/test/export.test.js tooling/test/capture.test.js tooling/test/schema-examples.test.js tooling/test/git-flow-docs.test.js tooling/test/role-contracts.test.js tooling/test/ci-workflow.test.js tooling/test/contributing.test.js tooling/test/author-artifact.test.js tooling/test/capture/usage.test.js tooling/test/adapters/composition-engine.test.js tooling/test/docs-drift.test.js tooling/test/init.test.js tooling/test/gating/agent.test.js tooling/test/guards/phase-prerequisite-guard.test.js tooling/test/hooks/context-mode-router.test.js",
+    "test:active": "node --test tooling/test/cli.test.js tooling/test/validate.test.js tooling/test/index.test.js tooling/test/doctor-status.test.js tooling/test/guard-hooks.test.js tooling/test/export.test.js tooling/test/capture.test.js tooling/test/schema-examples.test.js tooling/test/git-flow-docs.test.js tooling/test/role-contracts.test.js tooling/test/ci-workflow.test.js tooling/test/contributing.test.js tooling/test/author-artifact.test.js tooling/test/capture/usage.test.js tooling/test/adapters/composition-engine.test.js tooling/test/docs-drift.test.js tooling/test/init.test.js tooling/test/gating/agent.test.js tooling/test/guards/phase-prerequisite-guard.test.js tooling/test/hooks/context-mode-router.test.js tooling/test/hooks/session-start.test.js",
     "test:coverage": "c8 npm run test:active",
     "prepare": "husky"
   },
