@@ -9,6 +9,12 @@ Run Phase 3 (Review) for the current project.
 
 The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
 
+**Reviewer-owned responsibilities** (callers must NOT replicate these):
+1. **Codex integration** — the reviewer runs `codex exec` / `codex review` calls, handles errors, and manages fallback to self-review
+2. **Dimension selection** — the reviewer selects the correct dimension set for the review mode and depth
+3. **Pass counting** — the reviewer tracks pass numbers and enforces the depth-based cap (quick=3, standard=5, deep=7)
+4. **Finding attribution** — each finding is tagged `[Wazir]`, `[Codex]`, or `[Both]` based on source
+
 ## Review Modes
 
 The reviewer operates in different modes depending on the phase. Mode MUST be passed explicitly by the caller (`--mode <mode>`). The reviewer does NOT auto-detect mode from artifact availability. If `--mode` is not provided, ask the user which review to run.

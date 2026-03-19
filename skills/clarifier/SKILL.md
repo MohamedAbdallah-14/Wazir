@@ -71,7 +71,7 @@ Read the briefing, research brief, and codebase context. Produce:
 
 Save to `.wazir/runs/latest/clarified/clarification.md`.
 
-Invoke the review loop for the clarification artifact using spec/clarification dimensions with `--mode clarification-review`. The **reviewer role** runs the loop (see `docs/reference/review-loop-pattern.md`). Resolve any findings before presenting to user.
+Invoke `wz:reviewer --mode clarification-review` on the clarification artifact. The reviewer skill handles Codex integration, dimension selection, pass counting, and finding attribution internally (see `docs/reference/review-loop-pattern.md`). Do NOT call `codex exec` or `codex review` directly from the clarifier — all review goes through `wz:reviewer`. Resolve any findings before presenting to user.
 
 ### Checkpoint 1A: Clarification Review
 
@@ -96,8 +96,8 @@ Delegate to the specify workflow (`workflows/specify.md`):
 
 1. The **specifier role** produces a measurable spec from the clarification
    and research artifacts.
-2. The **reviewer role** runs the spec-challenge loop
-   (`workflows/spec-challenge.md`) with `--mode spec-challenge`.
+2. Invoke `wz:reviewer --mode spec-challenge` to run the spec-challenge loop
+   (`workflows/spec-challenge.md`).
 3. The specifier resolves findings from each pass.
 4. Loop runs for `pass_counts[depth]` passes.
 
@@ -181,8 +181,8 @@ Delegate to `wz:writing-plans`:
 
 1. `wz:writing-plans` (using **planner role**) produces the execution plan
    and task specs.
-2. The **reviewer role** runs the plan-review loop
-   (`workflows/plan-review.md`) with `--mode plan-review`.
+2. Invoke `wz:reviewer --mode plan-review` to run the plan-review loop
+   (`workflows/plan-review.md`).
 3. The planner resolves findings from each pass.
 4. Loop runs for `pass_counts[depth]` passes.
 

@@ -34,7 +34,7 @@ Rules:
 
 ## Plan Review Loop
 
-After writing the plan, the reviewer role runs the plan-review loop with `--mode plan-review` using plan dimensions (see `workflows/plan-review.md` and `docs/reference/review-loop-pattern.md`).
+After writing the plan, invoke `wz:reviewer --mode plan-review` to run the plan-review loop using plan dimensions (see `workflows/plan-review.md` and `docs/reference/review-loop-pattern.md`). Do NOT call `codex exec` or `codex review` directly — the reviewer skill handles Codex integration internally.
 
 The planner resolves findings from each pass. The loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7). No extension.
 
