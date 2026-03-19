@@ -42,7 +42,7 @@ For each task:
    - See `docs/reference/review-loop-pattern.md` for full protocol
    - NOTE: this is the per-task review (5 dims), not the final scored review (7 dims) which runs later in `/wazir:reviewer --mode final`
 5. **Commit** — only after review passes, commit with conventional commit format: `<type>(<scope>): <description>`
-6. **CHANGELOG** — if the change is user-facing (new feature, behavior change, bug fix visible to users), update `CHANGELOG.md` `[Unreleased]` section. If not user-facing (refactor, internal tooling, tests), skip.
+6. **CHANGELOG** — if the change is user-facing (new feature, behavior change, bug fix visible to users), update `CHANGELOG.md` under `[Unreleased]` using keepachangelog types: Added, Changed, Fixed, Removed, Deprecated, Security. If not user-facing (refactor, internal tooling, tests), skip.
 7. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
 
 Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. Code review scoping: review uncommitted changes before commit. If changes are already committed (subagent workflow), use `codex review -c model="$CODEX_MODEL" --base <pre-task-sha>`.

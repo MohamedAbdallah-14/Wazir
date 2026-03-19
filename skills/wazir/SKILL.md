@@ -507,6 +507,22 @@ Present resume options:
 > 1. **Resume from [next phase]** (Recommended)
 > 2. **Start fresh** — Re-run all phases from scratch
 
+## Step 4.5: CHANGELOG + Gitflow Validation (Hard Gates)
+
+Before presenting results or creating a PR, run these validations. Both are **hard gates** — must fix before PR:
+
+```bash
+wazir validate changelog --require-entries --base main
+```
+If this fails, CHANGELOG entries are missing for user-facing changes. Must fix before continuing.
+
+```bash
+wazir validate commits --base main
+```
+If this fails, commits don't follow conventional format or branch naming. Must fix before continuing.
+
+These are not warnings — the pipeline stops here until both pass.
+
 ## Step 5: Present Results
 
 After the reviewer completes, present the verdict and offer next steps with numbered options:
