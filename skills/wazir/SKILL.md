@@ -289,6 +289,14 @@ After building the run config, evaluate confidence:
 
 The full pipeline runs these phases in order. Each phase produces an artifact that must pass its review loop before flowing to the next phase. Review mode is always passed explicitly (`--mode`) -- no auto-detection.
 
+**Usage capture rule:** At EVERY `phase_exit` event, immediately after the exit event capture, run:
+
+```bash
+wazir capture usage --run <run-id> --phase <phase> --json
+```
+
+Output is written to `.wazir/runs/<run-id>/reviews/usage-<phase>.json`. This applies to all phases below — clarify, discover, specify, spec-challenge, design, design-review, plan, plan-review, execute, review.
+
 ### 4a: Source Capture
 
 Before invoking the clarifier, capture all referenced sources locally:
