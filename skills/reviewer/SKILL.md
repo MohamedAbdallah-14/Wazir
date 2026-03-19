@@ -14,6 +14,7 @@ The reviewer role owns all review loops across the pipeline: research-review, cl
 2. **Dimension selection** — the reviewer selects the correct dimension set for the review mode and depth
 3. **Pass counting** — the reviewer tracks pass numbers and enforces the depth-based cap (quick=3, standard=5, deep=7)
 4. **Finding attribution** — each finding is tagged `[Wazir]`, `[Codex]`, or `[Both]` based on source
+5. **Dimension set recording** — each review pass file records which canonical dimension set was used, enabling Phase Scoring (first vs final delta)
 
 ## Review Modes
 

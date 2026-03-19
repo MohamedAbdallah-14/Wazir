@@ -478,4 +478,57 @@ tac <file> | sed '/^codex$/q' | tac | tail -n +2
 
 This reverses the file, finds the first (= last original) `codex` marker, reverses back, and skips the marker line.
 
-**If no marker found:** fail closed — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.
+**If no marker found:** fail closed
+
+---
+
+## Phase Scoring: First vs Final Artifact Comparison
+
+At the start of each review loop (pass 1), score the artifact on its phase's canonical dimension set (1-10 per dimension). At the end of the loop (final pass), score again using the **same canonical dimensions**. Present the delta in the end-of-phase report.
+
+### Canonical Dimension Sets Per Phase
+
+These are the fixed rubrics — no ad-hoc dimension selection:
+
+| Phase | Canonical Dimensions |
+|-------|---------------------|
+| research-review | Coverage, Source quality, Relevance, Gaps identified, Actionability |
+| clarification-review / spec-challenge | Completeness, Testability, Ambiguity, Assumptions, Scope creep |
+| design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
+| plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy |
+| task-review | Correctness, Tests, Wiring, Drift, Quality |
+| final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
+
+### Scoring Rules
+
+1. Initial and final scores MUST use the **same dimension set** — the delta is only meaningful on the same rubric.
+2. The reviewer records which dimension set was used in each pass file.
+3. Delta format: `Dimension: X/10 → Y/10 (+Z)`.
+
+### Quality Delta Report Section
+
+The end-of-phase report (see "End-of-Phase Report" below) includes a **Quality Delta** section:
+
+```markdown
+## Quality Delta
+
+| Dimension | Initial | Final | Delta |
+|-----------|---------|-------|-------|
+| Completeness | 4/10 | 9/10 | +5 |
+| Testability | 3/10 | 8/10 | +5 |
+| Ambiguity | 5/10 | 9/10 | +4 |
+```
+
+---
+
+## End-of-Phase Report
+
+Every phase exit produces a report saved to `.wazir/runs/latest/reviews/<phase>-report.md` containing:
+
+1. **Summary** — what the phase produced
+2. **Key Changes** — first-version vs final-version highlights (not full diff — what improved)
+3. **Quality Delta** — per-dimension before/after scores (see Phase Scoring above)
+4. **Findings Log** — per-pass finding counts by severity (e.g., "Pass 1: 6 findings (3 blocking, 2 warning, 1 note). Pass 7: 0 findings. All resolved.")
+5. **Usage** — token usage from `wazir capture usage` (runs before report generation)
+6. **Context Savings** — context-mode stats if available, omit section if not
+7. **Time Spent** — wall-clock elapsed time from phase start to end — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.
