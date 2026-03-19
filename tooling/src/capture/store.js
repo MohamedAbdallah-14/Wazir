@@ -92,6 +92,30 @@ export function writeCaptureOutput(targetPath, content) {
   fs.writeFileSync(targetPath, content);
 }
 
+export function readPhaseExitEvents(runPaths) {
+  if (!fs.existsSync(runPaths.eventsPath)) {
+    return [];
+  }
+
+  const content = fs.readFileSync(runPaths.eventsPath, 'utf8');
+  const completedPhases = [];
+
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const event = JSON.parse(trimmed);
+      if (event.event === 'phase_exit' && event.status === 'completed' && event.phase) {
+        completedPhases.push(event.phase);
+      }
+    } catch {
+      // Skip malformed lines
+    }
+  }
+
+  return completedPhases;
+}
+
 export function writeSummary(runPaths, content) {
   ensureRunDirectories(runPaths);
   fs.writeFileSync(runPaths.summaryPath, content);

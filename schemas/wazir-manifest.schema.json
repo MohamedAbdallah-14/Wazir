@@ -87,6 +87,25 @@
       "uniqueItems": true,
       "minItems": 1
     },
+    "phase_prerequisites": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "required_artifacts": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          },
+          "required_phase_exits": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "roles": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },

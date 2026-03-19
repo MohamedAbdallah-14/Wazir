@@ -3,7 +3,7 @@
 > AI coding agents produce code that compiles, passes superficial review, and reads authoritatively -- yet harbors systematic defects that human-written code rarely exhibits. These anti-patterns arise from the fundamental mechanics of next-token prediction operating without ground truth, persistent memory, or genuine understanding. A 2026 CodeRabbit analysis of 470 open-source repositories found AI-generated code contains 1.7x more bugs than human code, with 75% more logic errors and 57% more security findings per pull request. A USENIX Security 2025 study of 576,000 code samples found 20% of AI-recommended packages do not exist. This module catalogs the 20 most damaging patterns, grounded in documented incidents and empirical research.
 
 > **Domain:** Process -- AI-Assisted Development
-> **Anti-patterns covered:** 20
+> **Anti-patterns covered:** 21
 > **Highest severity:** Critical
 > **Primary audience:** AI agents performing self-evaluation; human reviewers auditing AI output
 
@@ -823,6 +823,50 @@ An AI coding agent should ask itself these questions before submitting generated
 
 15. **Continuity check:** After a session break, have I reviewed existing code for conventions before generating new code?
 
+### AP-21: Pipeline Phase Skipping
+
+**Also known as:** Rationalized Bypass, "The Spec Is Clear Enough", Shortcut Execution
+**Frequency:** Common
+**Severity:** Critical
+**Detection difficulty:** Low
+
+**What it looks like:**
+
+The agent receives a detailed briefing or spec and jumps directly to implementation, skipping the pipeline's clarification, specification, design, and planning phases. Typical rationalization: "The input is already detailed enough — I don't need to clarify further."
+
+```
+User: /wazir Build a caching layer for the API
+Agent: [reads detailed input] This is clear. Let me start implementing...
+       [spawns parallel agents for implementation]
+       [skips clarify → specify → design → plan entirely]
+```
+
+**Why AI agents do it:**
+
+When the input appears complete, the agent's next-token prediction favors the most "productive" action: writing code. The pipeline phases (clarify, specify, design, plan) feel redundant when the input already describes what to build. The agent lacks the meta-awareness that the pipeline exists precisely to catch what the input does NOT say — unstated assumptions, missing edge cases, architectural trade-offs, and scope boundaries. Skipping phases is the single most damaging process failure because it invalidates every downstream quality gate.
+
+**Detection signals:**
+
+- Implementation starts without `clarification.md`, `spec-hardened.md`, `design.md`, or `execution-plan.md` artifacts in the run directory
+- Agent jumps from input scanning to code writing without user checkpoints
+- Rationalization language in conversation: "this is already clear", "the spec is detailed enough", "we can skip clarification"
+- `wazir capture event --phase executor` returns exit 44 (phase prerequisite gate failed)
+- No `phase_exit` events for clarifier phase in `events.ndjson`
+
+**Root cause:**
+
+No enforcement mechanism between pipeline phases. The agent can read the pipeline skill and choose to interpret it loosely. Without hard gates (file-existence checks, CLI validation), the pipeline is advisory, not mandatory.
+
+**Remediation:**
+
+1. **Skill-level hard gates** — each phase skill contains a prerequisite check section that lists required artifacts and instructs the agent to STOP if any are missing
+2. **CLI-level validation** — `wazir capture event --phase executor` validates that prior phases completed before allowing `phase_enter`
+3. **Anti-rationalization instruction** — skill text explicitly names and blocks the rationalization pattern: "Do NOT skip phases because the input looks clear enough"
+
+**Related:** Wazir pipeline enforcement (item #18), `skills/executor/SKILL.md` Phase Prerequisites section, `tooling/src/guards/phase-prerequisite-guard.js`
+
+---
+
 ## Code Smell Quick Reference
 
 | Anti-Pattern | Severity | Frequency | Key Signal | First Action |
@@ -847,6 +891,7 @@ An AI coding agent should ask itself these questions before submitting generated
 | AP-18 Fake Progress | High | Common | Hardcoded return values | Ban pass/TODO in production |
 | AP-19 Over-Mocking | High | Common | More mocks than assertions | Require integration tests |
 | AP-20 Resumption Errors | High | Common | Mixed ID types across files | Architecture file in every session |
+| AP-21 Pipeline Phase Skipping | Critical | Common | Missing clarified/* artifacts | Enforce hard gates in skills + CLI |
 
 ---
 

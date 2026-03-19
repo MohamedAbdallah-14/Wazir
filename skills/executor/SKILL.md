@@ -20,11 +20,31 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 
 Run the Executor phase — implement the approved plan, then verify all claims.
 
+## Phase Prerequisites (Hard Gate)
+
+Before proceeding, verify these artifacts exist. Check each file. If ANY file is missing, **STOP immediately** and report:
+
+> **Cannot start Executor phase: missing prerequisite artifacts.**
+>
+> Missing:
+> - [list missing files]
+>
+> Run `/wazir:clarifier` to produce the missing artifacts.
+
+Required artifacts:
+- [ ] `.wazir/runs/latest/clarified/clarification.md`
+- [ ] `.wazir/runs/latest/clarified/spec-hardened.md`
+- [ ] `.wazir/runs/latest/clarified/design.md`
+- [ ] `.wazir/runs/latest/clarified/execution-plan.md`
+
+**This is a hard gate. Do NOT proceed without all artifacts. Do NOT rationalize that the input is "clear enough" to skip phases. The existence of detailed input does NOT replace the pipeline's clarification, specification, design, and planning phases.**
+
+**Standalone mode exception:** If `.wazir/runs/latest/` does not exist at all, operate in standalone mode (skip this check).
+
 ## Prerequisites
 
-1. Check `.wazir/runs/latest/clarified/execution-plan.md` exists. If not, tell the user to run `/clarifier` first.
-2. Read the execution plan.
-3. Read `.wazir/state/config.json` for depth settings.
+1. Read the execution plan from `.wazir/runs/latest/clarified/execution-plan.md`.
+2. Read `.wazir/state/config.json` for depth settings.
 
 ## Pre-Execution Validation
 

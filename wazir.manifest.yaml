@@ -51,6 +51,27 @@ phases:
   - clarifier
   - executor
   - final_review
+phase_prerequisites:
+  init: {}
+  clarifier: {}
+  executor:
+    required_artifacts:
+      - clarified/clarification.md
+      - clarified/spec-hardened.md
+      - clarified/design.md
+      - clarified/execution-plan.md
+    required_phase_exits:
+      - clarifier
+  final_review:
+    required_artifacts:
+      - clarified/clarification.md
+      - clarified/spec-hardened.md
+      - clarified/design.md
+      - clarified/execution-plan.md
+      - artifacts/verification-proof.md
+    required_phase_exits:
+      - clarifier
+      - executor
 roles:
   - clarifier
   - researcher

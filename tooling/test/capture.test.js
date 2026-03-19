@@ -521,6 +521,226 @@ describe('capture handler wiring', () => {
   });
 });
 
+describe('phase_enter prerequisite gate', () => {
+  function createPrereqFixture() {
+    const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-prereq-'));
+    const stateRoot = path.join(fixtureRoot, '.state-root');
+
+    for (const relativePath of Object.values(BASE_MANIFEST_PATHS)) {
+      if (relativePath.startsWith('~') || relativePath.includes('{')) continue;
+      fs.mkdirSync(path.join(fixtureRoot, relativePath), { recursive: true });
+    }
+
+    const manifest = {
+      manifest_version: 2,
+      project: {
+        name: 'fixture-prereq',
+        display_name: 'Fixture Prereq',
+        version: '0.1.0',
+        description: 'Fixture for prerequisite gate tests.',
+        license: 'MIT',
+      },
+      versioning_policy: {
+        strategy: 'semver',
+        stability: 'pre-1.0-alpha',
+        compatibility: 'additive_changes_only_until_manifest_bump',
+      },
+      paths: BASE_MANIFEST_PATHS,
+      hosts: ['codex'],
+      workflows: ['clarify', 'execute', 'verify', 'review'],
+      phases: ['init', 'clarifier', 'executor', 'final_review'],
+      phase_prerequisites: {
+        init: {},
+        clarifier: {},
+        executor: {
+          required_artifacts: [
+            'clarified/clarification.md',
+            'clarified/spec-hardened.md',
+            'clarified/design.md',
+            'clarified/execution-plan.md',
+          ],
+          required_phase_exits: ['clarifier'],
+        },
+        final_review: {
+          required_artifacts: [
+            'clarified/clarification.md',
+            'clarified/spec-hardened.md',
+            'clarified/design.md',
+            'clarified/execution-plan.md',
+            'artifacts/verification-proof.md',
+          ],
+          required_phase_exits: ['clarifier', 'executor'],
+        },
+      },
+      roles: ['clarifier', 'executor', 'verifier', 'reviewer'],
+      export_targets: ['codex'],
+      required_hooks: [
+        'session_start',
+        'pre_tool_capture_route',
+        'post_tool_capture',
+        'pre_compact_summary',
+        'stop_handoff_harvest',
+      ],
+      protected_paths: ['input'],
+      prohibited_terms: ['banned-term'],
+      adapters: {
+        context_mode: {
+          enabled_by_default: false,
+          required: false,
+          install_mode: 'external',
+          package_presence: 'optional',
+        },
+      },
+      index: { core_parsers: [], optional_language_plugins: [] },
+      validation_checks: [],
+    };
+
+    fs.writeFileSync(
+      path.join(fixtureRoot, 'wazir.manifest.yaml'),
+      JSON.stringify(manifest, null, 2),
+    );
+
+    return {
+      fixtureRoot,
+      stateRoot,
+      cleanup() {
+        fs.rmSync(fixtureRoot, { recursive: true, force: true });
+      },
+    };
+  }
+
+  function writeArtifacts(stateRoot, runId, artifacts) {
+    for (const artifact of artifacts) {
+      const artifactPath = path.join(stateRoot, 'runs', runId, artifact);
+      fs.mkdirSync(path.dirname(artifactPath), { recursive: true });
+      fs.writeFileSync(artifactPath, `# ${artifact}\n`);
+    }
+  }
+
+  function writePhaseExit(stateRoot, runId, phaseName) {
+    const eventsPath = path.join(stateRoot, 'runs', runId, 'events.ndjson');
+    const event = JSON.stringify({
+      event: 'phase_exit',
+      phase: phaseName,
+      status: 'completed',
+      created_at: new Date().toISOString(),
+    });
+    fs.appendFileSync(eventsPath, `${event}\n`);
+  }
+
+  test('phase_enter for executor blocked when artifacts missing — exit 44', () => {
+    const fixture = createPrereqFixture();
+    try {
+      const runId = 'run-prereq-block';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarifier', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      const result = runCli(
+        ['capture', 'event', '--run', runId, '--event', 'phase_enter', '--phase', 'executor', '--status', 'in_progress', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 44, `expected exit 44 but got ${result.exitCode}: stderr=${result.stderr}`);
+      assert.match(result.stderr, /Phase prerequisite gate failed/);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('phase_enter for executor allowed when all artifacts exist — exit 0', () => {
+    const fixture = createPrereqFixture();
+    try {
+      const runId = 'run-prereq-pass';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarifier', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      writeArtifacts(fixture.stateRoot, runId, [
+        'clarified/clarification.md',
+        'clarified/spec-hardened.md',
+        'clarified/design.md',
+        'clarified/execution-plan.md',
+      ]);
+      writePhaseExit(fixture.stateRoot, runId, 'clarifier');
+
+      const result = runCli(
+        ['capture', 'event', '--run', runId, '--event', 'phase_enter', '--phase', 'executor', '--status', 'in_progress', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: stderr=${result.stderr}`);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('phase_enter for init — no prerequisites, exit 0', () => {
+    const fixture = createPrereqFixture();
+    try {
+      const runId = 'run-prereq-init';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'init', '--status', 'starting', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      const result = runCli(
+        ['capture', 'event', '--run', runId, '--event', 'phase_enter', '--phase', 'clarifier', '--status', 'in_progress', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: stderr=${result.stderr}`);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('non-phase_enter events unaffected — exit 0 regardless', () => {
+    const fixture = createPrereqFixture();
+    try {
+      const runId = 'run-prereq-nonevent';
+      runCli(
+        ['capture', 'init', '--run', runId, '--phase', 'clarifier', '--status', 'running', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      // phase_exit for executor without prerequisites should still work
+      const result = runCli(
+        ['capture', 'event', '--run', runId, '--event', 'phase_exit', '--phase', 'executor', '--status', 'completed', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, `expected exit 0 but got ${result.exitCode}: stderr=${result.stderr}`);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('phase_enter standalone mode — no status.json, exit 0', () => {
+    const fixture = createPrereqFixture();
+    try {
+      const runId = 'run-prereq-standalone';
+      const runRoot = path.join(fixture.stateRoot, 'runs', runId);
+      fs.mkdirSync(runRoot, { recursive: true });
+      // No status.json — standalone mode
+
+      const result = runCli(
+        ['capture', 'event', '--run', runId, '--event', 'phase_enter', '--phase', 'executor', '--status', 'in_progress', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      // Standalone mode: guard is skipped (exit 44 NOT returned).
+      // readStatus() will throw since no status.json exists, causing exit 1.
+      // The key assertion: exit code is NOT 44 (the guard did not block).
+      assert.notStrictEqual(result.exitCode, 44, 'standalone should NOT trigger prerequisite gate (exit 44)');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+});
+
 describe('loop-check', () => {
   function writeRunConfig(stateRoot, runId, yamlContent) {
     const runRoot = path.join(stateRoot, 'runs', runId);

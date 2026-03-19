@@ -56,6 +56,23 @@ In `task-review` and `final` modes, flag missing CHANGELOG entries for user-faci
 Prerequisites depend on the review mode:
 
 ### `final` mode
+
+**Phase Prerequisites (Hard Gate):** Before proceeding, verify ALL of these artifacts exist. If ANY is missing, **STOP** and report which are missing.
+
+- [ ] `.wazir/runs/latest/clarified/clarification.md`
+- [ ] `.wazir/runs/latest/clarified/spec-hardened.md`
+- [ ] `.wazir/runs/latest/clarified/design.md`
+- [ ] `.wazir/runs/latest/clarified/execution-plan.md`
+- [ ] `.wazir/runs/latest/artifacts/verification-proof.md`
+
+If any file is missing:
+
+> **Cannot run final review: missing prerequisite artifacts.**
+>
+> Missing: [list missing files]
+>
+> Run `/wazir:clarifier` (for clarified/* files) or `/wazir:executor` (for verification-proof.md) first.
+
 1. Check `.wazir/runs/latest/artifacts/` has completed task artifacts. If not, tell the user to run `/wazir:executor` first.
 2. Read the approved spec, plan, and design from `.wazir/runs/latest/clarified/`.
 3. Read `.wazir/state/config.json` for depth and multi_tool settings.

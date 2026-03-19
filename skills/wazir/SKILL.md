@@ -284,6 +284,25 @@ wazir capture event --run <run-id> --event phase_exit --phase clarifier --status
 
 # Phase 3: Executor
 
+## Phase Gate (Hard Gate)
+
+Before entering the Executor phase, verify ALL clarifier artifacts exist:
+
+- [ ] `.wazir/runs/latest/clarified/clarification.md`
+- [ ] `.wazir/runs/latest/clarified/spec-hardened.md`
+- [ ] `.wazir/runs/latest/clarified/design.md`
+- [ ] `.wazir/runs/latest/clarified/execution-plan.md`
+
+If ANY file is missing, **STOP**:
+
+> **Cannot enter Executor phase: missing prerequisite artifacts from Clarifier.**
+>
+> Missing: [list missing files]
+>
+> The Clarifier phase must complete before execution can begin. Run `/wazir:clarifier` first.
+
+**Do NOT skip this check. Do NOT rationalize that the input is "clear enough" to bypass clarification. Every pipeline run must produce these artifacts.**
+
 ```bash
 wazir capture event --run <run-id> --event phase_enter --phase executor --status in_progress
 ```
@@ -312,6 +331,18 @@ wazir capture event --run <run-id> --event phase_exit --phase executor --status 
 ---
 
 # Phase 4: Final Review
+
+## Phase Gate (Hard Gate)
+
+Before entering the Final Review phase, verify the Executor produced its proof:
+
+- [ ] `.wazir/runs/latest/artifacts/verification-proof.md`
+
+If missing, **STOP**:
+
+> **Cannot enter Final Review: missing verification proof from Executor.**
+>
+> The Executor phase must complete and produce `verification-proof.md` before final review. Run `/wazir:executor` first.
 
 ```bash
 wazir capture event --run <run-id> --event phase_enter --phase final_review --status in_progress

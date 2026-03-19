@@ -19,6 +19,7 @@ import {
 import { readRunConfig, getPhaseLoopCap } from './run-config.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
 import { evaluateLoopCapGuard } from '../guards/loop-cap-guard.js';
+import { evaluatePhasePrerequisiteGuard } from '../guards/phase-prerequisite-guard.js';
 
 function formatResult(payload, options = {}) {
   if (options.json) {
@@ -160,12 +161,34 @@ function handleInit(parsed, context = {}) {
 }
 
 function handleEvent(parsed, context = {}) {
-  const { stateRoot, options } = resolveCaptureContext(parsed, context);
+  const { projectRoot, stateRoot, options } = resolveCaptureContext(parsed, context);
 
   requireOption(options, 'run', 'Usage: wazir capture event --run <id> --event <name> [--phase <phase>] [--status <status>] [--loop-count <n>] [--message <text>] [--state-root <path>] [--json]');
   requireOption(options, 'event', 'Usage: wazir capture event --run <id> --event <name> [--phase <phase>] [--status <status>] [--loop-count <n>] [--message <text>] [--state-root <path>] [--json]');
 
   const runPaths = getRunPaths(stateRoot, options.run);
+
+  // Phase prerequisite gate — block phase_enter if prerequisites not met (exit 44)
+  if (options.event === 'phase_enter') {
+    if (!fs.existsSync(runPaths.statusPath)) {
+      // Standalone mode — allow without guard check (matches handleLoopCheck pattern)
+    } else {
+      const guardResult = evaluatePhasePrerequisiteGuard({
+        run_id: options.run,
+        phase: options.phase,
+        state_root: stateRoot,
+        project_root: projectRoot,
+      });
+      if (!guardResult.allowed) {
+        return {
+          exitCode: 44,
+          stderr: `Phase prerequisite gate failed (exit 44): ${guardResult.reason}\n`,
+          stdout: options.json ? `${JSON.stringify(guardResult, null, 2)}\n` : '',
+        };
+      }
+    }
+  }
+
   const status = readStatus(runPaths);
   const event = createBaseEvent(options.event, {
     run_id: options.run,
