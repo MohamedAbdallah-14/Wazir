@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Renamed `phase_policy` to `workflow_policy` in run-config (legacy name still supported)
 - Pipeline init no longer asks about Agent Teams — always sequential
 - Input directory (`input/`) now scanned automatically at startup
+- Learning extraction with concrete proposal format in reviewer final mode
+- Accepted learnings injected into clarifier context (top 10 by confidence, scope-matched)
+- Prepare-next skill produces structured handoff document
 
 ### Added
 - Core review loop pattern across all pipeline phases with Codex CLI integration

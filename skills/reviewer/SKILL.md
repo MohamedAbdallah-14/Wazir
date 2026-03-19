@@ -220,23 +220,114 @@ All required fields per `schemas/phase-report.schema.json`:
 
 ## Post-Review: Learn (final mode only)
 
-After the final review verdict, extract durable learnings:
+After the final review verdict, extract durable learnings using the **learner role** (`roles/learner.md`).
 
-1. Scan all review findings from this run (internal + Codex, across all phases)
-2. Identify patterns — findings that recur across 2+ review passes or match findings from prior runs
-3. Propose learnings to `memory/learnings/proposed/` using the learning proposal template
-4. Each learning gets scope tags (roles, stacks, concerns), evidence, and confidence level
-5. Learnings require explicit user review before acceptance — no auto-apply
+### Step 1: Gather all findings
 
-This is how Wazir evolves: recurring review findings become accepted learnings injected into future executor context.
+Collect review findings from ALL sources in this run:
+- `.wazir/runs/<run-id>/reviews/` — all review pass logs (task-review, final review)
+- Codex findings (attributed `[Codex]` or `[Both]`)
+- Self-audit findings (if `run_audit` was enabled)
+
+### Step 2: Identify learning candidates
+
+A finding becomes a learning candidate if:
+- It recurred across 2+ review passes within this run (same issue found repeatedly)
+- It matches a finding from a prior run (check `memory/learnings/proposed/` and `accepted/` for similar patterns)
+- It represents a class of mistake, not just a single instance (e.g., "missing error handling in async functions" vs "missing try-catch on line 42")
+
+### Step 3: Write learning proposals
+
+For each candidate, write a proposal to `memory/learnings/proposed/<run-id>-<NNN>.md`:
+
+```markdown
+---
+artifact_type: proposed_learning
+phase: learn
+role: learner
+run_id: <run-id>
+status: proposed
+sources:
+  - <review-file-1>
+  - <review-file-2>
+approval_status: required
+---
+
+# Proposed Learning: <title>
+
+## Scope
+- **Roles:** [which roles should receive this learning — e.g., executor, reviewer]
+- **Stacks:** [which tech stacks — e.g., node, react, or "all"]
+- **Concerns:** [which concerns — e.g., error-handling, testing, security]
+
+## Evidence
+- [finding from review pass N: description]
+- [finding from review pass M: same pattern]
+- [optional: similar finding from prior run <run-id>]
+
+## Learning
+[The concrete, actionable instruction that should be injected into future executor context]
+
+## Expected Benefit
+[What this prevents in future runs]
+
+## Confidence
+- **Level:** low | medium | high
+- **Basis:** [single run observation | multi-run recurrence | user correction]
+```
+
+### Step 4: Report
+
+Present proposed learnings to the user:
+
+> **Learnings proposed:** [count]
+> - [title 1] (confidence: high, scope: executor/node)
+> - [title 2] (confidence: medium, scope: reviewer/all)
+>
+> Proposals saved to `memory/learnings/proposed/`. Review and accept with `/wazir audit learnings`.
+
+Learnings are NEVER auto-applied. They require explicit user acceptance before being injected into future runs.
 
 ## Post-Review: Prepare Next (final mode only)
 
-After learning extraction, prepare for the next run:
+After learning extraction, invoke the `prepare-next` skill to prepare the handoff:
 
-1. Write handoff document at `.wazir/runs/<run-id>/handoff.md`
-2. Record what was completed, what's pending, open bugs
-3. Archive large intermediate artifacts that won't be needed
+### Handoff document
+
+Write to `.wazir/runs/<run-id>/handoff.md`:
+
+```markdown
+# Handoff — <run-id>
+
+**Status:** [Completed | Partial]
+**Branch:** <branch-name>
+**Date:** YYYY-MM-DD
+
+## What Was Done
+[List of completed tasks with commit hashes]
+
+## Test Results
+[Test count, pass/fail, validator status]
+
+## Review Score
+[Final review verdict and score]
+
+## What's Next
+[Pending items, deferred work, follow-up tasks]
+
+## Open Bugs
+[Any known issues discovered during this run]
+
+## Learnings From This Run
+[Key insights — what worked, what didn't, what to change]
+```
+
+### Cleanup
+
+- Archive verbose intermediate review logs (compress to summary)
+- Update `.wazir/runs/latest` symlink if creating a new run
+- Do NOT mutate `input/` — it belongs to the user
+- Do NOT auto-load proposed learnings into the next run
 
 ## Done
 

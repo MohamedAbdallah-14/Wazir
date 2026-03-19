@@ -32,7 +32,8 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 2. Check `.wazir/input/briefing.md` exists. If not, ask the user what they want to build and save it there.
 3. Scan `input/` (project-level) and `.wazir/input/` (state-level) for additional input files. Present what's found.
 4. Read config for `default_depth` and `multi_tool` settings.
-5. Create a run directory if one doesn't exist:
+5. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
+6. Create a run directory if one doesn't exist:
    ```bash
    mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
    ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
