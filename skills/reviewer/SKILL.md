@@ -107,8 +107,8 @@ If `codex` is in `multi_tool.tools`:
      2>&1 | tee .wazir/runs/latest/reviews/codex-review.md
    ```
 
-2. Read the Codex findings from `.wazir/runs/latest/reviews/codex-review.md`
-3. Incorporate Codex findings into your scoring — if Codex flags something you missed, add it. If you disagree with a Codex finding, note it with your rationale.
+2. **Extract findings only** (context protection): After tee, use `execute_file` to extract only the final findings from the Codex output (everything after the last `codex` marker). If context-mode is unavailable, use `tac <file> | sed '/^codex$/q' | tac | tail -n +2`. If no marker found, fail closed (0 findings, warn user). See `docs/reference/review-loop-pattern.md` "Codex Output Context Protection" for full protocol.
+3. Incorporate extracted Codex findings into your scoring — if Codex flags something you missed, add it. If you disagree with a Codex finding, note it with your rationale.
 
 **Codex error handling:** If codex exits non-zero (auth/rate-limit/transport failure), log the full stderr, mark the pass as `codex-unavailable` in the review log, and use self-review findings only for that pass. Do NOT treat a Codex failure as a clean review. Do NOT skip the pass. The next pass still attempts Codex (transient failures may recover).
 

@@ -442,3 +442,40 @@ Do NOT load or invoke any skills."
 
 For committed changes, replace `--uncommitted` with `--base <sha>`.
 Replace `[DIMENSION]`, `[dimension description]`, and `[criteria]` with the task-specific values from the execution plan and spec.
+
+---
+
+## Codex Output Context Protection
+
+Codex CLI output includes internal traces (file reads, tool calls, reasoning) that are NOT useful for the review — only the final findings matter. To prevent context flooding:
+
+### Tee + Extract Pattern
+
+1. **Always tee** Codex output to a file:
+   ```bash
+   codex exec ... 2>&1 | tee .wazir/runs/latest/reviews/<phase>-review-pass-<N>.md
+   ```
+
+2. **Extract findings** after the last `codex` marker using `execute_file`:
+   ```bash
+   # If context-mode available (has_execute_file: true):
+   mcp__plugin_context-mode_context-mode__execute_file(
+     path: ".wazir/runs/latest/reviews/<phase>-review-pass-<N>.md",
+     language: "shell",
+     code: "tac $FILE | sed '/^codex$/q' | tac | tail -n +2"
+   )
+   ```
+
+3. **Present extracted findings only** — the raw trace stays in the file for debugging but never enters the main context window.
+
+### Fallback (no context-mode)
+
+If `context_mode.has_execute_file` is false, extract using shell directly:
+
+```bash
+tac <file> | sed '/^codex$/q' | tac | tail -n +2
+```
+
+This reverses the file, finds the first (= last original) `codex` marker, reverses back, and skips the marker line.
+
+**If no marker found:** fail closed — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.
