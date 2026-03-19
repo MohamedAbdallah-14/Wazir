@@ -7,6 +7,12 @@ import { evaluateProtectedPathWriteGuard } from '../tooling/src/guards/protected
 try {
   const input = readFileSync(0, 'utf8');
   const payload = input.trim() ? JSON.parse(input) : {};
+
+  // Map Claude Code payload format (file_path) to guard format (target_path)
+  if (payload.file_path && !payload.target_path) {
+    payload.target_path = payload.file_path;
+  }
+
   const decision = evaluateProtectedPathWriteGuard(payload);
 
   process.stdout.write(`${JSON.stringify({ guard_decision: decision })}\n`);

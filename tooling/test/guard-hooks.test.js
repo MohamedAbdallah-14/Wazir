@@ -221,6 +221,103 @@ describe('protected-path-write-guard hook', () => {
   });
 });
 
+describe('protected-path-write-guard — Claude Code payload format (I9)', () => {
+  test('blocks writes to protected paths when Claude Code sends file_path', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      // Claude Code sends file_path, not target_path
+      const result = runHook('protected-path-write-guard', {
+        project_root: fixture.fixtureRoot,
+        file_path: 'input/brief.md',
+      });
+
+      assert.strictEqual(result.exitCode, 42);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.guard_decision.allowed, false);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('allows writes to non-protected paths when Claude Code sends file_path', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      const result = runHook('protected-path-write-guard', {
+        project_root: fixture.fixtureRoot,
+        file_path: 'tooling/src/test.js',
+      });
+
+      assert.strictEqual(result.exitCode, 0);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.guard_decision.allowed, true);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('runs 5 consecutive times on allowed paths without errors', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      for (let i = 0; i < 5; i++) {
+        const result = runHook('protected-path-write-guard', {
+          project_root: fixture.fixtureRoot,
+          file_path: 'tooling/src/test.js',
+        });
+
+        assert.strictEqual(result.exitCode, 0, `Run ${i + 1} failed`);
+        assert.ok(
+          !result.stderr.toLowerCase().includes('error'),
+          `Run ${i + 1} had error on stderr: ${result.stderr}`,
+        );
+      }
+    } finally {
+      fixture.cleanup();
+    }
+  });
+});
+
+describe('hook canonicalization (I9)', () => {
+  test('hooks/hooks.json contains exactly 4 hooks', () => {
+    const hooksPath = path.join(ROOT, 'hooks', 'hooks.json');
+    const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+
+    // Collect all hook command paths
+    const hookCommands = [];
+    for (const entries of Object.values(hooksContent.hooks)) {
+      for (const entry of entries) {
+        for (const hook of entry.hooks) {
+          hookCommands.push(hook.command);
+        }
+      }
+    }
+
+    assert.strictEqual(hookCommands.length, 4, `Expected 4 hooks, got ${hookCommands.length}: ${hookCommands.join(', ')}`);
+    assert.ok(hookCommands.includes('./hooks/protected-path-write-guard'));
+    assert.ok(hookCommands.includes('./hooks/context-mode-router'));
+    assert.ok(hookCommands.includes('./hooks/loop-cap-guard'));
+    assert.ok(hookCommands.includes('./hooks/session-start'));
+  });
+
+  test('hooks.json hooks field matches settings.json hooks field (generated from canonical)', () => {
+    const hooksPath = path.join(ROOT, 'hooks', 'hooks.json');
+    const settingsPath = path.join(ROOT, '.claude', 'settings.json');
+
+    const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+    const settingsContent = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+
+    // settings.json hooks should be identical to hooks.json hooks
+    // (settings.json is generated from hooks.json via wazir export claude)
+    assert.deepStrictEqual(
+      settingsContent.hooks,
+      hooksContent.hooks,
+      'settings.json hooks must match hooks.json hooks (canonical source)',
+    );
+  });
+});
+
 describe('context-mode-router hook — disabled fallback (Task 10)', () => {
   test('exits 0 (passthrough) when context-mode is disabled via env', () => {
     const result = runHook('context-mode-router', { command: 'npm test' }, {

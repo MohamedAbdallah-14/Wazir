@@ -82,50 +82,14 @@ function renderCommonInstructions(host, manifest) {
   ].join('\n');
 }
 
-function renderClaudeSettings() {
-  return JSON.stringify({
-    hooks: {
-      PreToolUse: [
-        {
-          matcher: 'Write|Edit',
-          hooks: [
-            {
-              type: 'command',
-              command: './hooks/protected-path-write-guard',
-            },
-          ],
-        },
-        {
-          matcher: 'Bash',
-          hooks: [
-            {
-              type: 'command',
-              command: './hooks/context-mode-router',
-            },
-          ],
-        },
-      ],
-      SessionStart: [
-        {
-          hooks: [
-            {
-              type: 'command',
-              command: './hooks/loop-cap-guard',
-            },
-          ],
-        },
-        {
-          matcher: 'startup|resume|clear|compact',
-          hooks: [
-            {
-              type: 'command',
-              command: './hooks/session-start',
-            },
-          ],
-        },
-      ],
-    },
-  }, null, 2);
+function renderClaudeSettings(projectRoot) {
+  const hooksPath = path.join(projectRoot, 'hooks', 'hooks.json');
+  if (fs.existsSync(hooksPath)) {
+    const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+    return JSON.stringify(hooksContent, null, 2);
+  }
+  // Fallback: empty hooks when hooks.json doesn't exist (e.g., new projects)
+  return JSON.stringify({ hooks: {} }, null, 2);
 }
 
 function renderCursorHooks() {
@@ -159,7 +123,7 @@ function generateHostFiles(projectRoot, manifest, host) {
 
   if (host === 'claude') {
     files['CLAUDE.md'] = common;
-    files['.claude/settings.json'] = renderClaudeSettings();
+    files['.claude/settings.json'] = renderClaudeSettings(projectRoot);
 
     for (const roleFile of roleFiles) {
       files[path.join('.claude', 'agents', path.basename(roleFile))] = fs.readFileSync(roleFile, 'utf8');
