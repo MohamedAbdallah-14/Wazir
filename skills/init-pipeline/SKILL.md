@@ -45,7 +45,6 @@ Run `wazir init` (default: auto mode). This automatically:
    - `model_mode: "claude-only"` (override: `wazir config set model_mode multi-model`)
    - `default_depth: "standard"` (override per-run: `/wazir deep ...`)
    - `default_intent: "feature"` (inferred per-run from request text)
-   - `team_mode: "sequential"` (always)
 6. **Auto-exports** for the detected host
 
 **No questions asked.** The pipeline is ready to use immediately.

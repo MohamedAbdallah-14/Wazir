@@ -196,8 +196,6 @@ parsed_intent: feature
 entry_point: "/wazir"
 
 depth: standard
-team_mode: sequential
-parallel_backend: none
 
 # Workflow policy — individual workflows within each phase
 workflow_policy:
