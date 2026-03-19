@@ -95,17 +95,25 @@ If any file is missing:
 
 ## Review Process (`final` mode)
 
+**Before starting this phase, output to the user:**
+
+> **Final Review** — About to run adversarial 7-dimension review comparing your implementation against the original input, not just the task specs. The executor's per-task reviewer already validated correctness per-task — this catches drift between what you asked for and what was actually built.
+>
+> **Why this matters:** Without this, implementation drift ships undetected. Per-task review confirms each task matches its spec, but cannot catch: tasks that collectively miss the original intent, scope creep that added unrequested features, or acceptance criteria that were rewritten to match implementation instead of input.
+>
+> **Looking for:** Logic errors, missing features, dead code, unsubstantiated "it works" claims, scope creep, security gaps, stale documentation
+
 **Input:** Read the ORIGINAL user input (`.wazir/input/briefing.md`, `input/` directory files) and compare against what was built. This catches intent drift that task-level review misses.
 
 Perform adversarial review across 7 dimensions:
 
-1. **Correctness** — Does the code do what the original input asked for?
-2. **Completeness** — Are all requirements from the original input met?
-3. **Wiring** — Are all paths connected end-to-end?
-4. **Verification** — Is there evidence (tests, type checks) for each claim?
-5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT)
-6. **Quality** — Code style, naming, error handling, security
-7. **Documentation** — Changelog entries, commit messages, comments
+1. **Correctness** — Does the code do what the original input asked for? *(catches: logic errors, wrong behavior, spec violations)*
+2. **Completeness** — Are all requirements from the original input met? *(catches: missing features, unimplemented acceptance criteria, partially delivered items)*
+3. **Wiring** — Are all paths connected end-to-end? *(catches: dead code, disconnected paths, missing imports, orphaned routes)*
+4. **Verification** — Is there evidence (tests, type checks) for each claim? *(catches: false claims of "it works" without evidence, untested code paths, missing type coverage)*
+5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT) *(catches: scope creep, plan deviations, unauthorized changes, gold-plating)*
+6. **Quality** — Code style, naming, error handling, security *(catches: security vulnerabilities, poor error handling, inconsistent naming, missing input validation)*
+7. **Documentation** — Changelog entries, commit messages, comments *(catches: missing changelogs, wrong commit messages, stale comments, undocumented breaking changes)*
 
 ## Context Retrieval
 
@@ -237,6 +245,13 @@ Save review results to `.wazir/runs/latest/reviews/review.md` with:
 - Rationale tied to evidence
 - Score breakdown
 - Verdict
+
+Run the phase report and display it to the user:
+```bash
+wazir report phase --run <run-id> --phase <review-mode>
+```
+
+Output the report content to the user in the conversation.
 
 ## Phase Report Generation
 
@@ -408,6 +423,16 @@ Write to `.wazir/runs/<run-id>/handoff.md`:
 
 ## Done
 
+**After completing this phase, output to the user:**
+
+> **Final Review complete.**
+>
+> **Found:** [N] findings across 7 dimensions — [N] blocking, [N] warnings, [N] notes. Score: [score]/70 ([VERDICT]).
+>
+> **Without this phase:** [N] blocking issues would have shipped — including [specific examples: e.g., "missing error handler on /api/users endpoint", "auth middleware not wired to 3 routes", "CHANGELOG missing entry for breaking API change"]
+>
+> **Changed because of this work:** [List of issues caught and fixed during review passes, score improvement from first to final pass]
+
 Present the verdict and offer next steps:
 
 > **Review complete: [VERDICT] ([score]/70)**
@@ -416,8 +441,12 @@ Present the verdict and offer next steps:
 >
 > **Learnings proposed:** [count] (see `memory/learnings/proposed/`)
 > **Handoff:** `.wazir/runs/<run-id>/handoff.md`
->
-> **What would you like to do?**
-> 1. **Create a PR** (if PASS)
-> 2. **Auto-fix and re-review** (if MINOR FIXES)
-> 3. **Review findings in detail**
+
+Ask the user via AskUserQuestion:
+- **Question:** "How would you like to proceed with the review results?"
+- **Options:**
+  1. "Create a PR" *(Recommended if PASS)*
+  2. "Auto-fix and re-review" *(Recommended if MINOR FIXES)*
+  3. "Review findings in detail"
+
+Wait for the user's selection before continuing.

@@ -93,11 +93,14 @@ Run `which wazir` to check if the CLI is installed.
 **If not installed**, present:
 
 > **The Wazir CLI is not installed. It's required for event capture, validation, and indexing.**
->
-> **How would you like to install it?**
->
-> 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
-> 2. **Local link** — `npm link` from the Wazir project root
+
+Ask the user via AskUserQuestion:
+- **Question:** "The Wazir CLI is not installed. How would you like to install it?"
+- **Options:**
+  1. "npm install -g @wazir-dev/cli" *(Recommended)*
+  2. "npm link from the Wazir project root"
+
+Wait for the user's selection before continuing.
 
 The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
 
@@ -109,9 +112,14 @@ Run `wazir validate branches` to check the current git branch.
 
 - If on `main` or `develop`:
   > You're on **[branch]**. The pipeline requires a feature branch.
-  >
-  > 1. **Create feat/<slug>** (Recommended) — branch from current
-  > 2. **Continue on [branch]** — not recommended for feature/refactor work
+
+  Ask the user via AskUserQuestion:
+  - **Question:** "You're on a protected branch. Create a feature branch?"
+  - **Options:**
+    1. "Create feat/<slug> from current branch" *(Recommended)*
+    2. "Continue on current branch — not recommended"
+
+  Wait for the user's selection before continuing.
 
 ### Index Check
 
@@ -154,9 +162,14 @@ Check if a previous incomplete run exists (via `latest` symlink pointing to a ru
 **If previous incomplete run found**, present:
 
 > **A previous incomplete run was detected:** `<previous-run-id>`
->
-> 1. **Resume** (Recommended) — continue from the last completed phase
-> 2. **Start fresh** — create a new empty run
+
+Ask the user via AskUserQuestion:
+- **Question:** "A previous incomplete run was detected. Resume or start fresh?"
+- **Options:**
+  1. "Resume from the last completed phase" *(Recommended)*
+  2. "Start fresh with a new empty run"
+
+Wait for the user's selection before continuing.
 
 **If Resume:**
 - Copy `clarified/` from previous run into new run, EXCEPT `user-feedback.md`.
@@ -245,17 +258,37 @@ After building run config:
   > **Running: standard depth, feature, sequential. Proceeding...**
 
 - **Low confidence** — show plan and ask:
-  > **Does this look right?**
-  > 1. **Yes, proceed** (Recommended)
-  > 2. **No, let me adjust**
+
+  Ask the user via AskUserQuestion:
+  - **Question:** "Does this run configuration look right?"
+  - **Options:**
+    1. "Yes, proceed" *(Recommended)*
+    2. "No, let me adjust"
+
+  Wait for the user's selection before continuing.
 
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase init --status completed
 ```
 
+Run the phase report and display it to the user:
+```bash
+wazir report phase --run <run-id> --phase init
+```
+
+Output the report content to the user in the conversation.
+
 ---
 
 # Phase 2: Clarifier
+
+**Before starting this phase, output to the user:**
+
+> **Clarifier Phase** — About to research your codebase, clarify requirements, harden the spec, brainstorm designs, and produce an execution plan.
+>
+> **Why this matters:** Without this, I'd guess your tech stack, misunderstand constraints, miss edge cases in the spec, and build the wrong architecture. Every ambiguity left unresolved here becomes a bug or rework cycle later.
+>
+> **Looking for:** Unstated assumptions, scope boundaries, conflicting requirements, missing acceptance criteria
 
 ```bash
 wazir capture event --run <run-id> --event phase_enter --phase clarifier --status in_progress
@@ -278,13 +311,38 @@ Each sub-workflow has its own review loop. User checkpoints between major steps.
 
 Output: approved spec + design + execution plan in `.wazir/runs/latest/clarified/`.
 
+**After completing this phase, output to the user:**
+
+> **Clarifier Phase complete.**
+>
+> **Found:** [N] ambiguities resolved, [N] assumptions made explicit, [N] scope boundaries drawn, [N] acceptance criteria hardened
+>
+> **Without this phase:** Requirements would be interpreted differently across tasks, acceptance criteria would be vague and untestable, the design would be ad-hoc, and the plan would miss dependency ordering
+>
+> **Changed because of this work:** [List spec tightening changes, resolved questions, design decisions, scope adjustments]
+
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase clarifier --status completed
 ```
 
+Run the phase report and display it to the user:
+```bash
+wazir report phase --run <run-id> --phase clarifier
+```
+
+Output the report content to the user in the conversation.
+
 ---
 
 # Phase 3: Executor
+
+**Before starting this phase, output to the user:**
+
+> **Executor Phase** — About to implement [N] tasks in dependency order with TDD (test-first), per-task code review, and verification before each commit.
+>
+> **Why this matters:** Without this discipline, tests get skipped, edge cases get missed, integration points break silently, and review catches problems too late when they're expensive to fix.
+>
+> **Looking for:** Correct dependency ordering, test coverage for each task, clean per-task review passes, no implementation drift from the approved plan
 
 ## Phase Gate (Hard Gate)
 
@@ -326,13 +384,38 @@ Tasks always run sequentially.
 
 Output: code changes + verification proof in `.wazir/runs/latest/artifacts/`.
 
+**After completing this phase, output to the user:**
+
+> **Executor Phase complete.**
+>
+> **Found:** [N]/[N] tasks implemented, [N] tests written, [N] per-task review passes completed, [N] findings fixed before commit
+>
+> **Without this phase:** Code would ship without tests, review findings would accumulate until final review (10x more expensive to fix), and verification claims would be unsubstantiated
+>
+> **Changed because of this work:** [List of commits with conventional commit messages, test counts, verification evidence collected]
+
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase executor --status completed
 ```
 
+Run the phase report and display it to the user:
+```bash
+wazir report phase --run <run-id> --phase executor
+```
+
+Output the report content to the user in the conversation.
+
 ---
 
 # Phase 4: Final Review
+
+**Before starting this phase, output to the user:**
+
+> **Final Review Phase** — About to run adversarial 7-dimension review comparing the implementation against your original input, extract durable learnings, and prepare the handoff.
+>
+> **Why this matters:** Without this, implementation drift ships undetected, missing acceptance criteria go unnoticed, untested code paths hide bugs, and the same mistakes repeat in the next run.
+>
+> **Looking for:** Spec violations, missing features, dead code paths, unsubstantiated claims, scope creep, security gaps, stale documentation
 
 ## Phase Gate (Hard Gate)
 
@@ -373,9 +456,26 @@ Prepare context and handoff for the next run:
 - Compress/archive unneeded files
 - Record what's left to do
 
+**After completing this phase, output to the user:**
+
+> **Final Review Phase complete.**
+>
+> **Found:** [N] findings across 7 dimensions, [N] blocking issues, [N] warnings, [N] learnings proposed for future runs
+>
+> **Without this phase:** Implementation drift from the original request would ship undetected, untested paths would hide production bugs, and recurring mistakes would never get captured as learnings
+>
+> **Changed because of this work:** [List of findings fixed, score achieved, learnings extracted, handoff prepared]
+
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
 ```
+
+Run the phase report and display it to the user:
+```bash
+wazir report phase --run <run-id> --phase final_review
+```
+
+Output the report content to the user in the conversation.
 
 ---
 
@@ -397,26 +497,41 @@ After the reviewer completes, present verdict with numbered options:
 ### If PASS (score 56+):
 
 > **Result: PASS (score/70)**
->
-> 1. **Create a PR** (Recommended)
-> 2. **Merge directly**
-> 3. **Review the changes first**
+
+Ask the user via AskUserQuestion:
+- **Question:** "Pipeline passed. What would you like to do next?"
+- **Options:**
+  1. "Create a PR" *(Recommended)*
+  2. "Merge directly"
+  3. "Review the changes first"
+
+Wait for the user's selection before continuing.
 
 ### If NEEDS MINOR FIXES (score 42-55):
 
 > **Result: NEEDS MINOR FIXES (score/70)**
->
-> 1. **Auto-fix and re-review** (Recommended)
-> 2. **Fix manually**
-> 3. **Accept as-is**
+
+Ask the user via AskUserQuestion:
+- **Question:** "Minor issues found. How should we handle them?"
+- **Options:**
+  1. "Auto-fix and re-review" *(Recommended)*
+  2. "Fix manually"
+  3. "Accept as-is"
+
+Wait for the user's selection before continuing.
 
 ### If NEEDS REWORK (score 28-41):
 
 > **Result: NEEDS REWORK (score/70)**
->
-> 1. **Re-run affected tasks** (Recommended)
-> 2. **Review findings in detail**
-> 3. **Abandon this run**
+
+Ask the user via AskUserQuestion:
+- **Question:** "Significant issues found. How should we proceed?"
+- **Options:**
+  1. "Re-run affected tasks" *(Recommended)*
+  2. "Review findings in detail"
+  3. "Abandon this run"
+
+Wait for the user's selection before continuing.
 
 ### If FAIL (score 0-27):
 
@@ -436,10 +551,15 @@ wazir status --run <run-id> --json
 If any phase fails:
 
 > **Phase [name] failed: [reason]**
->
-> 1. **Retry this phase** (Recommended)
-> 2. **Skip and continue** (only if workflows within phase are adaptive)
-> 3. **Abort the run**
+
+Ask the user via AskUserQuestion:
+- **Question:** "Phase [name] failed: [reason]. How should we proceed?"
+- **Options:**
+  1. "Retry this phase" *(Recommended)*
+  2. "Skip and continue" *(only if workflows within phase are adaptive)*
+  3. "Abort the run"
+
+Wait for the user's selection before continuing.
 
 ---
 
@@ -453,9 +573,14 @@ Parse inline audit types: `/wazir audit security` → skip Question 1.
 
 After audit:
 
-> 1. **Review the findings** (Recommended)
-> 2. **Generate a fix plan**
-> 3. **Run the pipeline on the fix plan**
+Ask the user via AskUserQuestion:
+- **Question:** "Audit complete. What would you like to do with the findings?"
+- **Options:**
+  1. "Review the findings" *(Recommended)*
+  2. "Generate a fix plan"
+  3. "Run the pipeline on the fix plan"
+
+Wait for the user's selection before continuing.
 
 If option 3, save findings as briefing and run pipeline with intent = `bugfix`.
 
@@ -469,9 +594,14 @@ Generates a PRD from a completed run. Reads approved design, task specs, executi
 
 After generation:
 
-> 1. **Review the PRD** (Recommended)
-> 2. **Commit it**
-> 3. **Edit before committing**
+Ask the user via AskUserQuestion:
+- **Question:** "PRD generated. What would you like to do?"
+- **Options:**
+  1. "Review the PRD" *(Recommended)*
+  2. "Commit it"
+  3. "Edit before committing"
+
+Wait for the user's selection before continuing.
 
 ---
 

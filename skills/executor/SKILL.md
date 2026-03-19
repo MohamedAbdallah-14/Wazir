@@ -67,6 +67,12 @@ Implement tasks in the order defined by the execution plan.
 
 For each task:
 
+**Before starting each task, output to the user:**
+
+> **Implementing Task [NNN]: [task title]** — This enables [what downstream tasks or user-facing features depend on this task].
+>
+> **Looking for:** [Key technical concerns for this specific task — e.g., "correct API contract", "database migration safety", "backwards compatibility"]
+
 1. **Read** the task from the execution plan
 2. **Implement** using TDD (write test first, make it pass, refactor)
 3. **Verify locally** — run tests, type checks, linting as appropriate
@@ -84,6 +90,16 @@ For each task:
 5. **Commit** — only after review passes, commit with conventional commit format: `<type>(<scope>): <description>`
 6. **CHANGELOG** — if user-facing change, update `CHANGELOG.md` under `[Unreleased]` using keepachangelog types: Added, Changed, Fixed, Removed, Deprecated, Security.
 7. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
+
+**After completing each task, output to the user:**
+
+> **Completed Task [NNN]: [task title].**
+>
+> **Changed:** [List of files created/modified, tests added, key implementation decisions]
+>
+> **Without this task:** [Concrete risk — e.g., "no auth middleware means all routes are publicly accessible", "no migration means schema change would require manual DB intervention"]
+>
+> **Review result:** [N] findings in [N] review passes, [N] fixed before commit
 
 Review loops follow `docs/reference/review-loop-pattern.md`. Code review scoping: review uncommitted changes before commit. If changes are committed, use `--base <pre-task-sha>`.
 
@@ -116,6 +132,18 @@ Pause and ask the user when:
 - The plan is blocked or contradictory
 - Implementation would require unapproved scope change
 - A task's acceptance criteria can't be met
+
+When escalating, use this pattern:
+
+Ask the user via AskUserQuestion:
+- **Question:** "[Describe the specific blocker or conflict]"
+- **Options:**
+  1. "Adjust the plan to work around the blocker" *(Recommended)*
+  2. "Expand scope to handle the new requirement"
+  3. "Skip this task and continue with the rest"
+  4. "Abort the run"
+
+Wait for the user's selection before continuing.
 
 ## Done
 

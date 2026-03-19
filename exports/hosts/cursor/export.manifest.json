@@ -26,7 +26,7 @@
     "workflows/run-audit.md": "e582f767967dc3fb6aaeb938ad1672e7bed18bf044055ce8c45c2114251b787a",
     "workflows/spec-challenge.md": "dc99137c28c49a6f8312924709afb6077754d128e90466dc911150ce15737897",
     "workflows/specify.md": "53b84e74871f6dbd93cae22a881cc5907e398b29501d0a1fa08c7ed69df705cb",
-    "workflows/verify.md": "45f9c189520dfe9d24c0bc340a15e6a80c988fca1b84dc187627032a6dbaee16",
+    "workflows/verify.md": "6e80d784b5d9ebe39efbd39cf62a6a65ead9349524ba68663d085965f2383794",
     "hooks/definitions/context_mode_router.yaml": "a10dc927418bc130b447eb33faf0f45669ecd9c7917f56947ddd74850a4e0e37",
     "hooks/definitions/loop_cap_guard.yaml": "f0fd220e028ab6fad3d8fd650602884fe500ca4899eff6e428cf217af058618d",
     "hooks/definitions/post_tool_capture.yaml": "a773cd6e18972dee8eef3b7cb06fd1d319a71de4588897cebfbe643f6781a3b2",

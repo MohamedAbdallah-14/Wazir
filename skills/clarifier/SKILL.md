@@ -52,6 +52,14 @@ Read `context_mode` from `.wazir/state/config.json`:
 
 ## Sub-Workflow 1: Research (discover workflow)
 
+**Before starting this phase, output to the user:**
+
+> **Research** — About to scan the codebase and fetch external references to understand the existing architecture, tech stack, and any standards referenced in the briefing.
+>
+> **Why this matters:** Without research, I'd assume the wrong framework version, miss existing patterns in the codebase, and contradict established conventions. Every wrong assumption here cascades into a wrong spec and wrong implementation.
+>
+> **Looking for:** Existing code patterns, dependency versions, external standard definitions, architectural constraints
+
 Delegate to the discover workflow (`workflows/discover.md`):
 
 1. **Keyword extraction:** Read the briefing and extract concepts/terms that are vague, reference external standards, or use unfamiliar terminology.
@@ -68,21 +76,42 @@ Delegate to the discover workflow (`workflows/discover.md`):
 
 Save result to `.wazir/runs/latest/clarified/research-brief.md`.
 
+**After completing this phase, output to the user:**
+
+> **Research complete.**
+>
+> **Found:** [N] external sources fetched, [N] codebase patterns identified, [N] architectural constraints documented
+>
+> **Without this phase:** Spec would be built on assumptions instead of evidence — wrong framework APIs, missed existing utilities, contradicted naming conventions
+>
+> **Changed because of this work:** [List of key discoveries — e.g., "found existing auth middleware at src/middleware/auth.ts", "project uses Vitest not Jest"]
+
 ### Checkpoint: Research Review
 
 > **Research complete. Here's what I found:**
 >
 > [Summary of codebase state, relevant architecture, external context]
->
-> 1. **Looks good, continue** (Recommended)
-> 2. **Missing context** — let me add more information
-> 3. **Wrong direction** — let me clarify the intent
 
-**Wait for user response before continuing.**
+Ask the user via AskUserQuestion:
+- **Question:** "Does the research look complete and accurate?"
+- **Options:**
+  1. "Looks good, continue" *(Recommended)*
+  2. "Missing context — let me add more information"
+  3. "Wrong direction — let me clarify the intent"
+
+Wait for the user's selection before continuing.
 
 ---
 
 ## Sub-Workflow 2: Clarify (clarify workflow)
+
+**Before starting this phase, output to the user:**
+
+> **Clarification** — About to transform the briefing and research into a precise scope document with explicit constraints, assumptions, and boundaries.
+>
+> **Why this matters:** Without explicit clarification, "add user auth" could mean OAuth, magic links, or username/password. Every ambiguity left here becomes a 50/50 coin flip during implementation that could produce the wrong feature.
+>
+> **Looking for:** Ambiguous requirements, implicit assumptions, missing constraints, scope boundaries, unresolved questions
 
 ### Input Preservation (before producing clarification)
 
@@ -108,21 +137,42 @@ Save to `.wazir/runs/latest/clarified/clarification.md`.
 
 Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presenting to user.
 
+**After completing this phase, output to the user:**
+
+> **Clarification complete.**
+>
+> **Found:** [N] ambiguities resolved, [N] assumptions documented, [N] scope boundaries defined, [N] items explicitly marked out-of-scope
+>
+> **Without this phase:** Implementation would proceed with hidden assumptions, scope would creep mid-build, and acceptance criteria would be vague enough to pass any implementation
+>
+> **Changed because of this work:** [List of resolved ambiguities — e.g., "clarified auth means OAuth2 with Google provider only", "out-of-scope: mobile responsive for v1"]
+
 ### Checkpoint: Clarification Review
 
 > **Here's the clarified scope:**
 >
 > [Full clarification]
->
-> 1. **Approved — continue to spec hardening** (Recommended)
-> 2. **Needs changes** — [user provides corrections]
-> 3. **Missing important context** — [user adds information]
 
-**Wait for user response.** Route feedback: plan corrections → `user-feedback.md`, new requirements → `briefing.md`.
+Ask the user via AskUserQuestion:
+- **Question:** "Does the clarified scope accurately capture what you want to build?"
+- **Options:**
+  1. "Approved — continue to spec hardening" *(Recommended)*
+  2. "Needs changes — let me provide corrections"
+  3. "Missing important context — let me add information"
+
+Wait for the user's selection before continuing. Route feedback: plan corrections → `user-feedback.md`, new requirements → `briefing.md`.
 
 ---
 
 ## Sub-Workflow 3: Spec Harden (specify + spec-challenge workflows)
+
+**Before starting this phase, output to the user:**
+
+> **Spec Hardening** — About to convert the clarified scope into a measurable, testable specification and then run adversarial spec-challenge review to find gaps.
+>
+> **Why this matters:** Without hardening, acceptance criteria stay vague ("it should work well") instead of measurable ("response time under 200ms for 95th percentile"). Vague specs pass any implementation, making review meaningless.
+>
+> **Looking for:** Untestable criteria, missing error handling specs, undefined edge cases, performance requirements, security constraints
 
 Delegate to the specify workflow (`workflows/specify.md`):
 
@@ -131,6 +181,16 @@ Delegate to the specify workflow (`workflows/specify.md`):
 3. Loop runs for `pass_counts[depth]` passes.
 
 Save result to `.wazir/runs/latest/clarified/spec-hardened.md`.
+
+**After completing this phase, output to the user:**
+
+> **Spec Hardening complete.**
+>
+> **Found:** [N] acceptance criteria tightened, [N] edge cases added, [N] error handling requirements specified, [N] spec-challenge findings resolved
+>
+> **Without this phase:** Acceptance criteria would be subjective, review would have no concrete standard to measure against, and "done" would mean whatever the implementer decided
+>
+> **Changed because of this work:** [List of hardening changes — e.g., "added 404 handling spec for missing resources", "specified max payload size of 5MB", "added rate limit requirement of 100 req/min"]
 
 ### Content-Author Detection
 
@@ -151,16 +211,27 @@ If detected, set `workflow_policy.author.enabled = true` in the run config and n
 > **Spec hardened. Changes made:**
 >
 > [List of gaps found and how they were tightened]
->
-> 1. **Approved — continue to brainstorming** (Recommended)
-> 2. **Disagree with a change** — [user specifies]
-> 3. **Found more gaps** — [user adds]
 
-**Wait for user response.**
+Ask the user via AskUserQuestion:
+- **Question:** "Are the spec hardening changes acceptable?"
+- **Options:**
+  1. "Approved — continue to brainstorming" *(Recommended)*
+  2. "Disagree with a change — let me specify"
+  3. "Found more gaps — let me add"
+
+Wait for the user's selection before continuing.
 
 ---
 
 ## Sub-Workflow 4: Brainstorm (design + design-review workflows)
+
+**Before starting this phase, output to the user:**
+
+> **Brainstorming** — About to propose 2-3 design approaches with explicit trade-offs, then run design-review on the approved choice.
+>
+> **Why this matters:** Without exploring alternatives, the first approach that comes to mind gets built — even if a simpler, more maintainable, or more performant option exists. This is where architectural mistakes get caught cheaply instead of discovered during implementation.
+>
+> **Looking for:** Architectural trade-offs, scalability implications, complexity vs. simplicity, alignment with existing codebase patterns
 
 Invoke the `brainstorming` skill (`wz:brainstorming`):
 
@@ -170,16 +241,27 @@ Invoke the `brainstorming` skill (`wz:brainstorming`):
 
 ### Checkpoint: Design Approval
 
-> **Which approach should we implement?**
->
-> 1. **Approach A** — [one-line summary] (Recommended)
-> 2. **Approach B** — [one-line summary]
-> 3. **Approach C** — [one-line summary]
-> 4. **Modify an approach** — [user specifies changes]
+Ask the user via AskUserQuestion:
+- **Question:** "Which design approach should we implement?"
+- **Options:**
+  1. "Approach A — [one-line summary]" *(Recommended)*
+  2. "Approach B — [one-line summary]"
+  3. "Approach C — [one-line summary]"
+  4. "Modify an approach — let me specify changes"
 
-**Wait for user response.** This is the most important checkpoint.
+Wait for the user's selection before continuing. This is the most important checkpoint.
 
 Save approved design to `.wazir/runs/latest/clarified/design.md`.
+
+**After completing this phase, output to the user:**
+
+> **Brainstorming complete.**
+>
+> **Found:** [N] approaches evaluated, [N] trade-offs documented, [N] design-review findings resolved
+>
+> **Without this phase:** The first viable approach would be built without considering alternatives — potentially choosing a complex solution when a simple one exists, or an approach that conflicts with existing patterns
+>
+> **Changed because of this work:** [Selected approach and why, rejected alternatives and why, design-review adjustments made]
 
 After approval: design-review loop with `--mode design-review` (5 canonical dimensions: spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity).
 
@@ -187,11 +269,29 @@ After approval: design-review loop with `--mode design-review` (5 canonical dime
 
 ## Sub-Workflow 5: Plan (plan + plan-review workflows)
 
+**Before starting this phase, output to the user:**
+
+> **Planning** — About to break the approved design into ordered, dependency-aware implementation tasks with a gap analysis against the original input.
+>
+> **Why this matters:** Without explicit planning, tasks get implemented in the wrong order (breaking dependencies), items from the input get silently dropped, and task granularity is either too coarse (monolithic changes that are hard to review) or too fine (overhead without value).
+>
+> **Looking for:** Correct dependency ordering, complete input coverage, appropriate task granularity, clear acceptance criteria per task
+
 Delegate to `wz:writing-plans`:
 
 1. Planner produces a SINGLE execution plan at `.wazir/runs/latest/clarified/execution-plan.md` in spec-kit format.
 2. **Gap analysis exit gate:** Compare original input against plan. Invoke `wz:reviewer --mode plan-review`.
 3. Loop until clean or cap reached.
+
+**After completing this phase, output to the user:**
+
+> **Planning complete.**
+>
+> **Found:** [N] tasks created, [N] dependencies mapped, [N] plan-review findings resolved, [N] gap analysis items addressed
+>
+> **Without this phase:** Tasks would be implemented in ad-hoc order breaking dependencies, input items would be silently dropped, and task sizes would vary wildly making review inconsistent
+>
+> **Changed because of this work:** [Task count, dependency chain summary, any items reordered or split during plan-review]
 
 ### Checkpoint: Plan Review
 
@@ -199,13 +299,16 @@ Delegate to `wz:writing-plans`:
 >
 > | # | Task | Complexity | Dependencies | Description |
 > |---|------|-----------|--------------|-------------|
->
-> 1. **Approved — ready for execution** (Recommended)
-> 2. **Reorder or split tasks**
-> 3. **Missing tasks**
-> 4. **Too granular / too coarse**
 
-**Wait for user response.**
+Ask the user via AskUserQuestion:
+- **Question:** "Does the implementation plan look correct and complete?"
+- **Options:**
+  1. "Approved — ready for execution" *(Recommended)*
+  2. "Reorder or split tasks"
+  3. "Missing tasks"
+  4. "Too granular / too coarse"
+
+Wait for the user's selection before continuing.
 
 ---
 
@@ -220,9 +323,12 @@ Before presenting the plan to the user, verify ALL input items are covered:
 > **Scope reduction detected.** The input contains [N] items but the plan only covers [M].
 >
 > Missing items: [list]
->
-> 1. **Add missing items to the plan** (Required)
-> 2. **User explicitly approves reduced scope** — only if user confirms
+
+Ask the user via AskUserQuestion:
+- **Question:** "The plan is missing [N-M] items from your input. How should we proceed?"
+- **Options:**
+  1. "Add missing items to the plan" *(Recommended)*
+  2. "Approve reduced scope — I confirm these items can be dropped"
 
 **The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.**
 

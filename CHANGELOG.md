@@ -11,11 +11,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Removed depth and intent questions from pipeline init — depth defaults to standard (override via inline modifiers), intent inferred from request keywords
 - Enabled learn + prepare-next workflows by default (part of Final Review phase)
 - Renamed `phase_policy` to `workflow_policy` in run-config (legacy name still supported)
-- Pipeline init no longer asks about Agent Teams — always sequential
 - Input directory (`input/`) now scanned automatically at startup
 - Learning extraction with concrete proposal format in reviewer final mode
 - Accepted learnings injected into clarifier context (top 10 by confidence, scope-matched)
 - Prepare-next skill produces structured handoff document
+- All pipeline checkpoints now use AskUserQuestion pattern instead of numbered lists
+- Every pipeline phase outputs value-reporting text (before/after) explaining why the phase matters and what it found
+- Review dimensions annotated with "catches:" descriptions explaining what class of bugs each dimension prevents
+
+### Removed
+- `@inquirer/prompts` dependency and `--interactive` init path (always fails in non-TTY)
+- All Agent Teams references (team_mode, parallel_backend, TeamCreate/SendMessage/TeamDelete, Free Thinker/Grounder/Synthesizer)
 
 ### Fixed
 - Router logs now write to manifest-derived state root instead of `_default` (Codex P1)
@@ -23,15 +29,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Index-query savings now computed from avoided bytes, not raw bytes (Codex P2)
 - Index-query savings included in savings-ratio denominator (Codex P2)
 - Cursor export now includes context-mode-router hook (Codex P2)
+- SessionStart hook uses correct `database_path` key for index freshness check
+- TabManager stop hook error documented as Claude Code internal (cannot fix from Wazir side)
 
 ### Added
 - Core review loop pattern across all pipeline phases with Codex CLI integration
 - `wazir capture loop-check` CLI subcommand with task-scoped cap tracking and run-config loader
-- `wazir init` interactive CLI command with arrow-key selection (depth, intent, teams, codex model)
+- `wazir init` zero-config auto-init (no prompts, infer everything)
 - `docs/reference/review-loop-pattern.md` canonical reference for the review loop pattern
 - Standalone skills: `/wazir:clarifier`, `/wazir:executor`, `/wazir:reviewer`
-- Agent Teams real implementation in brainstorming (TeamCreate, SendMessage, TeamDelete)
 - Codex prompt templates (artifact + code) with "Do NOT load skills" instruction
+- `tooling/src/verify/proof-collector.js` — detects project type (web/api/cli/library) and collects mechanical proof of implementation
+- Phase reports wired into pipeline — `wazir report phase` called after each phase exit and displayed to user
+- Proof-of-implementation in verify workflow — runnable vs non-runnable detection with evidence collection
 - Git branch enforcement in `/wazir` runner (validates branch, offers to create feature branch)
 - CLI wiring across pipeline phases (doctor gate, index build/refresh, capture events, validate gates)
 - CHANGELOG enforcement in executor and reviewer skills
