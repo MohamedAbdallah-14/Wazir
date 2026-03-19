@@ -127,6 +127,8 @@ After creating the run directory, initialize event capture:
 wazir capture init --run <run-id> --phase clarify --status starting
 ```
 
+Record context-mode availability in the run-config so downstream phases know whether to use `fetch_and_index`/`execute` or fall back to `WebFetch`/`Bash`. Read `context_mode` from `.wazir/state/config.json` and note it in the run's `run-config.yaml`.
+
 ## Step 3: Pre-Flight Configuration
 
 Build the run configuration. Skip questions that were answered via inline modifiers.

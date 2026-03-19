@@ -26,6 +26,17 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 
 ---
 
+## Context-Mode Usage
+
+Read `context_mode` from `.wazir/state/config.json`:
+
+- **If `context_mode.enabled: true`:** Use `fetch_and_index` for URL fetching, `search` for follow-up queries on indexed content. Use `execute` or `execute_file` for large outputs (test results, git log, etc.) instead of Bash.
+- **If `context_mode.enabled: false`:** Fall back to `WebFetch` for URLs and `Bash` for commands. The `search` step is skipped entirely (use full fetched content instead).
+
+This applies to Phase 0 (research) and all subsequent phases.
+
+---
+
 ## Phase 0: Research (delegated)
 
 Delegate to the discover workflow (`workflows/discover.md`):
