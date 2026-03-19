@@ -196,20 +196,6 @@ Only ask this if the request is ambiguous. If the intent is clear from the text 
 > 4. **Docs** — Documentation only
 > 5. **Spike** — Research and exploration, no production code
 
-### Question 3: Agent Teams (conditional)
-
-Only ask this if ALL of these are true:
-- The host is Claude Code (not Codex/Gemini/Cursor)
-- Depth is `standard` or `deep`
-- Intent is `feature` or `refactor` (not bugfix/docs/spike)
-
-> **Would you like to use Agent Teams for parallel execution?**
->
-> 1. **No** (Recommended) — Tasks run sequentially. Predictable, lower cost.
-> 2. **Yes** — Spawns parallel teammates for independent tasks. Potentially faster and richer output.
->
-> *Agent Teams is experimental from Claude's side. Requires Opus model. Higher token consumption.*
-
 ### Write Run Config
 
 Save all decisions to `.wazir/runs/<run-id>/run-config.yaml`:
@@ -228,8 +214,8 @@ entry_point: "/wazir"                  # how the user entered the pipeline
 
 # Configuration
 depth: standard                        # quick | standard | deep
-team_mode: sequential                  # sequential | parallel
-parallel_backend: none                 # none | claude_teams (future: subagents, worktrees)
+team_mode: sequential                  # always sequential
+parallel_backend: none                 # always none
 
 # Phase policy (system-decided, not user-facing)
 phase_policy:
@@ -463,7 +449,7 @@ Cap tracking: `wazir capture loop-check --task-id <NNN>`
 Codex error handling: non-zero exit -> codex-unavailable, self-review only.
 NOTE: per-task review is NOT the final review.
 
-If `team_mode: parallel` in run-config, the executor spawns Agent Teams for independent tasks. Otherwise, tasks run sequentially.
+Tasks run sequentially.
 
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase execute --status completed

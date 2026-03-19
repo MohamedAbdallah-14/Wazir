@@ -138,33 +138,7 @@ Wait for the user to answer before continuing.
 
 Wait for the user to answer before continuing.
 
-## Step 6: Agent Teams (conditional)
-
-Only ask this if ALL of these are true:
-- The host is Claude Code (not Codex/Gemini/Cursor)
-- Default depth is `standard` or `deep`
-- Default intent is `feature` or `refactor` (not bugfix/docs/spike)
-
-> **Would you like to use Agent Teams for parallel execution?**
->
-> 1. **No** (Recommended) — Tasks run sequentially. Predictable, lower cost.
-> 2. **Yes** — Spawns parallel teammates for independent tasks. Potentially faster and richer output.
->
-> *Agent Teams is experimental from Claude's side. Requires Opus model. Higher token consumption.*
-
-If the conditions above are NOT met, silently default to `team_mode: sequential`.
-
-If the user selects **Yes**, enable the Agent Teams experimental feature:
-
-```bash
-claude config set env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS 1
-```
-
-Then inform the user they need to restart their Claude Code session for it to take effect.
-
-Wait for the user to answer before continuing.
-
-## Step 7: Write Config
+## Step 6: Write Config
 
 Create/update `.wazir/state/config.json`:
 
@@ -172,8 +146,8 @@ Create/update `.wazir/state/config.json`:
 - If `multi-tool`, set `multi_tool.tools` to the selected tools (e.g. `["codex"]`, `["gemini"]`, or `["codex", "gemini"]`)
 - Set `default_depth` to the selected depth (`quick`, `standard`, or `deep`)
 - Set `default_intent` to the selected intent (`feature`, `bugfix`, `refactor`, `docs`, or `spike`)
-- Set `team_mode` to the selected mode (`sequential` or `parallel`)
-- If `team_mode` is `parallel`, set `parallel_backend` to `claude_teams`
+- Set `team_mode` to `sequential`
+- Set `parallel_backend` to `none`
 - If Codex selected, set `multi_tool.codex.model` to the chosen model
 - Set `context_mode` to the detected value from Step 0.5 (object: `{ "enabled": true|false, "has_execute_file": true|false }`)
 
@@ -188,7 +162,7 @@ Example for claude-only with defaults:
 }
 ```
 
-Example for multi-tool with teams enabled:
+Example for multi-tool:
 ```json
 {
   "model_mode": "multi-tool",
@@ -200,12 +174,12 @@ Example for multi-tool with teams enabled:
   },
   "default_depth": "deep",
   "default_intent": "feature",
-  "team_mode": "parallel",
-  "parallel_backend": "claude_teams"
+  "team_mode": "sequential",
+  "parallel_backend": "none"
 }
 ```
 
-## Step 8: Runtime-Specific Setup
+## Step 7: Runtime-Specific Setup
 
 Based on `multi_tool.tools`:
 
@@ -228,7 +202,7 @@ Based on `multi_tool.tools`:
 
 - If **both**: Create both files.
 
-## Step 9: Confirm
+## Step 8: Confirm
 
 List all files created and show the selected mode. Then present:
 

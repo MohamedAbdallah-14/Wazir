@@ -60,7 +60,7 @@ For each task:
 
 Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. Code review scoping: review uncommitted changes before commit. If changes are already committed (subagent workflow), use `codex review -c model="$CODEX_MODEL" --base <pre-task-sha>`.
 
-If `team_mode: parallel` in config, spawn Agent Teams for independent tasks. Otherwise, tasks run sequentially.
+Tasks always run sequentially.
 
 **Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/` alongside the artifact.
 

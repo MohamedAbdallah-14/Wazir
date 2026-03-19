@@ -1,4 +1,3 @@
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -84,33 +83,9 @@ export async function runInitCommand(parsed, context = {}) {
       default: 'feature',
     });
 
-    // Agent Teams (conditional)
-    let teamMode = 'sequential';
-    let parallelBackend = 'none';
-
-    const depthAllows = defaultDepth === 'standard' || defaultDepth === 'deep';
-    const intentAllows = defaultIntent === 'feature' || defaultIntent === 'refactor';
-
-    if (depthAllows && intentAllows) {
-      const useTeams = await select({
-        message: 'Would you like to use Agent Teams for parallel execution?',
-        choices: [
-          { name: 'No (Recommended) — sequential, predictable, lower cost', value: 'sequential' },
-          { name: 'Yes — parallel teammates, faster but experimental (Opus only)', value: 'parallel' },
-        ],
-        default: 'sequential',
-      });
-      teamMode = useTeams;
-      parallelBackend = useTeams === 'parallel' ? 'claude_teams' : 'none';
-
-      if (teamMode === 'parallel') {
-        try {
-          execFileSync('claude', ['config', 'set', 'env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', '1'], { stdio: 'pipe' });
-        } catch {
-          // claude CLI not available — user will need to set it manually
-        }
-      }
-    }
+    // Team mode is always sequential (Agent Teams removed — too much overhead)
+    const teamMode = 'sequential';
+    const parallelBackend = 'none';
 
     // Detect context-mode MCP (silent — no user prompt)
     // Two detection paths:

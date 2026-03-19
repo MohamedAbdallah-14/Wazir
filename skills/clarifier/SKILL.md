@@ -185,22 +185,6 @@ This phase explores design approaches:
 2. For each approach: effort estimate, risk assessment, what it enables/prevents
 3. Recommend one approach with rationale
 
-If `team_mode: parallel` in config, the brainstorming skill activates its
-**Agent Teams Structured Dialogue** mode:
-
-1. Checks that `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled (falls back
-   to single-agent brainstorming if not)
-2. Creates a team via `TeamCreate` (`wazir-brainstorm-<concept-slug>`)
-3. Spawns three teammates via `Agent` with `team_name`:
-   - **Free Thinker** — proposes creative directions via `SendMessage`
-   - **Grounder** — challenges each direction with practical concerns via `SendMessage`
-   - **Synthesizer** — observes silently, writes the design document on convergence
-4. You (the Arbiter) coordinate the dialogue, signal convergence, and clean up
-   with `TeamDelete`
-
-See `skills/brainstorming/SKILL.md` "Team Mode: Agent Teams Structured Dialogue"
-for full spawn prompts, convergence criteria, and constraints.
-
 ### Checkpoint 1B: Design Approval
 
 > **Proposed design approaches:**
