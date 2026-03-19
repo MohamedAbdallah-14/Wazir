@@ -119,11 +119,11 @@ Present the full clarification to the user:
 > [Full clarification with what/why/constraints/assumptions/scope/questions]
 >
 > **Are there any corrections, missing context, or open questions to resolve?**
-> 1. **Approved — continue to spec hardening**
+> 1. **Approved — continue to spec hardening** (Recommended)
 > 2. **Needs changes** — [user provides corrections]
 > 3. **Missing important context** — [user adds information]
 
-**Wait for user response. If the user provides corrections, update the clarification and re-present.**
+**Wait for the user to answer before continuing.** If the user provides corrections, update the clarification and re-present.
 
 ---
 
@@ -189,12 +189,12 @@ for full spawn prompts, convergence criteria, and constraints.
 > [Approaches with trade-offs, recommendation]
 >
 > **Which approach should we implement?**
-> 1. **Approach A** — [one-line summary]
+> 1. **Approach A** — [one-line summary] (Recommended)
 > 2. **Approach B** — [one-line summary]
 > 3. **Approach C** — [one-line summary]
 > 4. **Modify an approach** — [user specifies changes]
 
-**This is the most important checkpoint. Do NOT proceed without explicit design approval.**
+**Wait for the user to answer before continuing.** This is the most important checkpoint. Do NOT proceed without explicit design approval.
 
 Save approved design to `.wazir/runs/latest/clarified/design.md`.
 
