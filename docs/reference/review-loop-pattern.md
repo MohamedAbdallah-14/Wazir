@@ -134,9 +134,24 @@ review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
       log(pass_number+1, dimension, findings) -> log_path
 
     if findings.has_issues:
-      # --- Fix inline, do NOT return ---
+      # --- Fix and re-submit (MANDATORY) ---
+      # The producer MUST fix findings and the reviewer MUST re-review.
+      # "Fix and continue without re-review" is EXPLICITLY PROHIBITED.
       producer_fix(artifact_path, findings)
       # Continue to next pass -- the fix will be re-reviewed
+
+  # --- Post-loop: escalation if issues remain ---
+  if remaining.has_issues:
+    # Cap reached with unresolved findings. Present to user:
+    # 1. Approve with known issues (Recommended if non-blocking)
+    # 2. Fix manually and re-run
+    # 3. Abort
+    escalate_to_user(remaining, options=[
+      "approve-with-issues",
+      "fix-manually-and-rerun",
+      "abort"
+    ])
+    # User decides. If approved, log "user-approved-with-issues" in final pass file.
 
   return { pass_count: total_passes, issues_found, issues_fixed, remaining, attributions }
 ```
@@ -328,10 +343,11 @@ Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7
 
 ## Loop Cap Configuration
 
-The `phase_policy` section of `run-config.yaml` controls which phases are enabled and sets an absolute safety ceiling per phase. Only two fields exist: `enabled` and `loop_cap`. There is no `passes` field -- depth determines pass counts (3/5/7), not phase policy.
+The `workflow_policy` section of `run-config.yaml` (legacy: `phase_policy`) controls which workflows are enabled and sets an absolute safety ceiling per workflow. Only two fields exist: `enabled` and `loop_cap`. There is no `passes` field -- depth determines pass counts (3/5/7), not workflow policy.
 
 ```yaml
-phase_policy:
+workflow_policy:
+  # Clarifier phase workflows
   discover:       { enabled: true, loop_cap: 10 }
   clarify:        { enabled: true, loop_cap: 10 }
   specify:        { enabled: true, loop_cap: 10 }
@@ -341,21 +357,24 @@ phase_policy:
   design-review:  { enabled: true, loop_cap: 10 }
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
+  # Executor phase workflows
   execute:        { enabled: true, loop_cap: 10 }
   verify:         { enabled: true, loop_cap: 5 }
   review:         { enabled: true, loop_cap: 10 }
-  learn:          { enabled: false, loop_cap: 5 }
-  prepare_next:   { enabled: false, loop_cap: 5 }
+  learn:          { enabled: true, loop_cap: 5 }
+  prepare_next:   { enabled: true, loop_cap: 5 }
   run_audit:      { enabled: false, loop_cap: 10 }
 ```
 
 **`loop_cap`** is an absolute safety ceiling that prevents runaway loops regardless of depth. It is checked by `wazir capture loop-check` in pipeline mode. It is NOT the same as pass count (which is determined by depth: 3/5/7). Example: depth=deep gives 7 passes, but if `loop_cap: 5`, the cap guard fires at pass 5 and escalates. This is intentional -- the operator can constrain expensive phases.
 
-**Adaptive phases** (`author`, `learn`, `prepare_next`, `run_audit`) default to `enabled: false`. They are activated by explicit operator config or intent detection. They do not participate in the standard review loop pattern because:
+**Adaptive workflows** (`author`, `run_audit`) default to `enabled: false`. They are activated by explicit operator config or intent detection.
 
+**Post-run workflows** (`learn`, `prepare_next`) default to `enabled: true`. They run as part of the Final Review phase:
+
+- `learn` extracts durable learnings from review findings -- recurring findings become accepted learnings.
+- `prepare_next` prepares context and handoff for the next run.
 - `author` has a human approval gate, not an iterative review loop.
-- `learn` extracts learnings from the completed run -- it is post-execution housekeeping.
-- `prepare_next` prepares context for the next run -- it is a handoff phase.
 - `run_audit` is an on-demand standalone audit, not part of the main pipeline flow.
 
 ---
@@ -427,3 +446,93 @@ Do NOT load or invoke any skills."
 
 For committed changes, replace `--uncommitted` with `--base <sha>`.
 Replace `[DIMENSION]`, `[dimension description]`, and `[criteria]` with the task-specific values from the execution plan and spec.
+
+---
+
+## Codex Output Context Protection
+
+Codex CLI output includes internal traces (file reads, tool calls, reasoning) that are NOT useful for the review — only the final findings matter. To prevent context flooding:
+
+### Tee + Extract Pattern
+
+1. **Always tee** Codex output to a file:
+   ```bash
+   codex exec ... 2>&1 | tee .wazir/runs/latest/reviews/<phase>-review-pass-<N>.md
+   ```
+
+2. **Extract findings** after the last `codex` marker using `execute_file`:
+   ```bash
+   # If context-mode available (has_execute_file: true):
+   mcp__plugin_context-mode_context-mode__execute_file(
+     path: ".wazir/runs/latest/reviews/<phase>-review-pass-<N>.md",
+     language: "shell",
+     code: "tac $FILE | sed '/^codex$/q' | tac | tail -n +2"
+   )
+   ```
+
+3. **Present extracted findings only** — the raw trace stays in the file for debugging but never enters the main context window.
+
+### Fallback (no context-mode)
+
+If `context_mode.has_execute_file` is false, extract using shell directly:
+
+```bash
+tac <file> | sed '/^codex$/q' | tac | tail -n +2
+```
+
+This reverses the file, finds the first (= last original) `codex` marker, reverses back, and skips the marker line.
+
+**If no marker found:** fail closed
+
+---
+
+## Phase Scoring: First vs Final Artifact Comparison
+
+At the start of each review loop (pass 1), score the artifact on its phase's canonical dimension set (1-10 per dimension). At the end of the loop (final pass), score again using the **same canonical dimensions**. Present the delta in the end-of-phase report.
+
+### Canonical Dimension Sets Per Phase
+
+These are the fixed rubrics — no ad-hoc dimension selection:
+
+| Phase | Canonical Dimensions |
+|-------|---------------------|
+| research-review | Coverage, Source quality, Relevance, Gaps identified, Actionability |
+| clarification-review / spec-challenge | Completeness, Testability, Ambiguity, Assumptions, Scope creep |
+| design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
+| plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy |
+| task-review | Correctness, Tests, Wiring, Drift, Quality |
+| final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
+
+### Scoring Rules
+
+1. Initial and final scores MUST use the **same dimension set** — the delta is only meaningful on the same rubric.
+2. The reviewer records which dimension set was used in each pass file.
+3. Delta format: `Dimension: X/10 → Y/10 (+Z)`.
+
+### Quality Delta Report Section
+
+The end-of-phase report (see "End-of-Phase Report" below) includes a **Quality Delta** section:
+
+```markdown
+## Quality Delta
+
+| Dimension | Initial | Final | Delta |
+|-----------|---------|-------|-------|
+| Completeness | 4/10 | 9/10 | +5 |
+| Testability | 3/10 | 8/10 | +5 |
+| Ambiguity | 5/10 | 9/10 | +4 |
+```
+
+---
+
+## End-of-Phase Report
+
+Every phase exit produces a report saved to `.wazir/runs/latest/reviews/<phase>-report.md` containing:
+
+1. **Summary** — what the phase produced
+2. **Key Changes** — first-version vs final-version highlights (not full diff — what improved)
+3. **Quality Delta** — per-dimension before/after scores (see Phase Scoring above)
+4. **Findings Log** — per-pass finding counts by severity (e.g., "Pass 1: 6 findings (3 blocking, 2 warning, 1 note). Pass 7: 0 findings. All resolved.")
+5. **Usage** — token usage from `wazir capture usage` (runs before report generation)
+6. **Context Savings** — context-mode stats if available, omit section if not
+7. **Time Spent** — wall-clock elapsed time from phase start to end — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.

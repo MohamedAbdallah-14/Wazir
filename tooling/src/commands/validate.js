@@ -12,6 +12,7 @@ import { validateBranchName } from '../checks/branches.js';
 import { validateCommits } from '../checks/commits.js';
 import { validateChangelog } from '../checks/changelog.js';
 import { runDocsDriftCheck } from '../checks/docs-drift.js';
+import { validateSkillsAtProjectRoot } from '../checks/skills.js';
 
 function success(stdout) {
   return { exitCode: 0, stdout: `${stdout}\n` };
@@ -254,9 +255,11 @@ export function runValidateCommand(parsed, context = {}) {
         strict: hasFlag(parsed.args, '--strict'),
         cwd: projectRoot,
       });
+    case 'skills':
+      return validateSkillsAtProjectRoot(projectRoot);
     default: {
       if (parsed.subcommand != null) {
-        return failure(`Unknown validator: ${parsed.subcommand}\nUsage: wazir validate <manifest|hooks|docs|brand|runtime|branches|commits|changelog|docs-drift>`);
+        return failure(`Unknown validator: ${parsed.subcommand}\nUsage: wazir validate <manifest|hooks|docs|brand|runtime|branches|commits|changelog|docs-drift|skills>`);
       }
 
       if (parsed.args.length > 0) {
@@ -290,6 +293,7 @@ export function runValidateCommand(parsed, context = {}) {
         { name: 'branches', fn: () => validateBranchName(undefined, { cwd: projectRoot }), available: hasBranch },
         { name: 'commits', fn: () => validateCommits({ cwd: projectRoot }), available: hasGit },
         { name: 'changelog', fn: () => validateChangelog(projectRoot, {}), available: hasChangelog },
+        { name: 'skills', fn: () => validateSkillsAtProjectRoot(projectRoot) },
       ];
 
       const lines = [];

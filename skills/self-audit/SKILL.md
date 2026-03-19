@@ -5,15 +5,100 @@ description: Run a self-audit loop in an isolated git worktree — validates, au
 
 # Self-Audit — Worktree-Isolated Audit-Fix Loop
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 ## Overview
 
 This skill runs a structured self-audit of the Wazir project itself, operating entirely in an isolated git worktree. It validates the project against all canonical checks, performs deeper structural analysis, fixes issues found, verifies the fixes pass, and only merges back on all-green.
 
 **Safety guarantee:** The main worktree is never modified until all checks pass in isolation.
 
+## Severity Levels
+
+Every finding is assigned a severity that determines handling:
+
+| Severity | Action | Description |
+|----------|--------|-------------|
+| **critical** | Abort loop | Structural integrity threat — cannot safely continue. Discard worktree. |
+| **high** | Fix now | Must be resolved in this loop before proceeding to verify. |
+| **medium** | Fix if time | Fix within remaining loop budget. Skip if loop cap approaching. |
+| **low** | Log and skip | Record in report. No fix attempted. |
+
+Severity assignment rules:
+- Protected-path violation → **critical**
+- Test failure, broken hook, missing manifest entry → **high**
+- Documentation drift, stale export, missing schema → **medium**
+- Style issues, minor inconsistency, cosmetic → **low**
+
+## Quality Scoring
+
+Each loop measures a quality score **before** and **after** fixes:
+
+```
+quality_score = (checks_passing / total_checks) * 100
+```
+
+Track per loop:
+- `quality_score_before` — score at start of loop (after Phase 1)
+- `quality_score_after` — score at end of loop (after Phase 4 verify)
+- `delta` — improvement from this loop's fixes
+
+**Effectiveness threshold:** If 3 consecutive loops show `delta < 2%`, the audit has converged — skip remaining loops.
+
+## Learning Integration
+
+After each audit loop, findings feed the learning pipeline:
+
+1. **Propose learnings:** For each finding category that appeared in this loop:
+   - Check `state.sqlite` findings table for the same `finding_hash` in previous runs
+   - If `recurrence_count >= 2`: auto-propose a learning to `memory/learnings/proposed/`
+   - Learning scope tags: `scope_roles: [executor]`, `scope_concerns: [quality]`
+2. **Store findings:** Insert all findings into `state.sqlite` via `insertFinding()` with severity and finding_hash
+3. **Store audit record:** Insert `{run_id, finding_count, fix_count, manual_count, quality_score_before, quality_score_after}` into `audit_history`
+
+## Trend Tracking
+
+Before starting Loop 1, query previous audit results:
+
+```javascript
+const trend = getAuditTrend(db, 5); // last 5 audits
+```
+
+Present trend in the report:
+- Are finding counts trending up or down?
+- Are the same finding_hashes recurring? If so, the fixes aren't preventing recurrence — escalate.
+- Has quality_score improved across runs?
+
+## Escalation Path
+
+Manual-required findings that cannot be auto-fixed are escalated:
+
+1. **Within the audit:** Logged in the report with remediation guidance
+2. **Cross-run recurrence:** If the same manual finding recurs across 3+ audits, escalate to:
+   - Create a task spec in `.wazir/runs/latest/tasks/` describing the fix
+   - Flag in the audit report as **RECURRING — needs dedicated task**
+3. **Critical findings:** Immediately logged. If 2+ critical findings in a single loop, abort the entire audit run.
+
 ## Trigger
 
 On-demand: operator invokes `/self-audit` or requests a self-audit loop.
+
+### Parameters
+
+| Flag | Default | Max | Description |
+|------|---------|-----|-------------|
+| `--loops N` | 5 | 10 | Number of audit-fix loops to run. Each loop executes the full Phase 1-5 cycle. If a loop finds 0 new issues, subsequent loops are skipped (convergence detection). |
 
 ## Worktree Isolation Model
 
@@ -45,7 +130,9 @@ node tooling/src/cli.js doctor --json
 node tooling/src/cli.js export --check
 ```
 
-Collect pass/fail for each. Any failure is a finding.
+Collect pass/fail for each. Any failure is a finding. Assign severity per the severity table above.
+
+Calculate `quality_score_before` from the pass/fail results.
 
 ## Phase 2: Deep Structural Audit
 
@@ -79,10 +166,52 @@ Beyond CLI checks, inspect for:
    - Each skill dir under `skills/` has a well-formed `SKILL.md` with frontmatter
    - Skills referenced in documentation actually exist
 
+7. **Code Quality**
+   - Run `node tooling/src/cli.js validate` (all subcommands) and capture exit codes
+   - If `eslint` is present in `package.json` scripts or devDependencies, run `npx eslint .` and capture results
+   - If `tsc` is present in `package.json` scripts or devDependencies, run `npx tsc --noEmit` and capture results
+   - Tools not found in `package.json` are skipped with a note in the report
+
+8. **Test Coverage**
+   - Run `npm test` and capture pass/fail counts from output
+   - Any test failure is a finding
+
+9. **Expertise Coverage**
+   - Read `expertise/composition-map.yaml`
+   - For every module path referenced, check that the file exists under `expertise/`
+   - Missing files are findings
+
+10. **Export Freshness**
+    - Run `wazir export --check`
+    - Any drift detected is a finding
+
+## Protected-Path Safety Rails
+
+Before applying ANY fix in Phase 3, check if the target file is in a protected path. The self-audit loop MUST NOT modify files in:
+
+- `skills/`
+- `workflows/`
+- `roles/`
+- `schemas/`
+- `wazir.manifest.yaml`
+- `docs/concepts/`
+- `docs/reference/`
+- `expertise/composition-map.yaml`
+- `docs/plans/`
+- `program.md`
+
+If a fix would touch a protected path, log it as a **manual-required** finding and skip. If `git diff --name-only` shows any protected path was modified during a loop iteration, **ABORT** the loop and discard the worktree.
+
 ## Phase 3: Fix
 
-For each finding from Phases 1-2:
+For each finding from Phases 1-2, ordered by severity (critical first):
 
+1. **Critical findings:** Abort immediately. Discard worktree. Report the critical finding.
+2. **High findings:** Must fix now.
+3. **Medium findings:** Fix if loop budget allows (remaining loops > 1).
+4. **Low findings:** Log only. No fix attempted.
+
+For high/medium findings:
 1. Categorize as **auto-fixable** or **manual-required**
 2. Auto-fixable issues: apply the fix directly
    - Missing files → create stubs or fix references
@@ -90,7 +219,7 @@ For each finding from Phases 1-2:
    - Documentation drift → update docs to match reality
    - Permission issues → `chmod +x` hook scripts
    - Schema formatting → auto-format
-3. Manual-required issues: document in the audit report with remediation guidance
+3. Manual-required issues: document in the audit report with remediation guidance. Check escalation path for recurrence.
 
 **Fix constraints:**
 - Never modify `input/` (read-only operator surface)
@@ -106,27 +235,61 @@ If any check fails after fixes:
 - Document the revert and the root cause
 - Re-verify
 
-## Phase 5: Report & Commit
+## Phase 5: Report, Learn & Commit
+
+### Quality Score
+
+Re-run Phase 1 checks and calculate `quality_score_after`. Compute delta.
+
+### Learning Extraction
+
+1. Hash each finding description → `finding_hash`
+2. Store all findings in `state.sqlite` via `insertFinding(db, {run_id, phase: 'self-audit', source: 'self-audit', severity, description, finding_hash})`
+3. Query `getRecurringFindingHashes(db, 2)` — findings occurring 2+ times across runs
+4. For each recurring finding not already in `memory/learnings/proposed/`:
+   - Write a learning proposal: `memory/learnings/proposed/self-audit-<hash-prefix>.md`
+   - Content: what the issue is, how often it recurs, recommended prevention
+5. Store audit record: `insertAuditRecord(db, {run_id, finding_count, fix_count, manual_count, quality_score_before, quality_score_after})`
+
+### Report
 
 Produce a structured report:
 
 ```markdown
 # Self-Audit Report — Loop N — <date>
 
-## Validation Sweep
-| Check | Before | After |
-|-------|--------|-------|
-| manifest | PASS/FAIL | PASS |
-| hooks | PASS/FAIL | PASS |
-| ... | ... | ... |
+## Quality Score
+- Before: X% → After: Y% (delta: +Z%)
 
-## Findings
-### Auto-Fixed (N)
-- [F-001] <description> — fixed by <change>
+## Trend (last 5 audits)
+| Run | Date | Findings | Fixes | Quality |
+|-----|------|----------|-------|---------|
+| ... | ...  | ...      | ...   | ...     |
+
+## Validation Sweep
+| Check | Severity | Before | After |
+|-------|----------|--------|-------|
+| manifest | high | PASS/FAIL | PASS |
+| hooks | high | PASS/FAIL | PASS |
+| ... | ... | ... | ... |
+
+## Findings by Severity
+### Critical (N) — loop aborted if any
+### High (N) — fixed
+### Medium (N) — fixed if budget allowed
+### Low (N) — logged only
+
+## Auto-Fixed (N)
+- [F-001] [high] <description> — fixed by <change>
 - ...
 
-### Manual Required (N)
-- [M-001] <description> — remediation: <guidance>
+## Manual Required (N)
+- [M-001] [medium] <description> — remediation: <guidance>
+- [M-002] [medium] <description> — **RECURRING (3x)** — needs dedicated task
+- ...
+
+## Proposed Learnings (N)
+- <learning-file>: <summary>
 - ...
 
 ## Changes Made
@@ -146,8 +309,26 @@ The worktree agent returns its results. If changes were made, the caller can mer
 
 ## Loop Behavior
 
+Default: **5 loops** (override with `--loops N`, max 10).
+
 When running multiple loops:
 - Loop 1 audits the current state, fixes what it finds
 - Loop 2 audits the result of Loop 1, catches anything missed or introduced
 - Each loop is independent and runs in its own fresh worktree
-- Convergence: if Loop N finds 0 issues, the project is clean
+- **Convergence detection:** if Loop N finds **0 new issues** (no new findings beyond what previous loops already reported), all subsequent loops are skipped and the audit terminates early
+- **Effectiveness convergence:** if 3 consecutive loops show `quality_score delta < 2%`, skip remaining loops
+- **Critical abort:** if any loop encounters 2+ critical findings, abort the entire audit run
+- If a loop modifies a protected path (see Protected-Path Safety Rails above), the loop is aborted and the worktree is discarded
+
+The final branch is **NOT auto-merged** — it requires human review.
+
+## State Database Integration
+
+The self-audit skill requires `state.sqlite` (see `tooling/src/state/db.js`). At audit start:
+
+```javascript
+const { openStateDb, getAuditTrend, insertFinding, insertAuditRecord, getRecurringFindingHashes } = require('../../tooling/src/state/db');
+const db = openStateDb(stateRoot);
+```
+
+All findings are persisted across runs, enabling trend detection and learning extraction.

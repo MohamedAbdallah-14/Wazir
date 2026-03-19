@@ -1,17 +1,42 @@
 {
   "hooks": {
-    "beforeFileEdit": [
+    "PreToolUse": [
       {
-        "command": "./hooks/protected-path-write-guard",
-        "matcher": "*.md|*.yaml|*.json"
-      }
-    ],
-    "sessionStart": [
-      {
-        "command": "./hooks/loop-cap-guard"
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/protected-path-write-guard"
+          }
+        ]
       },
       {
-        "command": "./hooks/session-start"
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/context-mode-router"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/loop-cap-guard"
+          }
+        ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/session-start"
+          }
+        ]
       }
     ]
   }

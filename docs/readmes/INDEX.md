@@ -1,6 +1,6 @@
 # Wazir README Index
 
-> 60 world-class README files covering every feature, workflow, role, skill, hook, and package.
+> 76 world-class README files covering every feature, workflow, role, skill, hook, and package.
 
 ## Main README
 
@@ -48,7 +48,7 @@
 ### Skills (`features/skills/`)
 | File | Description |
 |------|-------------|
-| [README.md](features/skills/README.md) | Skills system overview — all 11 skills, type table, invocation rules |
+| [README.md](features/skills/README.md) | Skills system overview — all 28 skills, type table, invocation rules |
 | [using-skills.md](features/skills/using-skills.md) | Bootstrap skill — enforces skill-check-before-action |
 | [brainstorming.md](features/skills/brainstorming.md) | Design gate skill — ideas into designs before implementation |
 | [writing-plans.md](features/skills/writing-plans.md) | Plan production skill — specs into bite-sized task files |
@@ -60,6 +60,23 @@
 | [run-audit.md](features/skills/run-audit.md) | Run audit skill — 6-step interactive audit pipeline |
 | [self-audit.md](features/skills/self-audit.md) | Self-audit skill — worktree-isolated drift detection |
 | [prepare-next.md](features/skills/prepare-next.md) | Prepare next skill — clean handoff between sessions |
+| [clarifier.md](features/skills/clarifier.md) | Clarifier skill — research, scope, design, specs pipeline |
+| [executor.md](features/skills/executor.md) | Executor skill — TDD execution with quality gates |
+| [reviewer.md](features/skills/reviewer.md) | Reviewer skill — adversarial review against spec and plan |
+| [wazir.md](features/skills/wazir.md) | Wazir skill — one-command full pipeline |
+| [init-pipeline.md](features/skills/init-pipeline.md) | Init pipeline skill — zero-config project setup |
+| [executing-plans.md](features/skills/executing-plans.md) | Executing plans skill — session-isolated plan execution |
+| [dispatching-parallel-agents.md](features/skills/dispatching-parallel-agents.md) | Parallel agents skill — dispatch independent tasks |
+| [subagent-driven-development.md](features/skills/subagent-driven-development.md) | Subagent development skill — in-session parallel execution |
+| [using-git-worktrees.md](features/skills/using-git-worktrees.md) | Git worktrees skill — isolated feature branches |
+| [finishing-a-development-branch.md](features/skills/finishing-a-development-branch.md) | Branch finishing skill — merge, PR, or cleanup |
+| [humanize.md](features/skills/humanize.md) | Humanize skill — remove AI writing patterns |
+| [writing-skills.md](features/skills/writing-skills.md) | Writing skills skill — create and verify skills |
+| [receiving-code-review.md](features/skills/receiving-code-review.md) | Receiving review skill — process feedback with rigor |
+| [requesting-code-review.md](features/skills/requesting-code-review.md) | Requesting review skill — structured review requests |
+| [claude-cli.md](features/skills/claude-cli.md) | Claude CLI skill — programmatic Claude Code usage |
+| [codex-cli.md](features/skills/codex-cli.md) | Codex CLI skill — programmatic Codex usage |
+| [gemini-cli.md](features/skills/gemini-cli.md) | Gemini CLI skill — programmatic Gemini usage |
 
 ### Hooks (`features/hooks/`)
 | File | Description |
@@ -77,8 +94,8 @@
 ### Other Features
 | File | Description |
 |------|-------------|
-| [expertise/README.md](features/expertise/README.md) | Expertise system — 308 modules across 11 domains |
-| [schemas/README.md](features/schemas/README.md) | Schema system — 16 JSON schemas for artifact validation |
+| [expertise/README.md](features/expertise/README.md) | Expertise system — 268 modules across 12 domains |
+| [schemas/README.md](features/schemas/README.md) | Schema system — 19 JSON schemas for artifact validation |
 | [tooling/README.md](features/tooling/README.md) | CLI tooling — all commands with options and examples |
 | [exports/README.md](features/exports/README.md) | Host exports — Claude, Codex, Gemini, Cursor packages |
 
@@ -88,7 +105,6 @@
 |------|---------|-------------|
 | [README.md](packages/README.md) | — | Package index with versions and reading order |
 | [ajv.md](packages/ajv.md) | `ajv@^8.18.0` | JSON Schema 2020-12 validation |
-| [gray-matter.md](packages/gray-matter.md) | `gray-matter@^4.0.3` | YAML frontmatter parsing for skill files |
 | [yaml.md](packages/yaml.md) | `yaml@^2.0.0` | YAML 1.2 serialization for manifests |
 | [node-test.md](packages/node-test.md) | `node:test` | Zero-dependency built-in test runner |
 | [context-mode.md](packages/context-mode.md) | `context-mode` plugin | Context compression for large outputs |

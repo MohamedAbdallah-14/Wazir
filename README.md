@@ -32,7 +32,7 @@
 I'm Mohamed Abdallah. I kept watching AI agents write confident code that broke in production, skip tests, and forget what we agreed on yesterday. So I stopped asking them to be better and built them an engineering department instead.
 
 **Wazir puts engineering discipline inside AI coding agents.**
-No wrapper. No server. Just structure -- inside Claude, Codex, Gemini, and Cursor. Built on 300+ research sources distilled into 261 curated expertise modules across 12 domains.
+No wrapper. No server. Just structure -- inside Claude, Codex, Gemini, and Cursor. Built on 300+ research sources distilled into 268 curated expertise modules across 12 domains.
 
 ---
 
@@ -122,9 +122,9 @@ Three concepts.
 
 **1 -- Roles are isolation boundaries, not personas.** Each of the 10 roles has defined inputs, allowed tools, required outputs, escalation rules, and failure conditions. An agent inside a role cannot write to protected paths, cannot skip required outputs, and must escalate when ambiguity conditions are met. The discipline is structural, not instructional. See [Roles & Workflows](docs/concepts/roles-and-workflows.md).
 
-**2 -- Phases are artifact checkpoints, not conversation stages.** Every phase consumes a named artifact from the previous phase and produces a named artifact for the next. Nothing flows through conversation history. A session can end, a new agent can pick up the artifacts, and delivery continues. The handoff is explicit, structured, and schema-validated against 18 JSON schemas. See [Architecture](docs/concepts/architecture.md).
+**2 -- Phases are artifact checkpoints, not conversation stages.** Every phase consumes a named artifact from the previous phase and produces a named artifact for the next. Nothing flows through conversation history. A session can end, a new agent can pick up the artifacts, and delivery continues. The handoff is explicit, structured, and schema-validated against 19 JSON schemas. See [Architecture](docs/concepts/architecture.md).
 
-**3 -- The composition engine loads the right expert automatically.** One agent pretending to be an expert in everything is an expert in nothing. A 4-layer system (always, auto, stacks, concerns) decides which of 261 expertise modules load into each role's context. The executor gets modules on how to build. The verifier gets modules on what to detect. The reviewer gets modules on what to flag. All resolved automatically from the task's declared stack and concerns. Max 15 modules per dispatch, token budget enforced.
+**3 -- The composition engine loads the right expert automatically.** One agent pretending to be an expert in everything is an expert in nothing. A 4-layer system (always, auto, stacks, concerns) decides which of 268 expertise modules load into each role's context. The executor gets modules on how to build. The verifier gets modules on what to detect. The reviewer gets modules on what to flag. All resolved automatically from the task's declared stack and concerns. Max 15 modules per dispatch, token budget enforced.
 
 ---
 
@@ -171,7 +171,7 @@ Run `wazir capture usage` at the end of a session to see the savings:
 
 **Adversarial review at three chokepoints.** Spec-challenge, plan-review, and final review run by the reviewer role, never the phase author. Nine hard approval gates span the 14-phase pipeline. Nothing advances without explicit clearance. [Architecture](docs/concepts/architecture.md)
 
-**261 curated expertise modules across 12 domains.** Loaded selectively per role per phase via a 4-layer composition engine. Max 15 modules per dispatch, token budget enforced. Wazir ships with 261. Yours could be next. [Expertise index](docs/reference/expertise-index.md)
+**268 curated expertise modules across 12 domains.** Loaded selectively per role per phase via a 4-layer composition engine. Max 15 modules per dispatch, token budget enforced. Wazir ships with 268. Yours could be next. [Expertise index](docs/reference/expertise-index.md)
 
 **Three-tier recall for token savings.** L0 (~~100 tokens), L1 (~~500-2k tokens), direct read for full source. Symbol-first exploration searches the index before reading source. Capture routing redirects large tool output to files. Result: 60-80% token reduction on exploration-heavy phases, measured per-session by `wazir capture usage`. [Indexing and Recall](docs/concepts/indexing-and-recall.md)
 
@@ -200,7 +200,7 @@ The AI coding tool space is fragmenting. Developers bolt together separate plugi
 | **Phase model**        | 14 explicit, artifact-gated   | 7-step (advisory)                                  | 3-step                                         | 1 (generate/test)                                       | N/A                                             | N/A                                                    | 5-step pipeline                                        |
 | **Adversarial review** | 3 gate phases                 | Code review skill                                  | No                                             | No                                                      | No                                              | No                                                     | team-verify step                                       |
 | **Context management** | L0/L1 tiered recall           | None                                               | None                                           | None                                                    | LLM compression                                 | Vector DB (ChromaDB)                                   | Token routing                                          |
-| **Schema validation**  | 18 JSON schemas               | No                                                 | No                                             | No                                                      | No                                              | No                                                     | No                                                     |
+| **Schema validation**  | 19 JSON schemas               | No                                                 | No                                             | No                                                      | No                                              | No                                                     | No                                                     |
 | **Guardrails**         | 7 hook contracts              | None                                               | None                                           | None                                                    | None                                            | 5 hooks (memory)                                       | Agent tracking                                         |
 | **External deps**      | None (host-native)            | None (prompt-only)                                 | Python CLI                                     | Node.js CLI                                             | Node.js + LLM                                   | ChromaDB, SQLite, Bun                                  | tmux, exp. teams API                                   |
 | **Host support**       | Claude, Codex, Gemini, Cursor | Claude, Codex, Gemini, Cursor, OpenCode            | Claude, Copilot, Gemini                        | Any LLM provider                                        | Any LLM                                         | Claude Code only                                       | Claude Code (+ workers)                                |
@@ -265,7 +265,7 @@ The pipeline, roles, and expertise modules are stable and used in production by 
 What's solid:
 
 - The 14-phase pipeline and 10 role contracts
-- 261 expertise modules across 12 domains
+- 268 expertise modules across 12 domains
 - Host exports for Claude, Codex, Gemini, and Cursor
 - The composition engine and tiered recall system
 

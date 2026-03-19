@@ -7,6 +7,19 @@ description: Use when reviewing or editing any text artifact (specs, plans, code
 
 Remove AI writing patterns from text artifacts using a 4-phase corrective pipeline. This skill operates on text that has already been generated. For rules that prevent AI patterns during generation, the composition engine loads expertise modules from `expertise/humanize/` into role context automatically.
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 ## Phase 1: Scan
 
 Detect the domain and scan for AI patterns.

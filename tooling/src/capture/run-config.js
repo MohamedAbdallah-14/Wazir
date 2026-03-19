@@ -16,6 +16,8 @@ export function readRunConfig(runPaths) {
 }
 
 export function getPhaseLoopCap(runConfig, phase) {
-  const policy = runConfig?.phase_policy?.[phase] ?? DEFAULT_PHASE_POLICY;
+  // Support both workflow_policy (new) and phase_policy (legacy)
+  const policyMap = runConfig?.workflow_policy ?? runConfig?.phase_policy ?? {};
+  const policy = policyMap[phase] ?? DEFAULT_PHASE_POLICY;
   return policy.loop_cap ?? DEFAULT_PHASE_POLICY.loop_cap;
 }

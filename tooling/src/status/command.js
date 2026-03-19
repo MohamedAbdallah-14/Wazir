@@ -5,6 +5,46 @@ import { parseCommandOptions } from '../command-options.js';
 import { readYamlFile } from '../loaders.js';
 import { findProjectRoot } from '../project-root.js';
 import { resolveStateRoot } from '../state-root.js';
+import { estimateTokens } from '../capture/usage.js';
+
+function readUsageSavingsSummary(stateRoot, runId) {
+  const usagePath = path.join(stateRoot, 'runs', runId, 'usage.json');
+
+  if (!fs.existsSync(usagePath)) {
+    return null;
+  }
+
+  try {
+    const usage = JSON.parse(fs.readFileSync(usagePath, 'utf8'));
+    const cr = usage.savings?.capture_routing ?? {};
+    const cm = usage.savings?.context_mode ?? {};
+    const co = usage.savings?.compaction ?? {};
+    const iq = usage.savings?.index_queries ?? {};
+
+    const crTokensSaved = cr.estimated_tokens_avoided ?? 0;
+    const cmRawTokens = estimateTokens(Math.round((cm.raw_kb ?? 0) * 1024));
+    const cmAfterTokens = estimateTokens(Math.round((cm.context_kb ?? 0) * 1024));
+    const cmTokensSaved = cmRawTokens - cmAfterTokens;
+    const coTokensSaved = (co.pre_compaction_tokens_est ?? 0) - (co.post_compaction_tokens_est ?? 0);
+    const iqTokensSaved = iq.estimated_tokens_saved ?? 0;
+
+    const totalSaved = crTokensSaved + cmTokensSaved + coTokensSaved + iqTokensSaved;
+
+    if (totalSaved === 0) {
+      return null;
+    }
+
+    const crRawTokens = crTokensSaved + estimateTokens(cr.summary_bytes ?? 0);
+    const withoutSavings = crRawTokens + cmRawTokens + (co.pre_compaction_tokens_est ?? 0);
+    const pct = withoutSavings > 0
+      ? `${((totalSaved / withoutSavings) * 100).toFixed(0)}%`
+      : '0%';
+
+    return `Context savings: ~${totalSaved.toLocaleString('en-US')} tokens saved (${pct} reduction)`;
+  } catch {
+    return null;
+  }
+}
 
 function success(payload, options = {}) {
   if (options.json) {
@@ -14,9 +54,15 @@ function success(payload, options = {}) {
     };
   }
 
+  let output = `${payload.run_id} ${payload.phase} ${payload.status}\n`;
+
+  if (payload.savings_summary) {
+    output += `${payload.savings_summary}\n`;
+  }
+
   return {
     exitCode: 0,
-    stdout: `${payload.run_id} ${payload.phase} ${payload.status}\n`,
+    stdout: output,
   };
 }
 
@@ -60,6 +106,12 @@ export function runStatusCommand(parsed, context = {}) {
       ...JSON.parse(fs.readFileSync(statusPath, 'utf8')),
       status_path: statusPath,
     };
+
+    const savingsSummary = readUsageSavingsSummary(stateRoot, options.run);
+
+    if (savingsSummary) {
+      payload.savings_summary = savingsSummary;
+    }
 
     return success(payload, { json: options.json });
   } catch (error) {

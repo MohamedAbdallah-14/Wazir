@@ -306,7 +306,7 @@ describe('wazir export command', () => {
       const manifestPath = path.join(fixture.fixtureRoot, 'wazir.manifest.yaml');
       const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
       manifest.workflows = ['clarify', 'review', 'run_orchestrator'];
-      manifest.phases = ['clarify', 'review', 'run_orchestrator'];
+      manifest.phases = ['init', 'clarifier', 'executor', 'final_review'];
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
       const firstBuild = runCli(['export', 'build'], {
@@ -316,7 +316,7 @@ describe('wazir export command', () => {
       assert.ok(fs.existsSync(path.join(fixture.fixtureRoot, 'exports', 'hosts', 'claude', '.claude', 'commands', 'run-orchestrator.md')));
 
       manifest.workflows = ['clarify', 'review'];
-      manifest.phases = ['clarify', 'review'];
+      manifest.phases = ['init', 'clarifier'];
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 
       const secondBuild = runCli(['export', 'build'], {

@@ -4,7 +4,7 @@
   "title": "Usage Report",
   "description": "Per-run token usage tracking and context savings data.",
   "type": "object",
-  "required": ["schema_version", "run_id", "created_at", "updated_at", "phases", "roles", "savings", "totals"],
+  "required": ["schema_version", "run_id", "created_at", "updated_at", "phases", "roles", "savings", "routing", "totals"],
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
     "run_id": { "type": "string", "minLength": 1 },
@@ -81,6 +81,30 @@
             "post_compaction_tokens_est": { "type": "integer", "minimum": 0 }
           },
           "additionalProperties": false
+        },
+        "index_queries": {
+          "type": "object",
+          "properties": {
+            "count": { "type": "integer", "minimum": 0 },
+            "total_raw_bytes": { "type": "integer", "minimum": 0 },
+            "total_summary_bytes": { "type": "integer", "minimum": 0 },
+            "estimated_tokens_saved": { "type": "integer", "minimum": 0 },
+            "bytes_avoided": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "routing": {
+      "type": "object",
+      "properties": {
+        "total_commands": { "type": "integer", "minimum": 0 },
+        "context_mode_routed": { "type": "integer", "minimum": 0 },
+        "passthrough": { "type": "integer", "minimum": 0 },
+        "by_category": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
         }
       },
       "additionalProperties": false

@@ -26,6 +26,14 @@ Task tool (general-purpose):
 
     **Ask them now.** Raise any concerns before starting work.
 
+    ## Codebase Exploration
+
+    Use wazir index search-symbols before direct file reads.
+    1. Query `wazir index search-symbols <query>` to locate relevant code
+    2. Use `wazir recall file <path> --tier L1` for targeted reads
+    3. Fall back to direct file reads ONLY for files identified by index queries
+    4. If no index exists: `wazir index build && wazir index summarize --tier all`
+
     ## Your Job
 
     Once you're clear on requirements:

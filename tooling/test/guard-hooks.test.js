@@ -1,6 +1,6 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,28 +8,25 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url));
 
-function runHook(scriptName, payload) {
+function runHook(scriptName, payload, env) {
   const scriptPath = path.join(ROOT, 'hooks', scriptName);
+  const opts = {
+    encoding: 'utf8',
+    input: JSON.stringify(payload),
+    cwd: ROOT,
+  };
 
-  try {
-    const stdout = execFileSync(scriptPath, [], {
-      encoding: 'utf8',
-      input: JSON.stringify(payload),
-      cwd: ROOT,
-    });
-
-    return {
-      exitCode: 0,
-      stdout,
-      stderr: '',
-    };
-  } catch (error) {
-    return {
-      exitCode: error.status ?? 1,
-      stdout: error.stdout ?? '',
-      stderr: error.stderr ?? '',
-    };
+  if (env) {
+    opts.env = { ...process.env, ...env };
   }
+
+  const result = spawnSync(scriptPath, [], opts);
+
+  return {
+    exitCode: result.status ?? 1,
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? '',
+  };
 }
 
 function createGuardFixture() {
@@ -221,6 +218,179 @@ describe('protected-path-write-guard hook', () => {
     } finally {
       fixture.cleanup();
     }
+  });
+});
+
+describe('protected-path-write-guard — Claude Code payload format (I9)', () => {
+  test('blocks writes to protected paths when Claude Code sends file_path', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      // Claude Code sends file_path, not target_path
+      const result = runHook('protected-path-write-guard', {
+        project_root: fixture.fixtureRoot,
+        file_path: 'input/brief.md',
+      });
+
+      assert.strictEqual(result.exitCode, 42);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.guard_decision.allowed, false);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('allows writes to non-protected paths when Claude Code sends file_path', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      const result = runHook('protected-path-write-guard', {
+        project_root: fixture.fixtureRoot,
+        file_path: 'tooling/src/test.js',
+      });
+
+      assert.strictEqual(result.exitCode, 0);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.guard_decision.allowed, true);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('blocks writes when Claude Code sends nested tool_input.file_path', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      const result = runHook('protected-path-write-guard', {
+        project_root: fixture.fixtureRoot,
+        tool_input: { file_path: 'input/brief.md', content: '# test' },
+      });
+
+      assert.strictEqual(result.exitCode, 42);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.guard_decision.allowed, false);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('runs 5 consecutive times on allowed paths without errors', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      for (let i = 0; i < 5; i++) {
+        const result = runHook('protected-path-write-guard', {
+          project_root: fixture.fixtureRoot,
+          file_path: 'tooling/src/test.js',
+        });
+
+        assert.strictEqual(result.exitCode, 0, `Run ${i + 1} failed`);
+        assert.ok(
+          !result.stderr.toLowerCase().includes('error'),
+          `Run ${i + 1} had error on stderr: ${result.stderr}`,
+        );
+      }
+    } finally {
+      fixture.cleanup();
+    }
+  });
+});
+
+describe('hook canonicalization (I9)', () => {
+  test('hooks/hooks.json contains exactly 4 hooks', () => {
+    const hooksPath = path.join(ROOT, 'hooks', 'hooks.json');
+    const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+
+    // Collect all hook command paths
+    const hookCommands = [];
+    for (const entries of Object.values(hooksContent.hooks)) {
+      for (const entry of entries) {
+        for (const hook of entry.hooks) {
+          hookCommands.push(hook.command);
+        }
+      }
+    }
+
+    assert.strictEqual(hookCommands.length, 4, `Expected 4 hooks, got ${hookCommands.length}: ${hookCommands.join(', ')}`);
+    assert.ok(hookCommands.includes('./hooks/protected-path-write-guard'));
+    assert.ok(hookCommands.includes('./hooks/context-mode-router'));
+    assert.ok(hookCommands.includes('./hooks/loop-cap-guard'));
+    assert.ok(hookCommands.includes('./hooks/session-start'));
+  });
+
+  test('hooks.json hooks field matches settings.json hooks field (generated from canonical)', () => {
+    const hooksPath = path.join(ROOT, 'hooks', 'hooks.json');
+    const settingsPath = path.join(ROOT, '.claude', 'settings.json');
+
+    const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
+    const settingsContent = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+
+    // settings.json hooks should be identical to hooks.json hooks
+    // (settings.json is generated from hooks.json via wazir export claude)
+    assert.deepStrictEqual(
+      settingsContent.hooks,
+      hooksContent.hooks,
+      'settings.json hooks must match hooks.json hooks (canonical source)',
+    );
+  });
+});
+
+describe('context-mode-router hook — disabled fallback (Task 10)', () => {
+  test('exits 0 (passthrough) when context-mode is disabled via env', () => {
+    const result = runHook('context-mode-router', { command: 'npm test' }, {
+      WAZIR_CONTEXT_MODE: 'false',
+    });
+
+    assert.strictEqual(result.exitCode, 0);
+    const output = JSON.parse(result.stdout);
+    assert.strictEqual(output.routing_decision.route, 'passthrough');
+    assert.strictEqual(output.routing_decision.context_mode_enabled, false);
+  });
+
+  test('emits a warning to stderr when context-mode is disabled', () => {
+    const result = runHook('context-mode-router', { command: 'npm test' }, {
+      WAZIR_CONTEXT_MODE: 'false',
+    });
+
+    assert.strictEqual(result.exitCode, 0);
+    assert.ok(
+      result.stderr.includes('context_mode adapter is disabled'),
+      'expected disabled-warning on stderr',
+    );
+  });
+
+  test('suppresses repeated warnings when session marker is set', () => {
+    const result = runHook('context-mode-router', { command: 'git status' }, {
+      WAZIR_CONTEXT_MODE: 'false',
+      WAZIR_CM_WARNED: '1',
+    });
+
+    assert.strictEqual(result.exitCode, 0);
+    assert.strictEqual(result.stderr, '', 'expected no warning when session marker already set');
+  });
+
+  test('routes large commands to context-mode when enabled', () => {
+    const result = runHook('context-mode-router', { command: 'npm test' }, {
+      WAZIR_CONTEXT_MODE: '1',
+    });
+
+    assert.strictEqual(result.exitCode, 1);
+    const output = JSON.parse(result.stdout);
+    assert.strictEqual(output.routing_decision.route, 'context-mode');
+    assert.strictEqual(output.routing_decision.context_mode_enabled, true);
+    assert.strictEqual(output.routing_decision.category, 'large');
+  });
+
+  test('passes small commands through even when enabled', () => {
+    const result = runHook('context-mode-router', { command: 'git status' }, {
+      WAZIR_CONTEXT_MODE: '1',
+    });
+
+    assert.strictEqual(result.exitCode, 0);
+    const output = JSON.parse(result.stdout);
+    assert.strictEqual(output.routing_decision.route, 'passthrough');
+    assert.strictEqual(output.routing_decision.context_mode_enabled, true);
+    assert.strictEqual(output.routing_decision.category, 'small');
   });
 });
 

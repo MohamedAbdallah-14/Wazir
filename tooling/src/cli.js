@@ -10,6 +10,9 @@ import { runExportCommand as runGeneratedExportCommand } from './export/command.
 import { runIndexCommand } from './index/command.js';
 import { runInitCommand } from './init/command.js';
 import { runRecallCommand } from './recall/command.js';
+import { runReportCommand } from './reports/command.js';
+import { runStateCommand } from './state/command.js';
+import { runStatsCommand } from './commands/stats.js';
 import { runStatusCommand } from './status/command.js';
 
 const COMMAND_FAMILIES = [
@@ -19,7 +22,10 @@ const COMMAND_FAMILIES = [
   'index',
   'init',
   'recall',
+  'report',
+  'state',
   'status',
+  'stats',
   'capture'
 ];
 
@@ -30,7 +36,10 @@ const COMMAND_HANDLERS = {
   index: runIndexCommand,
   init: runInitCommand,
   recall: runRecallCommand,
+  report: runReportCommand,
+  state: runStateCommand,
   status: runStatusCommand,
+  stats: runStatsCommand,
   capture: runCaptureCommand,
 };
 

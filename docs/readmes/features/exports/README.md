@@ -50,8 +50,8 @@ wazir export build
 3. Collect canonical sources
    ┌────────────────────────────────┐
    │ wazir.manifest.yaml       │
-   │ roles/*.md  (9 role files)     │
-   │ workflows/*.md (13 workflows)  │
+   │ roles/*.md  (10 role files)    │
+   │ workflows/*.md (15 workflows)  │
    │ hooks/definitions/*.yaml       │
    └────────────────────────────────┘
         │

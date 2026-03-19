@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 
 export function estimateTokens(bytes) {
   if (bytes < 0) {
@@ -37,6 +38,19 @@ function createDefaultUsage(runId) {
         pre_compaction_tokens_est: 0,
         post_compaction_tokens_est: 0,
       },
+      index_queries: {
+        count: 0,
+        total_raw_bytes: 0,
+        total_summary_bytes: 0,
+        estimated_tokens_saved: 0,
+        bytes_avoided: 0,
+      },
+    },
+    routing: {
+      total_commands: 0,
+      context_mode_routed: 0,
+      passthrough: 0,
+      by_category: {},
     },
     totals: {
       total_events: 0,
@@ -181,6 +195,98 @@ export function recordCompaction(runPaths, preTokens, postTokens) {
   usage.savings.compaction.compaction_count += 1;
   usage.savings.compaction.pre_compaction_tokens_est += preTokens;
   usage.savings.compaction.post_compaction_tokens_est += postTokens;
+  writeUsageAtomic(runPaths, usage);
+}
+
+/**
+ * Record a single index query's savings.
+ * Called by the pipeline's capture hooks during phase execution
+ * (e.g. via `wazir capture index-query`), not by the CLI directly.
+ */
+export function recordIndexQuery(runPaths, { query, file_count_in_results, median_file_size, summary_bytes }) {
+  const usage = readUsage(runPaths);
+  const rawBytes = file_count_in_results * median_file_size;
+  const iq = usage.savings.index_queries;
+
+  iq.count += 1;
+  iq.total_raw_bytes += rawBytes;
+  iq.total_summary_bytes += summary_bytes;
+  iq.bytes_avoided = iq.total_raw_bytes - iq.total_summary_bytes;
+  iq.estimated_tokens_saved = estimateTokens(iq.bytes_avoided);
+
+  writeUsageAtomic(runPaths, usage);
+}
+
+export function consumeRoutingLog(runPaths) {
+  // Derive stateRoot from runPaths.runRoot (stateRoot/runs/runId -> stateRoot)
+  const stateRoot = path.resolve(runPaths.runRoot, '..', '..');
+  const logPath = path.join(stateRoot, 'logs', 'routing.ndjson');
+
+  if (!fs.existsSync(logPath)) {
+    return;
+  }
+
+  const raw = fs.readFileSync(logPath, 'utf8').trim();
+  if (!raw) {
+    return;
+  }
+
+  const usage = readUsage(runPaths);
+
+  // Determine run start time for scoping log entries to this run
+  let runStartTime = null;
+  try {
+    const configPath = path.join(runPaths.runRoot, 'run-config.yaml');
+    if (fs.existsSync(configPath)) {
+      const configRaw = fs.readFileSync(configPath, 'utf8');
+      const match = configRaw.match(/created_at:\s*["']?([^"'\n]+)/);
+      if (match) runStartTime = new Date(match[1].trim()).toISOString();
+    }
+  } catch { /* fall through — include all entries if no config */ }
+
+  // Ensure routing section exists (for older usage.json files)
+  if (!usage.routing) {
+    usage.routing = {
+      total_commands: 0,
+      context_mode_routed: 0,
+      passthrough: 0,
+      by_category: {},
+    };
+  }
+
+  // Reset counts before re-aggregating (scoped to this run)
+  usage.routing.total_commands = 0;
+  usage.routing.context_mode_routed = 0;
+  usage.routing.passthrough = 0;
+  usage.routing.by_category = {};
+
+  const lines = raw.split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+
+    let entry;
+    try {
+      entry = JSON.parse(line);
+    } catch {
+      continue; // skip malformed lines
+    }
+
+    // Scope to current run: skip entries before this run started
+    if (runStartTime && entry.ts && entry.ts < runStartTime) continue;
+
+    usage.routing.total_commands += 1;
+
+    const route = entry.route || 'passthrough';
+    if (route === 'context-mode') {
+      usage.routing.context_mode_routed += 1;
+    } else {
+      usage.routing.passthrough += 1;
+    }
+
+    const category = entry.category || 'unknown';
+    usage.routing.by_category[category] = (usage.routing.by_category[category] || 0) + 1;
+  }
+
   writeUsageAtomic(runPaths, usage);
 }
 

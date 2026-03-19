@@ -27,13 +27,15 @@
     "workflows/spec-challenge.md",
     "workflows/specify.md",
     "workflows/verify.md",
+    "hooks/definitions/context_mode_router.yaml",
     "hooks/definitions/loop_cap_guard.yaml",
     "hooks/definitions/post_tool_capture.yaml",
     "hooks/definitions/pre_compact_summary.yaml",
     "hooks/definitions/pre_tool_capture_route.yaml",
     "hooks/definitions/protected_path_write_guard.yaml",
     "hooks/definitions/session_start.yaml",
-    "hooks/definitions/stop_handoff_harvest.yaml"
+    "hooks/definitions/stop_handoff_harvest.yaml",
+    "hooks/hooks.json"
   ],
   "files": [
     "AGENTS.md"

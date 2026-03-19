@@ -34,6 +34,13 @@ Task tool (general-purpose):
     - Check for missing pieces they claimed to implement
     - Look for extra features they didn't mention
 
+    ## Codebase Exploration
+
+    Use wazir index search-symbols before direct file reads.
+    1. Query `wazir index search-symbols <query>` to locate relevant code
+    2. Use `wazir recall file <path> --tier L1` for targeted reads
+    3. Fall back to direct file reads ONLY for files identified by index queries
+
     ## Your Job
 
     Read the implementation code and verify:

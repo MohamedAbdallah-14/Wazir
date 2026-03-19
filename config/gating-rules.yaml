@@ -1,0 +1,43 @@
+# Gating rules for phase transition decisions
+# The gating agent applies these rules to phase reports
+
+schema_version: 1
+
+rules:
+  continue:
+    description: "All quality gates pass, no drift, no open risks"
+    conditions:
+      - field: quality_metrics.test_fail_count
+        operator: eq
+        value: 0
+      - field: quality_metrics.lint_errors
+        operator: eq
+        value: 0
+      - field: quality_metrics.type_errors
+        operator: eq
+        value: 0
+      - field: drift_analysis.delta
+        operator: eq
+        value: 0
+      - field: risk_flags
+        operator: none_match
+        match: { severity: "high" }
+      - field: attempted_actions
+        operator: none_match
+        match: { outcome: "uncertain" }
+
+  loop_back:
+    description: "Specific failures with deterministic fix paths"
+    conditions:
+      - field: quality_metrics.test_fail_count
+        operator: gt
+        value: 0
+    # OR lint_errors > 0 OR type_errors > 0
+    # Any deterministic failure triggers loop_back
+
+  escalate:
+    description: "Default when neither continue nor loop_back match"
+    # This is the fallback — always matches
+    conditions: []
+
+default_verdict: escalate

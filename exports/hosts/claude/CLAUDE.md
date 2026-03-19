@@ -6,7 +6,7 @@ This host package is generated from the canonical Wazir sources.
 
 - project: Wazir
 - hosts: claude, codex, gemini, cursor
-- phases: clarify, discover, specify, spec_challenge, author, design, design_review, plan, plan_review, execute, verify, review, learn, prepare_next
+- phases: init, clarifier, executor, final_review
 - roles: clarifier, researcher, specifier, content-author, designer, planner, executor, verifier, reviewer, learner
 - protected paths: input, roles, workflows, schemas, exports/hosts
 - state root default: ~/.wazir/projects/{project_slug}

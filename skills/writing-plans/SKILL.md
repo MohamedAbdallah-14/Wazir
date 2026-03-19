@@ -5,6 +5,19 @@ description: Use after clarification, research, and design approval to create an
 
 # Writing Plans
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 Inputs:
 
 - approved design or approved clarified direction
@@ -34,7 +47,7 @@ Rules:
 
 ## Plan Review Loop
 
-After writing the plan, the reviewer role runs the plan-review loop with `--mode plan-review` using plan dimensions (see `workflows/plan-review.md` and `docs/reference/review-loop-pattern.md`).
+After writing the plan, invoke `wz:reviewer --mode plan-review` to run the plan-review loop using plan dimensions (see `workflows/plan-review.md` and `docs/reference/review-loop-pattern.md`). Do NOT call `codex exec` or `codex review` directly — the reviewer skill handles Codex integration internally.
 
 The planner resolves findings from each pass. The loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7). No extension.
 

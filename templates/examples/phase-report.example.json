@@ -1,0 +1,48 @@
+{
+  "phase_name": "verify",
+  "run_id": "run-2026-03-11-example",
+  "timestamp": "2026-03-11T13:00:00Z",
+  "attempted_actions": [
+    {
+      "description": "Run full test suite against implementation artifacts",
+      "outcome": "success",
+      "evidence": "42 tests passed, 0 failed"
+    },
+    {
+      "description": "Check lint compliance across all changed files",
+      "outcome": "success",
+      "evidence": "0 lint errors found"
+    }
+  ],
+  "drift_analysis": {
+    "delta": 0,
+    "description": "No drift detected between spec requirements and implementation."
+  },
+  "quality_metrics": {
+    "test_pass_count": 42,
+    "test_fail_count": 0,
+    "lint_errors": 0,
+    "type_errors": 0
+  },
+  "risk_flags": [
+    {
+      "severity": "low",
+      "description": "One acceptance criterion is verified by a single unit test only.",
+      "mitigation": "Add an integration test covering the same criterion in the next phase."
+    }
+  ],
+  "decisions": [
+    {
+      "description": "Proceed to review without additional verification loops.",
+      "rationale": "All tests pass and drift delta is zero.",
+      "alternatives_considered": [
+        "Run a second verification loop with stricter coverage thresholds"
+      ],
+      "source": "verifier"
+    }
+  ],
+  "verdict_recommendation": {
+    "verdict": "continue",
+    "reasoning": "All quality metrics are within acceptable thresholds and no high-severity risks were identified."
+  }
+}

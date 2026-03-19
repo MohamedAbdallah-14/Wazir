@@ -5,9 +5,22 @@ description: Run the clarification pipeline — research, clarify scope, brainst
 
 # Clarifier
 
-Run Phase 0 (Research) + Phase 1 (Clarify, Brainstorm, Plan) for the current project.
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
 
-**Pacing rule:** This skill has mandatory user checkpoints between phases. Do NOT skip checkpoints. Do NOT combine phases. Complete each phase fully, present the output, and wait for explicit user approval before advancing.
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
+Run the Clarifier phase — everything from reading input to having an approved execution plan.
+
+**Pacing rule:** This skill has mandatory user checkpoints between sub-workflows. Do NOT skip checkpoints. Do NOT combine sub-workflows. Complete each fully, present output, and wait for explicit user approval before advancing.
 
 Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All reviewer invocations use explicit `--mode`.
 
@@ -17,8 +30,10 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 
 1. Check `.wazir/state/config.json` exists. If not, run `wazir init` first.
 2. Check `.wazir/input/briefing.md` exists. If not, ask the user what they want to build and save it there.
-3. Read config for `default_depth`, `default_intent`, `team_mode`, and `multi_tool` settings.
-4. Create a run directory if one doesn't exist:
+3. Scan `input/` (project-level) and `.wazir/input/` (state-level) for additional input files. Present what's found.
+4. Read config for `default_depth` and `multi_tool` settings.
+5. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
+6. Create a run directory if one doesn't exist:
    ```bash
    mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
    ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
@@ -26,30 +41,39 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 
 ---
 
-## Phase 0: Research (delegated)
+## Context-Mode Usage
+
+Read `context_mode` from `.wazir/state/config.json`:
+
+- **If `context_mode.enabled: true`:** Use `fetch_and_index` for URL fetching, `search` for follow-up queries on indexed content. Use `execute` or `execute_file` for large outputs instead of Bash.
+- **If `context_mode.enabled: false`:** Fall back to `WebFetch` for URLs and `Bash` for commands.
+
+---
+
+## Sub-Workflow 1: Research (discover workflow)
 
 Delegate to the discover workflow (`workflows/discover.md`):
 
-1. The **researcher role** produces the research artifact
-   (codebase scan, external sources, source manifest, research brief).
-2. The **reviewer role** runs the research-review loop
-   using research dimensions with `--mode research-review`
-   (see `docs/reference/review-loop-pattern.md`).
-3. The researcher resolves findings from each pass.
-4. Loop runs for `pass_counts[depth]` passes.
-5. Research artifact flows back to the clarifier for Checkpoint 0.
+1. **Keyword extraction:** Read the briefing and extract concepts/terms that are vague, reference external standards, or use unfamiliar terminology.
+   - **When to research:** concept references an external standard by name, uses a tool/library not seen in the codebase, or is ambiguous enough that two agents could interpret it differently.
+   - **When NOT to research:** concept is fully defined in the input, or it's a well-known programming concept.
+2. **Fetch sources:** For each concept needing research:
+   - Use `fetch_and_index` (if context-mode available) or `WebFetch` to fetch the source.
+   - Save fetched content to `.wazir/runs/latest/sources/`.
+   - Track each fetch in `sources/manifest.json`.
+3. **Error handling:** 404/unreachable → log failure, continue. Research is best-effort.
+4. The **researcher role** produces the research artifact.
+5. The **reviewer role** runs the research-review loop with `--mode research-review`.
+6. Loop runs for `pass_counts[depth]` passes.
 
 Save result to `.wazir/runs/latest/clarified/research-brief.md`.
 
-### Checkpoint 0: Research Review
-
-Present the research brief to the user:
+### Checkpoint: Research Review
 
 > **Research complete. Here's what I found:**
 >
-> [Summary of existing codebase state, relevant architecture, external context]
+> [Summary of codebase state, relevant architecture, external context]
 >
-> **Does this match your understanding? Anything to add or correct?**
 > 1. **Looks good, continue** (Recommended)
 > 2. **Missing context** — let me add more information
 > 3. **Wrong direction** — let me clarify the intent
@@ -58,162 +82,162 @@ Present the research brief to the user:
 
 ---
 
-## Phase 1A: Clarify (autonomous, then review, then checkpoint)
+## Sub-Workflow 2: Clarify (clarify workflow)
+
+### Input Preservation (before producing clarification)
+
+1. Glob `.wazir/input/tasks/*.md`. If files exist:
+   - Adopt those specs as the starting point — copy content verbatim into the clarification's item descriptions.
+   - Enhance with codebase scan + research findings. **Never remove detail — only add.**
+   - Every acceptance criterion from input must appear verbatim.
+   - Every API endpoint, color hex code, and UI dimension from input must appear in the relevant item section.
+2. If `.wazir/input/tasks/` is empty or missing, synthesize from `briefing.md` alone.
+
+### Clarification Production
 
 Read the briefing, research brief, and codebase context. Produce:
 
-- **What** we're building — concrete deliverables, not vague descriptions
+- **What** we're building — concrete deliverables
 - **Why** — the motivation and business value
 - **Constraints** — technical, timeline, dependencies
-- **Assumptions** — what we're taking as given (explicitly stated)
+- **Assumptions** — what we're taking as given
 - **Scope boundaries** — what's IN and what's explicitly OUT
-- **Unresolved questions** — anything ambiguous that could change architecture or acceptance criteria
+- **Unresolved questions** — anything ambiguous
 
 Save to `.wazir/runs/latest/clarified/clarification.md`.
 
-Invoke the review loop for the clarification artifact using spec/clarification dimensions with `--mode clarification-review`. The **reviewer role** runs the loop (see `docs/reference/review-loop-pattern.md`). Resolve any findings before presenting to user.
+Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presenting to user.
 
-### Checkpoint 1A: Clarification Review
-
-Present the full clarification to the user:
+### Checkpoint: Clarification Review
 
 > **Here's the clarified scope:**
 >
-> [Full clarification with what/why/constraints/assumptions/scope/questions]
+> [Full clarification]
 >
-> **Are there any corrections, missing context, or open questions to resolve?**
-> 1. **Approved — continue to spec hardening**
+> 1. **Approved — continue to spec hardening** (Recommended)
 > 2. **Needs changes** — [user provides corrections]
 > 3. **Missing important context** — [user adds information]
 
-**Wait for user response. If the user provides corrections, update the clarification and re-present.**
+**Wait for user response.** Route feedback: plan corrections → `user-feedback.md`, new requirements → `briefing.md`.
 
 ---
 
-## Phase 1A+: Spec Harden (delegated, then checkpoint)
+## Sub-Workflow 3: Spec Harden (specify + spec-challenge workflows)
 
 Delegate to the specify workflow (`workflows/specify.md`):
 
-1. The **specifier role** produces a measurable spec from the clarification
-   and research artifacts.
-2. The **reviewer role** runs the spec-challenge loop
-   (`workflows/spec-challenge.md`) with `--mode spec-challenge`.
-3. The specifier resolves findings from each pass.
-4. Loop runs for `pass_counts[depth]` passes.
+1. The **specifier role** produces a measurable spec from clarification + research.
+2. Invoke `wz:reviewer --mode spec-challenge`.
+3. Loop runs for `pass_counts[depth]` passes.
 
 Save result to `.wazir/runs/latest/clarified/spec-hardened.md`.
 
-### Checkpoint 1A+: Hardened Spec Review
+### Content-Author Detection
 
-Present the changes made during hardening:
+After spec hardening, scan the spec for content needs. Auto-enable the `author` workflow if the spec mentions any of:
+- Database seeding, seed data, fixtures, sample records
+- Sample content, placeholder text, demo data
+- Test fixtures, mock API responses, test data files
+- Translations, i18n strings, localization
+- Copy (button labels, error messages, onboarding text)
+- Documentation content, user guides, API docs
+- Email templates, notification text
+
+If detected, set `workflow_policy.author.enabled = true` in the run config and note:
+> **Content needs detected.** The content-author workflow will run after design approval to produce: [list detected content types].
+
+### Checkpoint: Hardened Spec Review
 
 > **Spec hardened. Changes made:**
 >
-> [List of each gap found and how it was tightened]
+> [List of gaps found and how they were tightened]
 >
-> **Review the hardened spec. Approve or adjust?**
 > 1. **Approved — continue to brainstorming** (Recommended)
 > 2. **Disagree with a change** — [user specifies]
 > 3. **Found more gaps** — [user adds]
 
-**Wait for user response before continuing.**
+**Wait for user response.**
 
 ---
 
-## Phase 1B: Brainstorm (interactive — always pauses)
+## Sub-Workflow 4: Brainstorm (design + design-review workflows)
 
-Invoke the `brainstorming` skill (`wz:brainstorming`) and follow it.
+Invoke the `brainstorming` skill (`wz:brainstorming`):
 
-This phase explores design approaches:
 1. Propose 2-3 viable approaches with explicit trade-offs
 2. For each approach: effort estimate, risk assessment, what it enables/prevents
 3. Recommend one approach with rationale
 
-If `team_mode: parallel` in config, the brainstorming skill activates its
-**Agent Teams Structured Dialogue** mode:
+### Checkpoint: Design Approval
 
-1. Checks that `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` is enabled (falls back
-   to single-agent brainstorming if not)
-2. Creates a team via `TeamCreate` (`wazir-brainstorm-<concept-slug>`)
-3. Spawns three teammates via `Agent` with `team_name`:
-   - **Free Thinker** — proposes creative directions via `SendMessage`
-   - **Grounder** — challenges each direction with practical concerns via `SendMessage`
-   - **Synthesizer** — observes silently, writes the design document on convergence
-4. You (the Arbiter) coordinate the dialogue, signal convergence, and clean up
-   with `TeamDelete`
-
-See `skills/brainstorming/SKILL.md` "Team Mode: Agent Teams Structured Dialogue"
-for full spawn prompts, convergence criteria, and constraints.
-
-### Checkpoint 1B: Design Approval
-
-> **Proposed design approaches:**
->
-> [Approaches with trade-offs, recommendation]
->
 > **Which approach should we implement?**
-> 1. **Approach A** — [one-line summary]
+>
+> 1. **Approach A** — [one-line summary] (Recommended)
 > 2. **Approach B** — [one-line summary]
 > 3. **Approach C** — [one-line summary]
 > 4. **Modify an approach** — [user specifies changes]
 
-**This is the most important checkpoint. Do NOT proceed without explicit design approval.**
+**Wait for user response.** This is the most important checkpoint.
 
 Save approved design to `.wazir/runs/latest/clarified/design.md`.
 
-### Design Review
-
-After the user approves the design concept, invoke the design-review loop with `--mode design-review`. The **reviewer role** validates the design against the approved spec using the canonical design-review dimensions:
-
-- Spec coverage
-- Design-spec consistency
-- Accessibility
-- Visual consistency
-- Exported-code fidelity
-
-See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. The designer resolves findings. Proceed to planning only after all design-review passes complete.
+After approval: design-review loop with `--mode design-review` (5 canonical dimensions: spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity).
 
 ---
 
-## Phase 1C: Plan (delegated, then checkpoint)
+## Sub-Workflow 5: Plan (plan + plan-review workflows)
 
 Delegate to `wz:writing-plans`:
 
-1. `wz:writing-plans` (using **planner role**) produces the execution plan
-   and task specs.
-2. The **reviewer role** runs the plan-review loop
-   (`workflows/plan-review.md`) with `--mode plan-review`.
-3. The planner resolves findings from each pass.
-4. Loop runs for `pass_counts[depth]` passes.
+1. Planner produces a SINGLE execution plan at `.wazir/runs/latest/clarified/execution-plan.md` in spec-kit format.
+2. **Gap analysis exit gate:** Compare original input against plan. Invoke `wz:reviewer --mode plan-review`.
+3. Loop until clean or cap reached.
 
-### Checkpoint 1C: Plan Review
+### Checkpoint: Plan Review
 
 > **Implementation plan: [N] tasks**
 >
 > | # | Task | Complexity | Dependencies | Description |
 > |---|------|-----------|--------------|-------------|
-> | 1 | ... | S | none | ... |
-> | 2 | ... | M | task-1 | ... |
 >
-> **Review the plan. Approve or adjust?**
 > 1. **Approved — ready for execution** (Recommended)
-> 2. **Reorder or split tasks** — [user specifies]
-> 3. **Missing tasks** — [user adds]
-> 4. **Too granular / too coarse** — [user adjusts scope]
+> 2. **Reorder or split tasks**
+> 3. **Missing tasks**
+> 4. **Too granular / too coarse**
 
-**Wait for user response before completing.**
+**Wait for user response.**
+
+---
+
+### Scope Coverage Gate (Hard Gate)
+
+Before presenting the plan to the user, verify ALL input items are covered:
+
+1. Count distinct items/deliverables in the input briefing (`.wazir/input/briefing.md` + any `input/*.md` files)
+2. Count tasks in the execution plan
+3. **If `tasks_in_plan < items_in_input`:** STOP and present:
+
+> **Scope reduction detected.** The input contains [N] items but the plan only covers [M].
+>
+> Missing items: [list]
+>
+> 1. **Add missing items to the plan** (Required)
+> 2. **User explicitly approves reduced scope** — only if user confirms
+
+**The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.**
+
+Invariant: `items_in_plan >= items_in_input` unless user explicitly approves reduction.
 
 ---
 
 ## Done
 
-When the plan is approved, present:
+When the plan is approved:
 
-> **Clarification complete.**
+> **Clarifier phase complete.**
 >
 > - Spec: `.wazir/runs/latest/clarified/spec-hardened.md`
 > - Design: `.wazir/runs/latest/clarified/design.md`
-> - Tasks: [count] tasks in `.wazir/runs/latest/tasks/`
 > - Plan: `.wazir/runs/latest/clarified/execution-plan.md`
 >
-> **Next:** Run `/wazir:executor` to execute the plan.
+> **Next:** Run `/executor` to implement the plan.

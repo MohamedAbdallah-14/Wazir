@@ -9,6 +9,19 @@ The user typed `/wazir <their request>`. Run the entire pipeline end-to-end, han
 
 All questions use **numbered interactive options** — one question at a time, defaults marked "(Recommended)", wait for user response before proceeding.
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 ## Subcommand Detection
 
 Before anything else, check if the request starts with a known subcommand:
@@ -18,11 +31,24 @@ Before anything else, check if the request starts with a known subcommand:
 | `/wazir audit ...` | Jump to **Audit Mode** (see below) |
 | `/wazir prd [run-id]` | Jump to **PRD Mode** (see below) |
 | `/wazir init` | Invoke the `init-pipeline` skill directly, then stop |
-| Anything else | Continue to Step 1 (normal pipeline) |
+| Anything else | Continue to Phase 1 (Init) |
 
 ---
 
-# Normal Pipeline Mode
+# 4-Phase Pipeline
+
+The pipeline has 4 phases. Each phase groups related workflows. Individual workflows within a phase can be enabled/disabled via `workflow_policy` in run-config.
+
+| Phase | Contains | Owner Skill | Key Output |
+|-------|----------|-------------|------------|
+| **Init** | Setup, prereqs, run directory, input scan | `wz:wazir` (inline) | `run-config.yaml` |
+| **Clarifier** | Research, clarify, specify, brainstorm, plan | `wz:clarifier` | Approved spec + design + plan |
+| **Executor** | Implement, verify | `wz:executor` | Code + verification proof |
+| **Final Review** | Review vs original input, learn, prepare next | `wz:reviewer` | Verdict + learnings + handoff |
+
+---
+
+# Phase 1: Init
 
 ## Step 1: Capture the Request
 
@@ -37,13 +63,22 @@ If the user provided no text after `/wazir`, ask:
 
 Save their answer as the briefing, then continue.
 
+### Scan Input Directory
+
+Scan both `input/` (project-level) and `.wazir/input/` (state-level) for existing briefing materials. If files exist beyond `briefing.md`, list them:
+
+> **Found input files:**
+> - `input/2026-03-19-deferred-items.md`
+> - `.wazir/input/briefing.md`
+>
+> Using all found input as context for clarification.
+
 ### Inline Modifiers
 
-Parse the request for inline modifiers before the main text. These skip the corresponding interview question:
+Parse the request for inline modifiers before the main text:
 
 - `/wazir quick fix the login redirect` → depth = quick, intent = bugfix
 - `/wazir deep design a new onboarding flow` → depth = deep, intent = feature
-- `/wazir feature add CSV export` → intent = feature, depth = standard (default)
 
 Recognized modifiers:
 - **Depth:** `quick`, `deep` (standard is default when omitted)
@@ -64,18 +99,9 @@ Run `which wazir` to check if the CLI is installed.
 > 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
 > 2. **Local link** — `npm link` from the Wazir project root
 
-If the user picks 1, run `npm install -g @wazir-dev/cli` and verify with `wazir --version`.
-If the user picks 2, run `npm link` from the project root and verify.
+The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
 
-The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution. There is no skip option.
-
-**If installed**, run `wazir doctor --json` to verify repo health.
-
-If doctor reports unhealthy:
-> **Repo health check failed:** [details from doctor output]
-> Fix issues before running the pipeline.
-
-Stop. Do NOT continue the pipeline until the health check passes.
+**If installed**, run `wazir doctor --json` to verify repo health. Stop if unhealthy.
 
 ### Branch Check
 
@@ -86,10 +112,6 @@ Run `wazir validate branches` to check the current git branch.
   >
   > 1. **Create feat/<slug>** (Recommended) — branch from current
   > 2. **Continue on [branch]** — not recommended for feature/refactor work
-
-  Wait for the user to answer before continuing.
-
-- If branch name is invalid (not `feat/`, `fix/`, `chore/`, etc.): warn but continue.
 
 ### Index Check
 
@@ -107,87 +129,79 @@ fi
 
 Check if `.wazir/state/config.json` exists.
 
-- **If missing** — invoke the `init-pipeline` skill. This will ask the user interactive questions to set up the config.
-- **If exists** — continue to Step 2.5.
+- **If missing** — invoke the `init-pipeline` skill.
+- **If exists** — continue.
 
-## Step 2.5: Create Run Directory
+## Step 3: Create Run Directory
 
 Generate a run ID using the current timestamp: `run-YYYYMMDD-HHMMSS`
 
 ```bash
-mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews}
+mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
 ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
 ```
 
-If a previous completed run exists (check for a `completed_at` field in the previous `latest` run's `run-config.yaml`), record its `run_id` as `parent_run_id` in the new run's config.
-
-After creating the run directory, initialize event capture:
+Initialize event capture:
 
 ```bash
-wazir capture init --run <run-id> --phase clarify --status starting
+wazir capture init --run <run-id> --phase init --status starting
 ```
 
-## Step 3: Pre-Flight Configuration
+### Resume Detection
 
-Build the run configuration. Skip questions that were answered via inline modifiers.
+Check if a previous incomplete run exists (via `latest` symlink pointing to a run without `completed_at`).
 
-### Question 1: Depth (if not set via modifier)
+**If previous incomplete run found**, present:
 
-> **How thorough should this run be?**
+> **A previous incomplete run was detected:** `<previous-run-id>`
 >
-> 1. **Quick** — Minimal research, single-pass review, fast execution. Good for small fixes and config changes.
-> 2. **Standard** (Recommended) — Balanced research, multi-pass hardening, full review. Good for most features.
-> 3. **Deep** — Extended research, thorough hardening, strict review thresholds. Good for complex or security-critical work.
+> 1. **Resume** (Recommended) — continue from the last completed phase
+> 2. **Start fresh** — create a new empty run
 
-### Question 2: Intent (if not set via modifier and not obvious from the request)
+**If Resume:**
+- Copy `clarified/` from previous run into new run, EXCEPT `user-feedback.md`.
+- Detect last completed phase by checking which artifacts exist.
+- **Staleness check:** If input files are newer than copied artifacts, warn and offer to re-run clarification.
 
-Only ask this if the request is ambiguous. If the intent is clear from the text (e.g., "fix the bug" → bugfix), infer it and skip.
+## Step 4: Build Run Config
 
-> **What kind of work is this?**
->
-> 1. **Feature** (Recommended) — New functionality or enhancement
-> 2. **Bugfix** — Fix broken behavior
-> 3. **Refactor** — Restructure without changing behavior
-> 4. **Docs** — Documentation only
-> 5. **Spike** — Research and exploration, no production code
+**No questions asked.** Depth, intent, and mode are all inferred or defaulted.
 
-### Question 3: Agent Teams (conditional)
+### Intent Inference
 
-Only ask this if ALL of these are true:
-- The host is Claude Code (not Codex/Gemini/Cursor)
-- Depth is `standard` or `deep`
-- Intent is `feature` or `refactor` (not bugfix/docs/spike)
+Infer intent from the request text using keyword matching:
 
-> **Would you like to use Agent Teams for parallel execution?**
->
-> 1. **No** (Recommended) — Tasks run sequentially. Predictable, lower cost.
-> 2. **Yes** — Spawns parallel teammates for independent tasks. Potentially faster and richer output.
->
-> *Agent Teams is experimental from Claude's side. Requires Opus model. Higher token consumption.*
+| Keywords in request | Inferred Intent |
+|-------------------|-----------------|
+| fix, bug, broken, crash, error, issue, wrong | `bugfix` |
+| refactor, clean, restructure, reorganize, rename, simplify | `refactor` |
+| doc, document, readme, guide, explain | `docs` |
+| research, spike, explore, investigate, prototype | `spike` |
+| (anything else) | `feature` |
+
+Depth defaults to `standard`. Override only via inline modifiers (`/wazir quick ...`, `/wazir deep ...`).
 
 ### Write Run Config
 
-Save all decisions to `.wazir/runs/<run-id>/run-config.yaml`:
+Save to `.wazir/runs/<run-id>/run-config.yaml`:
 
 ```yaml
-# Identity
-run_id: run-20260317-143000
-parent_run_id: null                    # set if resuming/continuing from a prior run
-continuation_reason: null              # e.g. "review found minor fixes"
+run_id: run-YYYYMMDD-HHMMSS
+parent_run_id: null
+continuation_reason: null
 
-# User request
 request: "the original user request"
-request_summary: "short summary of intent"
-parsed_intent: feature                 # feature | bugfix | refactor | docs | spike
-entry_point: "/wazir"                  # how the user entered the pipeline
+request_summary: "short summary"
+parsed_intent: feature
+entry_point: "/wazir"
 
-# Configuration
-depth: standard                        # quick | standard | deep
-team_mode: sequential                  # sequential | parallel
-parallel_backend: none                 # none | claude_teams (future: subagents, worktrees)
+depth: standard
+team_mode: sequential
+parallel_backend: none
 
-# Phase policy (system-decided, not user-facing)
-phase_policy:
+# Workflow policy — individual workflows within each phase
+workflow_policy:
+  # Clarifier phase workflows
   discover:       { enabled: true, loop_cap: 10 }
   clarify:        { enabled: true, loop_cap: 10 }
   specify:        { enabled: true, loop_cap: 10 }
@@ -197,295 +211,195 @@ phase_policy:
   design-review:  { enabled: true, loop_cap: 10 }
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
+  # Executor phase workflows
   execute:        { enabled: true, loop_cap: 10 }
   verify:         { enabled: true, loop_cap: 5 }
+  # Final Review phase workflows
   review:         { enabled: true, loop_cap: 10 }
-  learn:          { enabled: false, loop_cap: 5 }
-  prepare_next:   { enabled: false, loop_cap: 5 }
+  learn:          { enabled: true, loop_cap: 5 }
+  prepare_next:   { enabled: true, loop_cap: 5 }
   run_audit:      { enabled: false, loop_cap: 10 }
 
-# Research
-research_topics: []                    # populated by researcher phase
+research_topics: []
 
-# Timestamps
-created_at: 2026-03-17T14:30:00Z
+created_at: "YYYY-MM-DDTHH:MM:SSZ"
 completed_at: null
 ```
 
-Mutable execution state (current phase, task progress, error counts) lives in `.wazir/runs/<run-id>/status.json`, NOT in `run-config.yaml`. The run config captures setup decisions only.
+### Workflow Skip Rules
 
-### Phase Policy
+Map intent + depth to applicable workflows. The system decides — the user does NOT pick.
 
-Map intent + depth to applicable phases. The system decides — the user does NOT pick phases.
-
-**Phase classes:**
-
-| Class | Phases | Rules |
-|-------|--------|-------|
-| **Core** (always run) | `clarify`, `verify`, `review` | Never skipped |
+| Class | Workflows | Rules |
+|-------|-----------|-------|
+| **Core** (always run) | `clarify`, `execute`, `verify`, `review` | Never skipped |
 | **Adaptive** (run when evidence says so) | `discover`, `design`, `author`, `specify` | Skipped for bugfix/docs/spike at quick depth |
 | **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `design-review` | Loop cap controls iteration depth |
+| **Post-run** (always run) | `learn`, `prepare_next` | Part of Final Review phase |
 
-Log skip decisions to the run's `run-config.yaml` with reasons:
-
-```yaml
-phase_policy:
-  discover:       { enabled: true, loop_cap: 10 }
-  design:         { enabled: false, loop_cap: 10, reason: "bugfix intent — no design needed" }
-  spec-challenge: { enabled: true, loop_cap: 10 }
-```
+Log skip decisions with reasons in `workflow_policy`.
 
 ### Confidence Gate
 
-After building the run config, evaluate confidence:
+After building run config:
 
-- **High confidence** (clear intent, depth set, no ambiguity) — show a one-line summary and proceed:
-  > **Running: standard depth, feature, sequential. 11 of 15 phases. Proceeding...**
+- **High confidence** — one-line summary and proceed:
+  > **Running: standard depth, feature, sequential. Proceeding...**
 
-- **Low confidence** (ambiguous intent, unclear scope) — show the full plan and ask:
-  > **Here's the run plan:**
-  > - Depth: standard
-  > - Intent: feature
-  > - Phases: [list enabled phases]
-  > - Skipped: [list skipped with reasons]
-  >
+- **Low confidence** — show plan and ask:
   > **Does this look right?**
   > 1. **Yes, proceed** (Recommended)
   > 2. **No, let me adjust**
 
-## Step 4: Run Pipeline Phases
-
-The full pipeline runs these phases in order. Each phase produces an artifact that must pass its review loop before flowing to the next phase. Review mode is always passed explicitly (`--mode`) -- no auto-detection.
-
-### 4a: Source Capture
-
-Before invoking the clarifier, capture all referenced sources locally:
-
-- Fetch all URLs referenced in `.wazir/input/` briefing files
-- Save fetched content to `.wazir/runs/<run-id>/sources/`
-- Name files as `src-NNN-<slug>.md` (fetched content) or `src-NNN-fetch-failed.json` (failures)
-- Create `.wazir/runs/<run-id>/sources/manifest.json` indexing all captures:
-
-```json
-[
-  {
-    "id": "src-001",
-    "origin_url": "https://...",
-    "fetch_time": "2026-03-17T14:30:00Z",
-    "content_hash": "sha256:abc...",
-    "status": "captured",
-    "local_path": "src-001-github-readme.md"
-  },
-  {
-    "id": "src-002",
-    "origin_url": "https://...",
-    "status": "failed",
-    "error": "403 Forbidden",
-    "fetch_time": "2026-03-17T14:30:01Z"
-  }
-]
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase init --status completed
 ```
 
-Research briefs produced by the researcher must reference local paths (`sources/src-001-...`) instead of live URLs. The original URL is preserved in the manifest for provenance. Failures are recorded explicitly — never silently skipped.
+---
 
-### 4b: Clarify (clarifier role)
+# Phase 2: Clarifier
 
 ```bash
-wazir capture event --run <run-id> --event phase_enter --phase clarify --status in_progress
+wazir capture event --run <run-id> --event phase_enter --phase clarifier --status in_progress
 ```
 
-Invoke the clarifier skill for Phase 1A.
-Produces clarification artifact.
-Review: clarification-review loop (`--mode clarification-review`, spec/clarification dimensions).
-Pass count: quick=3, standard=5, deep=7. No extension.
-Checkpoint: user approves clarification.
+Invoke the `wz:clarifier` skill. It handles all sub-workflows internally:
+
+1. **Source Capture** — fetch URLs from input
+2. **Research** (discover workflow) — codebase + external research
+3. **Clarify** (clarify workflow) — scope, constraints, assumptions
+4. **Spec Harden** (specify + spec-challenge workflows) — measurable spec
+5. **Brainstorm** (design + design-review workflows) — design approaches
+6. **Plan** (plan + plan-review workflows) — execution plan
+
+Each sub-workflow has its own review loop. User checkpoints between major steps.
+
+### Scope Invariant
+
+**Hard rule:** `items_in_plan >= items_in_input` unless the user explicitly approves scope reduction. The clarifier MUST NOT autonomously tier, defer, or drop items from the user's input. It can suggest prioritization, but the decision belongs to the user.
+
+Output: approved spec + design + execution plan in `.wazir/runs/latest/clarified/`.
 
 ```bash
-wazir capture event --run <run-id> --event phase_exit --phase clarify --status completed
+wazir capture event --run <run-id> --event phase_exit --phase clarifier --status completed
 ```
 
-### 4c: Research (researcher role via discover workflow)
+---
+
+# Phase 3: Executor
+
+## Phase Gate (Hard Gate)
+
+Before entering the Executor phase, verify ALL clarifier artifacts exist:
+
+- [ ] `.wazir/runs/latest/clarified/clarification.md`
+- [ ] `.wazir/runs/latest/clarified/spec-hardened.md`
+- [ ] `.wazir/runs/latest/clarified/design.md`
+- [ ] `.wazir/runs/latest/clarified/execution-plan.md`
+
+If ANY file is missing, **STOP**:
+
+> **Cannot enter Executor phase: missing prerequisite artifacts from Clarifier.**
+>
+> Missing: [list missing files]
+>
+> The Clarifier phase must complete before execution can begin. Run `/wazir:clarifier` first.
+
+**Do NOT skip this check. Do NOT rationalize that the input is "clear enough" to bypass clarification. Every pipeline run must produce these artifacts.**
 
 ```bash
-wazir capture event --run <run-id> --event phase_enter --phase discover --status in_progress
+wazir capture event --run <run-id> --event phase_enter --phase executor --status in_progress
 ```
 
-Clarifier delegates to discover workflow (researcher role).
-Produces research artifact.
-Review: research-review loop (`--mode research-review`, research dimensions).
-Pass count: quick=3, standard=5, deep=7. No extension.
-Skip condition: depth=quick AND intent=bugfix.
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase discover --status completed
-```
-
-### 4d: Specify (specifier role)
-
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase specify --status in_progress
-```
-
-Delegate to specify workflow.
-Specifier produces measurable spec from clarification + research.
-Review: spec-challenge loop (`--mode spec-challenge`, spec/clarification dimensions).
-Pass count: quick=3, standard=5, deep=7. No extension.
-Checkpoint: user approves spec.
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase specify --status completed
-```
-
-### 4d.5: Author (content-author role) [ADAPTIVE]
-
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase author --status in_progress
-```
-
-Enabled when `phase_policy.author.enabled = true` (default: false).
-Content-author writes non-code content artifacts.
-Approval gate: human approval required (not a review loop).
-Skip condition: disabled by default. Enable for content-heavy projects.
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase author --status completed
-```
-
-### 4e: Brainstorm (designer role)
-
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase design --status in_progress
-```
-
-Invoke brainstorming skill for Phase 1B.
-Interactive -- pauses for user approval of design concept.
-After user approval: design-review loop (`--mode design-review`,
-canonical design-review dimensions: spec coverage, design-spec consistency,
-accessibility, visual consistency, exported-code fidelity).
-Pass count: quick=3, standard=5, deep=7. No extension.
-Skip condition: intent=bugfix/docs.
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase design --status completed
-```
-
-### 4f: Plan (planner role via wz:writing-plans)
-
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase plan --status in_progress
-```
-
-Delegate to `wz:writing-plans`.
-Planner produces execution plan and task specs.
-Review: plan-review loop (`--mode plan-review`, plan dimensions).
-Pass count: quick=3, standard=5, deep=7. No extension.
-Checkpoint: user approves plan.
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase plan --status completed
-```
-
-### 4g: Execute (executor role)
-
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase execute --status in_progress
-```
-
-**Pre-execution gate** — run before the first task:
+**Pre-execution gate:**
 
 ```bash
 wazir validate manifest && wazir validate hooks
-# If either fails, stop and report the failure. Do NOT proceed to task execution.
+# Hard gate — stop if either fails.
 ```
 
-Invoke executor skill for Phase 2.
-Per-task review: task-review loop (`--mode task-review --task-id <NNN>`,
-5 task-execution dimensions) before each commit.
-Review logs: `execute-task-<NNN>-review-pass-<N>.md`
-Cap tracking: `wazir capture loop-check --task-id <NNN>`
-Codex error handling: non-zero exit -> codex-unavailable, self-review only.
-NOTE: per-task review is NOT the final review.
+Invoke the `wz:executor` skill. It handles:
 
-If `team_mode: parallel` in run-config, the executor spawns Agent Teams for independent tasks. Otherwise, tasks run sequentially.
+1. **Execute** (execute workflow) — per-task TDD cycle with review before each commit
+2. **Verify** (verify workflow) — deterministic verification of all claims
+
+Per-task review: `--mode task-review`, 5 task-execution dimensions.
+Tasks always run sequentially.
+
+Output: code changes + verification proof in `.wazir/runs/latest/artifacts/`.
 
 ```bash
-wazir capture event --run <run-id> --event phase_exit --phase execute --status completed
+wazir capture event --run <run-id> --event phase_exit --phase executor --status completed
 ```
 
-### 4h: Verify (verifier role)
+---
 
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase verify --status in_progress
-```
+# Phase 4: Final Review
 
-Deterministic verification of execution claims.
-Not a review loop -- produces proof, not findings.
+## Phase Gate (Hard Gate)
 
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase verify --status completed
-```
+Before entering the Final Review phase, verify the Executor produced its proof:
 
-### 4i: Final Review (reviewer role in final mode)
+- [ ] `.wazir/runs/latest/artifacts/verification-proof.md`
 
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase review --status in_progress
-```
+If missing, **STOP**:
 
-Invoke reviewer skill with `--mode final`.
-7-dimension scored review (correctness, completeness, wiring, verification,
-drift, quality, documentation). Score 0-70.
-This IS the scored final review gate.
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase review --status completed
-```
-
-### 4j: Learn (learner role) [ADAPTIVE]
-
-Enabled when `phase_policy.learn.enabled = true` (default: false).
-Extract durable learnings from the completed run.
-No review loop. Learnings require explicit scope tags.
-Skip condition: disabled by default. Enable for retrospective runs.
-
-### 4k: Prepare Next (planner role) [ADAPTIVE]
-
-Enabled when `phase_policy.prepare_next.enabled = true` (default: false).
-Prepare context and handoff for the next run.
-No review loop. No implicit carry-forward of unapproved learnings.
-Skip condition: disabled by default.
-
-`run_audit` is NOT part of the pipeline flow -- it is an on-demand standalone phase invoked separately.
-
-### Resume Detection
-
-If the run has partial progress, detect the latest completed phase and resume:
-
-- If clarification exists but no spec: resume at 4d (specify)
-- If spec exists but no design: resume at 4e (brainstorm)
-- If design exists but no plan: resume at 4f (plan)
-- If plan exists but no task artifacts: resume at 4g (execute)
-- If task artifacts exist but no verification: resume at 4h (verify)
-- If verification exists: resume at 4i (final review)
-
-Present resume options:
-
-> **Previous progress detected (completed through [phase]).**
+> **Cannot enter Final Review: missing verification proof from Executor.**
 >
-> **What would you like to do?**
-> 1. **Resume from [next phase]** (Recommended)
-> 2. **Start fresh** — Re-run all phases from scratch
+> The Executor phase must complete and produce `verification-proof.md` before final review. Run `/wazir:executor` first.
 
-## Step 5: Present Results
+```bash
+wazir capture event --run <run-id> --event phase_enter --phase final_review --status in_progress
+```
 
-After the reviewer completes, present the verdict and offer next steps with numbered options:
+This phase validates the implementation against the **ORIGINAL INPUT** (not the task specs — the executor's per-task reviewer already covered that).
+
+### 4a: Review (reviewer role in final mode)
+
+Invoke `wz:reviewer --mode final`.
+7-dimension scored review comparing implementation against the original user input.
+Score 0-70. Verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+
+### 4b: Learn (learner role)
+
+Extract durable learnings from the completed run:
+- Scan all review findings (internal + Codex)
+- Propose learnings to `memory/learnings/proposed/`
+- Findings that recur across 2+ runs → auto-proposed as learnings
+- Learnings require explicit scope tags (roles, stacks, concerns)
+
+### 4c: Prepare Next (planner role)
+
+Prepare context and handoff for the next run:
+- Write handoff document
+- Compress/archive unneeded files
+- Record what's left to do
+
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
+```
+
+---
+
+## Step 5: CHANGELOG + Gitflow Validation (Hard Gates)
+
+Before presenting results:
+
+```bash
+wazir validate changelog --require-entries --base main
+wazir validate commits --base main
+```
+
+Both must pass before PR. These are not warnings.
+
+## Step 6: Present Results
+
+After the reviewer completes, present verdict with numbered options:
 
 ### If PASS (score 56+):
 
 > **Result: PASS (score/70)**
 >
-> [score breakdown]
->
-> **What would you like to do?**
 > 1. **Create a PR** (Recommended)
 > 2. **Merge directly**
 > 3. **Review the changes first**
@@ -494,9 +408,6 @@ After the reviewer completes, present the verdict and offer next steps with numb
 
 > **Result: NEEDS MINOR FIXES (score/70)**
 >
-> [findings list]
->
-> **What would you like to do?**
 > 1. **Auto-fix and re-review** (Recommended)
 > 2. **Fix manually**
 > 3. **Accept as-is**
@@ -505,9 +416,6 @@ After the reviewer completes, present the verdict and offer next steps with numb
 
 > **Result: NEEDS REWORK (score/70)**
 >
-> [findings list with affected tasks]
->
-> **What would you like to do?**
 > 1. **Re-run affected tasks** (Recommended)
 > 2. **Review findings in detail**
 > 3. **Abandon this run**
@@ -516,13 +424,9 @@ After the reviewer completes, present the verdict and offer next steps with numb
 
 > **Result: FAIL (score/70)**
 >
-> [full findings]
->
-> Something fundamental went wrong. Review the findings above and decide how to proceed.
+> Something fundamental went wrong. Review the findings above.
 
 ### Run Summary
-
-After presenting results (regardless of verdict), capture the run summary:
 
 ```bash
 wazir capture summary --run <run-id>
@@ -531,19 +435,13 @@ wazir status --run <run-id> --json
 
 ## Error Handling
 
-If any phase fails or the user cancels:
-
-1. Report which phase failed and why
-2. Present recovery options:
+If any phase fails:
 
 > **Phase [name] failed: [reason]**
 >
-> **What would you like to do?**
 > 1. **Retry this phase** (Recommended)
-> 2. **Skip and continue** (only if phase is adaptive, not core)
+> 2. **Skip and continue** (only if workflows within phase are adaptive)
 > 3. **Abort the run**
-
-The run config persists, so running `/wazir` again will detect the partial state and offer to resume.
 
 ---
 
@@ -551,27 +449,17 @@ The run config persists, so running `/wazir` again will detect the partial state
 
 Triggered by `/wazir audit` or `/wazir audit <focus>`.
 
-Runs a structured codebase audit. Invokes the `run-audit` skill with the interactive question flow.
+Runs a structured codebase audit. Invokes the `run-audit` skill.
 
-## Inline Audit Modifiers
+Parse inline audit types: `/wazir audit security` → skip Question 1.
 
-Parse for known audit types after `audit`:
+After audit:
 
-- `/wazir audit security` → audit type = security, skip Question 1
-- `/wazir audit deps` → audit type = dependencies, skip Question 1
-- `/wazir audit` → ask Question 1
-
-Then let the `run-audit` skill handle the rest (scope, output mode). All its questions already follow the interactive numbered pattern.
-
-After the audit completes:
-
-> **Audit complete. What would you like to do?**
->
 > 1. **Review the findings** (Recommended)
-> 2. **Generate a fix plan** — turn findings into implementation tasks
-> 3. **Run the pipeline on the fix plan** — generate plan, then execute and review fixes
+> 2. **Generate a fix plan**
+> 3. **Run the pipeline on the fix plan**
 
-If the user picks option 3, save the findings as the briefing and run the normal pipeline (Steps 3-5) with intent = `bugfix`.
+If option 3, save findings as briefing and run pipeline with intent = `bugfix`.
 
 ---
 
@@ -579,79 +467,10 @@ If the user picks option 3, save the findings as the briefing and run the normal
 
 Triggered by `/wazir prd` or `/wazir prd <run-id>`.
 
-Generates a Product Requirements Document from a completed pipeline run.
+Generates a PRD from a completed run. Reads approved design, task specs, execution plan, review results. Saves to `docs/prd/YYYY-MM-DD-<topic>-prd.md`.
 
-## Pre-Flight
+After generation:
 
-1. If a `<run-id>` was provided, use that run's directory. Otherwise, use `.wazir/runs/latest`.
-2. Verify the run has completed artifacts:
-   - Design doc in the run's tasks or in `docs/plans/`
-   - Task specs in the run's `clarified/`
-   - Review results in the run's `reviews/` (if available)
-3. If the run is incomplete or has no artifacts:
-
-> **No completed run found. Run `/wazir <your request>` first to create a pipeline run, then use `/wazir prd` to generate the PRD.**
-
-## Inputs (read-only)
-
-Read these artifacts from the completed run:
-- Approved design document
-- Task specs (all `spec.md` files in `clarified/`)
-- Execution plan
-- Review results and verification proofs (if available)
-- Run config (for context on depth, intent, decisions)
-
-## Output
-
-Generate a PRD and save to `docs/prd/YYYY-MM-DD-<topic>-prd.md`.
-
-### PRD Template
-
-```markdown
-# Product Requirements Document — <Topic>
-
-**Generated from run:** `<run-id>`
-**Date:** YYYY-MM-DD
-
-## Vision & Core Thesis
-
-[1-2 paragraphs synthesized from the design document's core approach]
-
-## What We're Building
-
-### Feature Area 1: <name>
-
-**What:** [description from task specs]
-**Why:** [rationale from design doc]
-**Requirements:**
-- [ ] [from task spec acceptance criteria]
-- [ ] ...
-
-### Feature Area 2: <name>
-...
-
-## Success Criteria
-
-[From review results and verification proofs — what was tested and confirmed]
-
-## Technical Constraints
-
-[From architecture decisions, run config, and design trade-offs]
-
-## What's NOT in Scope
-
-[From design doc's rejected alternatives and explicit exclusions]
-
-## Open Questions
-
-[From design doc's open questions and review findings]
-```
-
-## After Generation
-
-> **PRD generated at `docs/prd/YYYY-MM-DD-<topic>-prd.md`.**
->
-> **What would you like to do?**
 > 1. **Review the PRD** (Recommended)
 > 2. **Commit it**
 > 3. **Edit before committing**
@@ -659,8 +478,6 @@ Generate a PRD and save to `docs/prd/YYYY-MM-DD-<topic>-prd.md`.
 ---
 
 ## Interaction Rules
-
-These rules apply to ALL questions in the pipeline, including those asked by sub-skills (clarifier, executor, reviewer) and audit modes:
 
 - **One question at a time** — never combine multiple questions
 - **Numbered options** — always present choices as numbered lists

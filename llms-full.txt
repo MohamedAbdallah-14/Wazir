@@ -1,6 +1,6 @@
 # Wazir — Complete Documentation
 
-> Generated: 2026-03-16T23:53:58Z
+> Generated: 2026-03-19T16:28:21Z
 
 ---
 ## Source: docs/concepts/architecture.md
@@ -17,7 +17,7 @@ Wazir is a host-native engineering OS kit. The host environment (Claude, Codex, 
 | Workflows | Phase entrypoints that sequence roles through delivery |
 | Skills | Reusable procedures (wz:tdd, wz:debugging, wz:verification, wz:brainstorming) |
 | Hooks | Guardrails enforcing protected paths, loop caps, and capture routing |
-| Expertise | 308 curated knowledge modules composed into agent prompts |
+| Expertise | 268 curated knowledge modules composed into agent prompts |
 | Templates | Artifact templates for phase outputs and handoff |
 | Schemas | Validation schemas for manifest, hooks, artifacts, and exports |
 | Exports | Generated host packages tailored per supported host |
@@ -442,6 +442,8 @@ The canonical workflow sequence is:
 13. **learn** — capture scoped learnings
 14. **prepare-next** — produce a clean handoff for the next run
 
+Additionally, **run-audit** is a standalone workflow that can be invoked outside the linear pipeline to perform structured codebase audits with source-backed findings.
+
 ## Role routing
 
 The orchestrator dispatches three roles per task: `executor`, `reviewer`, and `verifier`. By default, all three run for every task. The `required_roles` field in a task's YAML frontmatter controls which roles are dispatched, allowing the orchestrator to skip unnecessary roles and save context window budget.
@@ -499,6 +501,69 @@ Do not use terms that describe Wazir as a background service, a web-based contro
 - Wazir is a host-native engineering OS kit, not a server or background service.
 - Use the canonical terms above in all roles, workflows, skills, and documentation.
 - When in doubt, describe what Wazir is, not what it is not.
+
+---
+## Source: docs/concepts/why-wazir.md
+
+# Why Wazir
+
+What makes Wazir the best engineering OS you can add to an AI coding agent.
+
+## 1. Measure Twice, Cut Once
+
+Wazir clarifies before coding. The pipeline forces research, spec hardening, design review, and plan approval before a single line of implementation code is written. Most AI agents jump straight to code and fix mistakes after. Wazir prevents the mistakes.
+
+## 2. Deep Research
+
+Every AI agent knows how to research. Users don't ask them to. Wazir makes research a mandatory phase — the researcher role scans the codebase, fetches external sources, and produces a research brief before clarification begins. The agent starts informed, not guessing.
+
+## 3. Clarifier + Task Planning
+
+A structured clarification pipeline turns vague requests into measurable specs. Spec hardening catches ambiguity, missing constraints, and untestable acceptance criteria before they become bugs. Task planning produces execution-grade task specs — not TODO lists.
+
+## 4. Content Author
+
+A dedicated role for any content need — database seeding, sample content, test fixtures, translations, copy, email templates, notification text. Most AI agents treat content as an afterthought bolted onto code tasks. Wazir gives content its own phase with editorial standards, i18n awareness, and humanization rules.
+
+## 5. Self-Audit
+
+The agent audits its own work in an isolated git worktree. Validates, finds structural issues, fixes what it can, verifies the fixes, and only merges on all-green. 5-loop cycle with convergence detection. Protected-path safety rails prevent the agent from modifying its own identity-defining files. Safe self-improvement.
+
+## 6. Composer
+
+~300 curated expertise modules across 12 domains. The composition engine assembles task-specific agents by loading the right expertise for each role, stack, and concern. The executor building a Flutter RTL app gets Flutter patterns, RTL layout rules, and mobile antipatterns composed into its context. The reviewer gets the corresponding antipattern catalog. Every dispatched agent is a specialist, not a generalist pretending.
+
+## 7. Review Loops
+
+Multi-pass adversarial review at every pipeline checkpoint — not a single rubber-stamp at the end. Research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions. Findings are resolved before advancing. The reviewer is an adversary, not a cheerleader.
+
+## 8. Continuous Learning
+
+Wazir evolves from its own mistakes. Review findings, audit findings, and user corrections feed into a learning system. Recurring issues become accepted learnings injected into future runs. A drift budget prevents learned behavior from diverging too far from the original design. The agent that builds your 10th feature is better than the one that built your 1st.
+
+## 9. Antipatterns
+
+A first-class antipattern catalog loaded into reviewer context BEFORE domain expertise. Catches AI-specific failure modes: fake completion, unwired abstractions, shallow tests, security theater, architecture drift. The reviewer's first lens is "what could go wrong" — not "does this look right."
+
+## 10. Multi-Host
+
+One canonical source, four host exports. Wazir works on Claude Code, Codex, Gemini, and Cursor from a single `wazir export build`. Roles, workflows, skills, and expertise are written once and compiled into each host's native format. Switch hosts without rewriting your engineering process.
+
+## 11. Context Efficiency
+
+AI agents waste most of their context window on brute-force file reads and verbose command output. Wazir's routing hook auto-routes large commands through context-mode. The index provides symbol-first exploration — query first, read only what's needed. Capture routing redirects large output to files. Result: 60-80% token reduction on exploration-heavy phases. The agent thinks more, reads less.
+
+## 12. Verification Before Completion
+
+No success claims without evidence. The verify phase produces deterministic proof — test results, lint output, type-check results — not "I believe it works." Every completion claim is backed by a command that was actually run and output that was actually checked. Evidence before assertions, always.
+
+## 13. Gating Agent
+
+Autonomous phase transition decisions. After each phase, a gating agent reads the phase report and decides: continue (all gates pass), loop back (specific failures with fix paths), or escalate to human (ambiguous trade-offs, scope changes). Default posture: escalate. The pipeline doesn't blindly advance — it stops when it should stop.
+
+## 14. Humanize
+
+Anti-AI-writing patterns across all text output. A vocabulary blacklist, domain-specific rules, and a self-audit checklist ensure that specs, plans, code comments, commit messages, and documentation read like they were written by a human engineer — not generated by an LLM. Because AI-sounding output erodes trust.
 
 ---
 ## Source: docs/getting-started/01-installation.md
@@ -969,15 +1034,56 @@ Out of scope for this manifest check:
 
 Maintainers are responsible for policing those surfaces with the separate docs-truth, runtime-surface, and repository review checks.
 
-## Workflows vs phases
+## Phases vs workflows
 
-- `phases` are the core lifecycle states of the operating model.
-- `workflows` are the canonical callable or review-gated entrypoints that drive those phases.
+The pipeline has **4 phases** (Init, Clarifier, Executor, Final Review) and **15 workflows** (atomic units within those phases).
 
-They overlap heavily, but they are not identical:
+- **Phases** are the top-level pipeline stages. Event capture and tracking use phase names: `init`, `clarifier`, `executor`, `final_review`.
+- **Workflows** are the canonical callable or review-gated entrypoints that run within phases. Each workflow can be independently enabled/disabled via `workflow_policy` in run-config.
 
-- `spec_challenge`, `plan_review`, and `prepare_next` are workflows that sit between or around the core execution phases.
-- Validators and exports should treat manifest-declared workflows as the canonical workflow file roster.
+| Phase | Workflows |
+|-------|-----------|
+| Init | (inline — no workflow files) |
+| Clarifier | clarify, discover, specify, spec_challenge, author, design, design_review, plan, plan_review |
+| Executor | execute, verify |
+| Final Review | review, learn, prepare_next |
+
+`run_audit` is a standalone on-demand workflow, not part of the main pipeline flow.
+
+Validators and exports should treat manifest-declared workflows as the canonical workflow file roster.
+
+## Hook configuration
+
+### `hooks/routing-matrix.json`
+
+The routing matrix defines how the context-mode router classifies commands:
+
+- `large` — array of command prefixes that always route to context-mode (AC-3.1). The `# wazir:passthrough` marker does NOT exempt commands in this category.
+- `small` — array of command prefixes that always pass through without context-mode processing.
+- `ambiguous_heuristic` — rules for commands that match neither large nor small:
+  - `pipe_detected` — classify piped commands as ambiguous
+  - `redirect_detected` — classify redirected commands as ambiguous
+  - `verbose_binaries` — array of binary names whose output is typically large
+
+### `config/gating-rules.yaml`
+
+The gating rules file defines conditions for phase transition decisions:
+
+- `rules.continue` — all conditions must pass for a phase to advance (test failures, lint errors, type errors, drift delta, risk flags, uncertain outcomes)
+- `rules.loop_back` — any deterministic failure (test failures, lint errors, or type errors) triggers a loop-back with actionable fix descriptions
+- `rules.escalate` — fallback when neither continue nor loop_back match
+- `default_verdict` — verdict when the report is empty or missing (defaults to `escalate`)
+
+### Composition proof artifacts
+
+The composition engine (`tooling/src/adapters/composition-engine.js`) writes a proof artifact per dispatch to `.wazir/runs/<id>/artifacts/composition-<role>-<task>.json` containing:
+
+- `modules_included[]` — `{ path, layer, tokens }` for each loaded module
+- `modules_dropped[]` — `{ path, layer, tokens, reason }` for each dropped module. Reason values:
+  - `module_cap_exceeded` — module count exceeded the 15-module cap
+  - `token_ceiling_exceeded` — total tokens exceeded the configurable ceiling (default: 50,000)
+- `total_tokens` — total token count of composed prompt
+- `prompt_hash` — SHA-256 hash of the composed prompt for audit traceability
 
 ## Current index parser roster
 
@@ -1273,7 +1379,7 @@ Submit pull requests to these curated lists (one PR per list, follow each repo's
 ### awesome-claude-code
 - **Repo:** `github.com/anthropics/awesome-claude-code` (or the most-starred community fork)
 - **Section:** Tools / Plugins / Extensions
-- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 14 phases, and 308 expertise modules.`
+- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 4 phases (15 workflows), and 268 expertise modules.`
 - **Tips:** Keep the description under 120 characters. Link directly to the repo.
 
 ### awesome-ai-agents
@@ -1303,7 +1409,7 @@ Show HN: Wazir – Engineering OS kit for AI coding agents (Claude, Codex, Gemin
 ### First comment
 Post a comment immediately after submission explaining:
 1. What problem Wazir solves (AI agents lack structured engineering workflows)
-2. How it works (10 canonical roles, 14-phase pipeline, 308 expertise modules)
+2. How it works (10 canonical roles, 14-phase pipeline, 268 expertise modules)
 3. What makes it different (host-native, works across Claude/Codex/Gemini/Cursor)
 4. Quick install: `npx @wazir-dev/cli init`
 5. Invite feedback -- HN readers appreciate genuine requests for input
@@ -1322,7 +1428,7 @@ Post a comment immediately after submission explaining:
 **Title:** "How I Built an Engineering OS for AI Coding Agents"
 
 1. **Hook** -- The problem: AI agents write code but lack engineering discipline.
-2. **Architecture overview** -- 10 roles, 14 phases, expertise modules, quality gates.
+2. **Architecture overview** -- 10 roles, 4 phases (15 workflows), expertise modules, quality gates.
 3. **Code walkthrough** -- Show a real workflow: how a feature moves from requirements through TDD to deployment.
 4. **Host-native approach** -- Explain why one kit works across Claude, Codex, Gemini, and Cursor.
 5. **Results** -- Concrete metrics or before/after comparisons.
@@ -1347,7 +1453,7 @@ Structure as a 5-7 tweet thread:
 
 1. **Hook tweet:** One-liner about the problem + link to repo.
 2. **What it is:** Brief description of Wazir.
-3. **Architecture:** 10 roles, 14 phases, 308 modules (include a diagram image).
+3. **Architecture:** 10 roles, 4 phases (15 workflows), 308 modules (include a diagram image).
 4. **Demo:** Short GIF or screenshot of a workflow in action.
 5. **Multi-host:** Works with Claude, Codex, Gemini, and Cursor.
 6. **Install:** `npx @wazir-dev/cli init`
@@ -1537,6 +1643,548 @@ When no Wazir release tag exists yet:
 - The first release tag will be `v1.0.0` (or `v0.1.0` if pre-stable)
 
 ---
+## Source: docs/reference/review-loop-pattern.md
+
+# Review Loop Pattern Reference
+
+Canonical reference for the review loop pattern used across all Wazir pipeline phases. Skills and workflows link to this document rather than embedding loop logic inline.
+
+---
+
+## Core Principle: Producer-Reviewer Separation
+
+The producer skill (clarifier, planner, designer, etc.) **emits** an artifact and calls for review. The **reviewer role** owns the review loop. The producer receives findings and resolves them. No role reviews its own output.
+
+```
+Producer emits artifact
+  -> Reviewer runs review loop (N passes, Codex if available)
+  -> Findings returned to producer
+  -> Producer fixes and resubmits
+  -> Loop until all passes exhausted or cap reached
+  -> Escalate to user if cap exceeded
+```
+
+When Codex is available, the reviewer role delegates to `codex review` as a secondary input while maintaining its own independent primary verdict.
+
+---
+
+## Per-Task Review vs Final Review
+
+These are two structurally different constructs:
+
+| | Per-Task Review | Final Review |
+|---|---|---|
+| **When** | During execution, after each task | After all execution + verification complete |
+| **Dimensions** | 5 task-execution dims (correctness, tests, wiring, drift, quality) | 7 scored dims (correctness, completeness, wiring, verification, drift, quality, documentation) |
+| **Scope** | Single task's uncommitted changes | Entire implementation vs spec/plan |
+| **Output** | Pass/fix loop, no score | Scored verdict (0-70), PASS/FAIL |
+| **Workflow** | Inline in execution flow | `workflows/review.md` |
+| **Skill** | `wz:reviewer` in `task-review` mode | `wz:reviewer` in `final` mode |
+| **Log filename** | `<phase>-task-<NNN>-review-pass-<N>.md` | `final-review.md` |
+
+---
+
+## Standalone Mode
+
+When no `.wazir/runs/latest/` directory exists (standalone skill invocation outside a pipeline run):
+
+1. **Review loops still run** -- the review logic is embedded in the skill, not dependent on run state.
+2. **Artifact location** -- artifacts live in `docs/plans/`. This is the canonical standalone artifact path.
+3. **Review log location** -- review logs go alongside the artifact: `docs/plans/YYYY-MM-DD-<topic>-review-pass-<N>.md`. No temp dir.
+4. **Loop cap is SKIPPED entirely** -- no `wazir capture loop-check` call. The loop runs for exactly `pass_counts[depth]` passes (3/5/7) and stops. No cap guard, no fallback constant.
+5. **`wazir capture loop-check`** -- not invoked in standalone mode. The standalone detection happens before the cap guard call.
+
+Detection logic:
+
+```
+if .wazir/runs/latest/ exists:
+  run_mode = "pipeline"
+  log_dir = .wazir/runs/latest/reviews/
+  cap_guard = wazir capture loop-check (full guard)
+else:
+  run_mode = "standalone"
+  artifact_dir = docs/plans/
+  log_dir = docs/plans/  (alongside artifact)
+  cap_guard = none (depth pass count is the only limit)
+```
+
+---
+
+## Review Loop Pseudocode
+
+```
+review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
+
+  # options.mode      -- explicit review mode (required)
+  # options.task_id   -- task identifier for task-scoped reviews (optional)
+
+  # Standalone detection
+  run_mode = detect_run_mode()  # "pipeline" or "standalone"
+
+  # Fixed pass counts -- no extension
+  pass_counts = { quick: 3, standard: 5, deep: 7 }
+  total_passes = pass_counts[depth]
+
+  # Depth-aware dimension subsets (coverage contract)
+  depth_dimensions = {
+    quick:    dimensions[0:3],     # first 3 dimensions only
+    standard: dimensions[0:5],     # first 5
+    deep:     dimensions,          # all available
+  }
+  active_dims = depth_dimensions[depth]
+
+  codex_available = check_codex()  # which codex && codex --version
+
+  for pass_number in 0..total_passes-1:
+
+    # --- Cap guard check (pipeline mode only, before each pass) ---
+    if run_mode == "pipeline":
+      loop_check_args = "--run <run-id> --phase <phase> --loop-count <pass_number+1>"
+      if options.task_id:
+        loop_check_args += " --task-id <task_id>"
+      wazir capture loop-check $loop_check_args
+      # loop-check wraps: event capture + evaluateLoopCapGuard
+      # If loop_cap_guard fires (exit 43), stop immediately:
+      if last_exit_code == 43:
+        log("Loop cap reached for phase: <phase>. Escalating to user.")
+        escalate_to_user(evidence_gathered_so_far)
+        return { pass_count: pass_number, escalated: true }
+    # Standalone mode: no cap guard. Loop runs for total_passes and stops.
+
+    dimension = active_dims[pass_number % len(active_dims)]
+
+    # --- Primary review (reviewer role, not producer) ---
+    # Mode is always explicit -- passed by caller via options.mode
+    findings = self_review(artifact_path, focus=dimension, mode=options.mode)
+
+    # --- Secondary review (Codex, if available) ---
+    if codex_available:
+      codex_exit_code, codex_output = run_codex_review(artifact_path, dimension)
+      if codex_exit_code != 0:
+        # Codex failed -- log error, fall back to self-review for this pass
+        log_error("Codex exited " + codex_exit_code + ": " + codex_output.stderr)
+        mark_pass_codex_unavailable(pass_number)
+        # Do NOT treat Codex failure as clean. Self-review findings stand alone.
+      else:
+        codex_findings = parse(codex_output.stdout)
+        merge(findings, codex_findings, preserve_attribution=true)
+
+    # --- Log the review pass ---
+    if run_mode == "pipeline":
+      if options.task_id:
+        log_path = .wazir/runs/latest/reviews/<phase>-task-<task_id>-review-pass-<N>.md
+      else:
+        log_path = .wazir/runs/latest/reviews/<phase>-review-pass-<N>.md
+      log(pass_number+1, dimension, findings) -> log_path
+    else:
+      log_path = docs/plans/YYYY-MM-DD-<topic>-review-pass-<N>.md
+      log(pass_number+1, dimension, findings) -> log_path
+
+    if findings.has_issues:
+      # --- Fix and re-submit (MANDATORY) ---
+      # The producer MUST fix findings and the reviewer MUST re-review.
+      # "Fix and continue without re-review" is EXPLICITLY PROHIBITED.
+      producer_fix(artifact_path, findings)
+      # Continue to next pass -- the fix will be re-reviewed
+
+  # --- Post-loop: escalation if issues remain ---
+  if remaining.has_issues:
+    # Cap reached with unresolved findings. Present to user:
+    # 1. Approve with known issues (Recommended if non-blocking)
+    # 2. Fix manually and re-run
+    # 3. Abort
+    escalate_to_user(remaining, options=[
+      "approve-with-issues",
+      "fix-manually-and-rerun",
+      "abort"
+    ])
+    # User decides. If approved, log "user-approved-with-issues" in final pass file.
+
+  return { pass_count: total_passes, issues_found, issues_fixed, remaining, attributions }
+```
+
+Key properties of this pseudocode:
+
+1. **Fixed pass counts** -- Quick is exactly 3, standard exactly 5, deep exactly 7. No `max_passes = min_passes + 3`. No clean-streak early-exit. No extension.
+2. **Task-scoped log filenames** -- `<phase>-task-<NNN>-review-pass-<N>.md` for per-task reviews, preventing log clobbering in parallel mode.
+3. **Task-scoped loop cap keys** -- `--task-id` flag on `loop-check` so each task gets its own counter in `phase_loop_counts`.
+4. **Explicit review mode** -- `options.mode` is always passed by the caller. No auto-detection.
+5. **Codex error handling** -- non-zero exit is logged, pass marked `codex-unavailable`, self-review findings used alone. Never treated as clean.
+6. **Standalone mode** -- uses `docs/plans/` for artifacts and logs. No temp dir. No cap guard at all.
+
+---
+
+## Codex Error Handling Contract
+
+```
+run_codex_review(artifact_path, dimension):
+  CODEX_MODEL = read_config('.wazir/state/config.json', '.multi_tool.codex.model') or "gpt-5.4"
+
+  if is_code_artifact:
+    cmd = codex review -c model="$CODEX_MODEL" --uncommitted --title "..." "Review for [dimension]..."
+    # or: codex review -c model="$CODEX_MODEL" --base <sha> for committed changes
+  else:
+    cmd = cat <artifact_path> | codex exec -c model="$CODEX_MODEL" "Review this [type] for [dimension]..."
+
+  result = execute(cmd, timeout=120s, capture_stderr=true)
+
+  if result.exit_code != 0:
+    return (result.exit_code, { stderr: result.stderr, stdout: "" })
+    # Caller handles: log error, mark codex-unavailable, use self-review only
+
+  return (0, { stdout: result.stdout, stderr: result.stderr })
+```
+
+Rules:
+
+- If Codex exits non-zero, log the full stderr.
+- Mark the pass as `codex-unavailable` in the review log metadata.
+- Fall back to self-review for that pass only. Do not skip the pass.
+- Do not retry Codex on the same pass. If Codex fails on pass 2, pass 3 still tries Codex (transient failures recover).
+- Never treat a Codex failure as a clean review pass.
+
+---
+
+## Codex Availability Probe
+
+Before any Codex call, verify availability once at loop start:
+
+```bash
+which codex >/dev/null 2>&1 && codex --version >/dev/null 2>&1
+```
+
+If the probe fails, set `codex_available = false` for the entire loop. Fall back to self-review only. Never error out.
+
+Per-invocation failures (Codex available but a single call fails) are handled separately by the error contract above.
+
+---
+
+## Codex Artifact-Scoped Review
+
+Never use `codex review` for non-code artifacts (specs, plans, designs). Instead, pipe the artifact content via stdin:
+
+```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+cat .wazir/runs/latest/clarified/spec-hardened.md | \
+  codex exec -c model="$CODEX_MODEL" "Review this specification for: [dimension]. Be specific, cite sections. Say CLEAN if no issues." \
+  2>&1 | tee .wazir/runs/latest/reviews/spec-challenge-review-pass-N.md
+```
+
+For code artifacts, use `codex review -c model="$CODEX_MODEL" --uncommitted` (or `--base` for committed changes). See the next section for details.
+
+---
+
+## Code Review Scoping
+
+**Rule: review BEFORE commit.**
+
+For each task during execution:
+
+1. Implement the task (changes are uncommitted).
+2. Review the uncommitted changes using the **5 task-execution dimensions** (NOT the 7 final-review dimensions):
+   ```bash
+   CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+   codex review -c model="$CODEX_MODEL" --uncommitted --title "Task NNN: <summary>" \
+     "Review against acceptance criteria: <criteria>" \
+     2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
+   ```
+3. Fix any findings (still uncommitted).
+4. Re-review until all passes exhausted or cap reached.
+5. **Only after review passes:** commit with conventional commit format.
+
+**If changes are already committed** (e.g., subagent workflow where the implementer subagent commits before review):
+
+```bash
+# Capture the SHA before the task starts
+PRE_TASK_SHA=$(git rev-parse HEAD)
+
+# ... subagent implements and commits ...
+
+# Review the committed changes against the pre-task baseline
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <summary>" \
+  "Review against acceptance criteria: <criteria>" \
+  2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
+```
+
+---
+
+## Dimension Sets
+
+### Research Dimensions (5)
+
+1. **Coverage** -- all briefing topics researched
+2. **Source quality** -- authoritative, current sources
+3. **Relevance** -- research answers the actual questions
+4. **Gaps** -- missing info that blocks later phases
+5. **Contradictions** -- conflicting sources identified
+
+### Spec/Clarification Dimensions (5)
+
+1. **Completeness** -- all requirements covered
+2. **Testability** -- each criterion verifiable
+3. **Ambiguity** -- no dual-interpretation statements
+4. **Assumptions** -- hidden assumptions explicit
+5. **Scope creep** -- nothing beyond briefing
+
+### Design-Review Dimensions (5)
+
+Matches canonical `workflows/design-review.md`:
+
+1. **Spec coverage** -- does the design address every acceptance criterion with a visual component?
+2. **Design-spec consistency** -- does the design introduce anything not in the spec? (scope creep check)
+3. **Accessibility** -- color contrast ratios (WCAG 2.1 AA), focus states, touch target sizes (44x44px minimum)
+4. **Visual consistency** -- design tokens form a coherent system, dark/light mode alignment
+5. **Exported-code fidelity** -- do exported scaffolds match the designs? Mismatches are failures here, not implementation concerns.
+
+### Plan Dimensions (7)
+
+1. **Completeness** -- all design decisions mapped to tasks
+2. **Ordering** -- dependencies correct, parallelizable identified
+3. **Atomicity** -- each task fits one session
+4. **Testability** -- concrete verification per task
+5. **Edge cases** -- error paths covered
+6. **Security** -- auth, injection, data exposure
+7. **Integration** -- tasks connect end-to-end
+
+### Task Execution Dimensions (5)
+
+Used for per-task review during execution:
+
+1. **Correctness** -- code matches spec
+2. **Tests** -- real tests, not mocked/faked
+3. **Wiring** -- all paths connected
+4. **Drift** -- matches task spec
+5. **Quality** -- naming, error handling
+
+### Final Review Dimensions (7)
+
+Used for `workflows/review.md` scored gate:
+
+1. **Correctness** -- does the code do what the spec says?
+2. **Completeness** -- are all acceptance criteria met?
+3. **Wiring** -- are all paths connected end-to-end?
+4. **Verification** -- is there evidence (tests, type checks) for each claim?
+5. **Drift** -- does the implementation match the approved plan?
+6. **Quality** -- code style, naming, error handling, security
+7. **Documentation** -- changelog entries, commit messages, comments
+
+The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. `workflows/review.md` is not modified by this pattern.
+
+---
+
+## Per-Depth Coverage Contract
+
+| Depth | Research | Spec | Design-Review | Plan | Task Execution | Final Review |
+|-------|----------|------|---------------|------|----------------|--------------|
+| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
+| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
+| Deep | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-7, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
+
+Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 7 dimensions -- it is a gate, not a loop.
+
+---
+
+## Loop Cap Configuration
+
+The `workflow_policy` section of `run-config.yaml` (legacy: `phase_policy`) controls which workflows are enabled and sets an absolute safety ceiling per workflow. Only two fields exist: `enabled` and `loop_cap`. There is no `passes` field -- depth determines pass counts (3/5/7), not workflow policy.
+
+```yaml
+workflow_policy:
+  # Clarifier phase workflows
+  discover:       { enabled: true, loop_cap: 10 }
+  clarify:        { enabled: true, loop_cap: 10 }
+  specify:        { enabled: true, loop_cap: 10 }
+  spec-challenge: { enabled: true, loop_cap: 10 }
+  author:         { enabled: false, loop_cap: 10 }
+  design:         { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }
+  plan:           { enabled: true, loop_cap: 10 }
+  plan-review:    { enabled: true, loop_cap: 10 }
+  # Executor phase workflows
+  execute:        { enabled: true, loop_cap: 10 }
+  verify:         { enabled: true, loop_cap: 5 }
+  review:         { enabled: true, loop_cap: 10 }
+  learn:          { enabled: true, loop_cap: 5 }
+  prepare_next:   { enabled: true, loop_cap: 5 }
+  run_audit:      { enabled: false, loop_cap: 10 }
+```
+
+**`loop_cap`** is an absolute safety ceiling that prevents runaway loops regardless of depth. It is checked by `wazir capture loop-check` in pipeline mode. It is NOT the same as pass count (which is determined by depth: 3/5/7). Example: depth=deep gives 7 passes, but if `loop_cap: 5`, the cap guard fires at pass 5 and escalates. This is intentional -- the operator can constrain expensive phases.
+
+**Adaptive workflows** (`author`, `run_audit`) default to `enabled: false`. They are activated by explicit operator config or intent detection.
+
+**Post-run workflows** (`learn`, `prepare_next`) default to `enabled: true`. They run as part of the Final Review phase:
+
+- `learn` extracts durable learnings from review findings -- recurring findings become accepted learnings.
+- `prepare_next` prepares context and handoff for the next run.
+- `author` has a human approval gate, not an iterative review loop.
+- `run_audit` is an on-demand standalone audit, not part of the main pipeline flow.
+
+---
+
+## Reviewer Mode Table
+
+The reviewer skill operates in different modes depending on the phase. **Mode is always explicit** -- the caller passes `--mode <mode>`. There is no auto-detection based on artifact availability.
+
+| Mode | Invoked during | Prerequisites | Dimensions | Output |
+|------|---------------|---------------|------------|--------|
+| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
+| `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Findings with severity, no score |
+| `design-review` | After design approval | Design artifact, approved spec, accessibility guidelines | 5 design-review dims (canonical) | Findings with severity (blocking/advisory) |
+| `plan-review` | After planning | Draft plan, approved spec, design artifact | 7 plan dims | Findings with severity, no score |
+| `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA) | 5 task-execution dims | Pass/fail per task, no score |
+| `research-review` | During discover | Research artifact | 5 research dims | Findings with severity, no score |
+| `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Findings with severity, no score |
+
+If `--mode` is not provided, the reviewer asks the user which review to run. Auto-detection based on artifact availability is NOT used -- it causes ambiguity in resumed/multi-phase runs where stale artifacts from prior phases exist.
+
+Each caller is responsible for passing the correct mode:
+
+- Clarifier passes `--mode clarification-review` after Phase 1A
+- Discover workflow passes `--mode research-review` after research
+- Specifier flow passes `--mode spec-challenge` after specify
+- Brainstorming passes `--mode design-review` after user approval
+- Writing-plans passes `--mode plan-review` after planning
+- Executor passes `--mode task-review` for each task
+- `/wazir` runner passes `--mode final` for the final review gate
+
+---
+
+## Codex Prompt Templates
+
+All Codex invocations read the model from config with a fallback:
+
+```bash
+CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
+CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
+```
+
+### Artifact Review (specs, plans, designs via stdin)
+
+Use this template with `codex exec` for non-code artifacts piped via stdin:
+
+```bash
+cat <artifact_path> | codex exec -c model="$CODEX_MODEL" \
+  "You are reviewing a [ARTIFACT_TYPE] for the Wazir engineering OS.
+Focus on [DIMENSION]: [dimension description].
+Rules: cite specific sections, be actionable, say CLEAN if no issues.
+Do NOT load or invoke any skills. Do NOT read the codebase.
+Review ONLY the content provided via stdin."
+```
+
+Replace `[ARTIFACT_TYPE]` with: `specification`, `implementation plan`, `design document`, `research brief`, or `clarification`.
+Replace `[DIMENSION]` and `[dimension description]` with the current review pass dimension from the relevant dimension set above.
+
+### Code Review (diffs via --uncommitted or --base)
+
+Use this template with `codex review` for code changes:
+
+```bash
+codex review -c model="$CODEX_MODEL" --uncommitted --title "Task NNN: <summary>" \
+  "Review the code changes for [DIMENSION]: [dimension description].
+Check against acceptance criteria: [criteria].
+Flag: correctness issues, missing tests, unwired paths, drift from spec.
+Do NOT load or invoke any skills."
+```
+
+For committed changes, replace `--uncommitted` with `--base <sha>`.
+Replace `[DIMENSION]`, `[dimension description]`, and `[criteria]` with the task-specific values from the execution plan and spec.
+
+---
+
+## Codex Output Context Protection
+
+Codex CLI output includes internal traces (file reads, tool calls, reasoning) that are NOT useful for the review — only the final findings matter. To prevent context flooding:
+
+### Tee + Extract Pattern
+
+1. **Always tee** Codex output to a file:
+   ```bash
+   codex exec ... 2>&1 | tee .wazir/runs/latest/reviews/<phase>-review-pass-<N>.md
+   ```
+
+2. **Extract findings** after the last `codex` marker using `execute_file`:
+   ```bash
+   # If context-mode available (has_execute_file: true):
+   mcp__plugin_context-mode_context-mode__execute_file(
+     path: ".wazir/runs/latest/reviews/<phase>-review-pass-<N>.md",
+     language: "shell",
+     code: "tac $FILE | sed '/^codex$/q' | tac | tail -n +2"
+   )
+   ```
+
+3. **Present extracted findings only** — the raw trace stays in the file for debugging but never enters the main context window.
+
+### Fallback (no context-mode)
+
+If `context_mode.has_execute_file` is false, extract using shell directly:
+
+```bash
+tac <file> | sed '/^codex$/q' | tac | tail -n +2
+```
+
+This reverses the file, finds the first (= last original) `codex` marker, reverses back, and skips the marker line.
+
+**If no marker found:** fail closed
+
+---
+
+## Phase Scoring: First vs Final Artifact Comparison
+
+At the start of each review loop (pass 1), score the artifact on its phase's canonical dimension set (1-10 per dimension). At the end of the loop (final pass), score again using the **same canonical dimensions**. Present the delta in the end-of-phase report.
+
+### Canonical Dimension Sets Per Phase
+
+These are the fixed rubrics — no ad-hoc dimension selection:
+
+| Phase | Canonical Dimensions |
+|-------|---------------------|
+| research-review | Coverage, Source quality, Relevance, Gaps identified, Actionability |
+| clarification-review / spec-challenge | Completeness, Testability, Ambiguity, Assumptions, Scope creep |
+| design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
+| plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy |
+| task-review | Correctness, Tests, Wiring, Drift, Quality |
+| final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
+
+### Scoring Rules
+
+1. Initial and final scores MUST use the **same dimension set** — the delta is only meaningful on the same rubric.
+2. The reviewer records which dimension set was used in each pass file.
+3. Delta format: `Dimension: X/10 → Y/10 (+Z)`.
+
+### Quality Delta Report Section
+
+The end-of-phase report (see "End-of-Phase Report" below) includes a **Quality Delta** section:
+
+```markdown
+## Quality Delta
+
+| Dimension | Initial | Final | Delta |
+|-----------|---------|-------|-------|
+| Completeness | 4/10 | 9/10 | +5 |
+| Testability | 3/10 | 8/10 | +5 |
+| Ambiguity | 5/10 | 9/10 | +4 |
+```
+
+---
+
+## End-of-Phase Report
+
+Every phase exit produces a report saved to `.wazir/runs/latest/reviews/<phase>-report.md` containing:
+
+1. **Summary** — what the phase produced
+2. **Key Changes** — first-version vs final-version highlights (not full diff — what improved)
+3. **Quality Delta** — per-dimension before/after scores (see Phase Scoring above)
+4. **Findings Log** — per-pass finding counts by severity (e.g., "Pass 1: 6 findings (3 blocking, 2 warning, 1 note). Pass 7: 0 findings. All resolved.")
+5. **Usage** — token usage from `wazir capture usage` (runs before report generation)
+6. **Context Savings** — context-mode stats if available, omit section if not
+7. **Time Spent** — wall-clock elapsed time from phase start to end — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.
+
+---
 ## Source: docs/reference/roles-reference.md
 
 # Roles Reference
@@ -1576,6 +2224,7 @@ This is the lookup reference for canonical roles, workflows, and their contracts
 | `review` | `verify` | Adversarial quality review |
 | `learn` | `review` | Capture scoped learnings |
 | `prepare-next` | `learn` | Produce clean next-run handoff |
+| `run-audit` | (standalone) | Structured codebase audit with source-backed findings |
 
 ## Role routing valid values
 
@@ -1616,6 +2265,157 @@ Every role contract includes a `## Context retrieval` section specifying the def
 Roles that explore broadly (clarifier, researcher, planner) benefit most from L1 summaries. Roles that need exact source (executor, verifier) use direct reads. The reviewer uses L1 as a triage pass before targeted deep reads.
 
 See [Indexing and Recall](../concepts/indexing-and-recall.md) for full details on tiers and commands.
+
+---
+## Source: docs/reference/skill-tiers.md
+
+# Skill Tier Classification
+
+Audit of Wazir skills against Superpowers v4.3.1 skills.
+Each skill is classified into one of three tiers:
+
+- **Delegate** -- use superpowers skill as-is, delete Wazir fork
+- **Augment** -- use superpowers skill + inject Wazir context addendum (strictly additive, no overrides). **NOTE:** R2 validation found this tier is not implementable -- see [Augment Mechanism](#augment-mechanism) below.
+- **Own** -- Wazir-original or structurally rewritten skill, rename to `wz:` prefix
+
+---
+
+## Classification Table
+
+| Wazir Skill | Superpowers Equivalent | Tier | Rationale | Risk Notes |
+|---|---|---|---|---|
+| brainstorming | brainstorming | **Own** | Structurally rewritten. Superpowers version is a linear checklist (explore context, ask questions, propose approaches, present design, write doc, invoke writing-plans). Wazir replaces the entire process: adds Command Routing and Codebase Exploration preambles, replaces the design-doc step with a design-review loop (`--mode design-review` with canonical dimensions), outputs to `.wazir/runs/latest/clarified/design.md` instead of `docs/plans/`, and adds a complete Agent Teams multi-agent brainstorming mode (Free Thinker / Grounder / Synthesizer / Arbiter pattern using TeamCreate/SendMessage). None of the superpowers process steps survive intact. | Dropping the Agent Teams mode would lose Wazir's most differentiated brainstorming capability. |
+| clarifier | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| debugging | systematic-debugging | **Own** | Structurally rewritten. Superpowers has a 4-phase process (Root Cause Investigation with 5 substeps, Pattern Analysis, Hypothesis and Testing, Implementation) totaling ~300 lines with detailed examples, rationalization tables, and supporting technique references. Wazir condenses this to a 4-step observe-hypothesize-test-fix loop (~75 lines), replaces all codebase exploration with Wazir CLI symbol-first exploration (`wazir index search-symbols`, `wazir recall symbol` and `wazir recall file`), adds loop cap awareness (pipeline mode with `wazir capture loop-check` vs. standalone mode), and removes all superpowers examples, rationalization tables, and red-flag lists. The methodology is fundamentally different in structure despite sharing the spirit of "root cause first." | Delegating would lose Wazir CLI integration and loop cap awareness. Superpowers version is far more detailed on anti-patterns and may be worth referencing separately. |
+| design | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| dispatching-parallel-agents | dispatching-parallel-agents | **Own** | Reclassified from Augment to Own (R2). Skill shadowing is full-override, so Augment tier is not implementable via `~/.claude/skills/`. Wazir already carries the full content: superpowers core (When to Use decision tree, The Pattern with 4 steps, Agent Prompt Structure, Common Mistakes section) plus Wazir additions (Command Routing preamble, Codebase Exploration preamble, philosophical paragraph in Overview, Problem/Fix format for Common Mistakes). Drops superpowers-only sections: "When NOT to Use," "Real Example from Session," "Key Benefits," "Verification," "Real-World Impact." | Superpowers informational sections (Real Example, Key Benefits, Verification, Real-World Impact) not carried forward. Low risk -- these are teaching content, not behavioral. |
+| executing-plans | executing-plans | **Own** | Structurally rewritten. Superpowers uses batch execution (default first 3 tasks) with report-and-wait checkpoints and explicit batch feedback loops. Wazir replaces batching with per-task execution, adds a per-task review loop (`--mode task-review` with 5 task-execution dimensions, Codex integration, review log filenames, loop cap tracking via `wazir capture loop-check`), adds standalone vs. pipeline mode detection, and adds a note recommending wz:subagent-driven-development when subagents are available. The batch-vs-per-task change is a core behavioral difference. All integration references point to `wz:` skills. | Delegating would lose per-task review loops and pipeline mode integration. |
+| executor | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| finishing-a-development-branch | finishing-a-development-branch | **Own** | Reclassified from Augment to Own (R2). Skill shadowing is full-override, so Augment tier is not implementable via `~/.claude/skills/`. Wazir already carries the full content: superpowers process (5 steps: verify tests, determine base branch, present 4 options, execute choice, cleanup worktree) preserved with identical structure and identical option semantics. Wazir adds Command Routing and Codebase Exploration preambles. Minor cosmetic changes: `<N>` removed from failure template, `<base-branch>` shortened to `<base>`, emoji checkmarks replaced with Y/-, `<commit-list>` changed to `<count>`, PR body simplified. Red Flags and Integration sections trimmed but no behavioral contradiction. | Low risk. The superpowers version has more detailed Red Flags and Integration sections not carried forward. |
+| humanize | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| init-pipeline | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| prepare-next | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| receiving-code-review | receiving-code-review | **Own** | Structurally rewritten. Superpowers has extensive sections: Forbidden Responses, Source-Specific Handling, YAGNI Check, Implementation Order, When To Push Back, Acknowledging Correct Feedback (with detailed anti-patterns for gratitude), Gracefully Correcting Pushback, Common Mistakes table, Real Examples, and GitHub Thread Replies. Wazir preserves the core Response Pattern and Forbidden Responses but: (1) adds Loop Tracking section (pipeline mode with `wazir capture loop-check` and standalone pass counts), (2) restructures Implementation Order to a 4-tier priority (blocking, functional, quality, nice-to-have) instead of 3-tier, (3) adds a Quick Reference decision table, (4) removes the entire "Acknowledging Correct Feedback" anti-gratitude section, the "Gracefully Correcting Pushback" section, the Common Mistakes table, all Real Examples, the "When To Push Back" enumeration, and the GitHub Thread Replies section. The Loop Tracking addition and structural deletions make this a substantive rewrite. | Delegating would lose loop tracking. The removed anti-gratitude and pushback sections from superpowers are valuable behavioral guardrails worth preserving. |
+| requesting-code-review | requesting-code-review | **Own** | Structurally rewritten. Both skills share the same When to Request triggers and Example structure. But Wazir: (1) replaces `superpowers:code-reviewer` with `wz:code-reviewer`, (2) adds explicit review loop parameters (`--mode`, depth-aware dimensions, pass number), (3) adds `codex review --uncommitted` and `codex review --base` commands, (4) adds Codex Error Handling section, (5) adds `{REVIEW_MODE}` placeholder, (6) changes Integration section to reference per-task review checkpoints instead of batch review, (7) adds "Dispatch review without explicit `--mode`" to Red Flags. The Codex integration and review loop parameter system are structural additions that change how reviews are dispatched. | Delegating would lose Codex integration and review loop protocol. |
+| reviewer | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| run-audit | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| scan-project | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| self-audit | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| subagent-driven-development | subagent-driven-development | **Own** | Structurally rewritten. Both share the same high-level process (fresh subagent per task, two-stage review, spec then quality). But Wazir: (1) adds `Capture PRE_TASK_SHA` step to the process flowchart for diff scoping, (2) adds Code Review Scoping section (`codex review --base <pre-task-sha>`), (3) adds Review Loop Alignment section (explicit `--mode task-review`, task-scoped log filenames, loop cap via `wazir capture loop-check`), (4) adds Codex Error Handling section, (5) adds standalone mode fallback, (6) changes all skill references from `superpowers:` to `wz:`, (7) adds "Review the wrong diff" to Red Flags, (8) removes the Example Workflow, Advantages detail, and Cost breakdown from superpowers. The diff-scoping and review-loop integration are structural process changes. | Delegating would lose diff-scoped reviews and Codex integration. The removed Example Workflow from superpowers is a useful teaching tool. |
+| tdd | test-driven-development | **Own** | Structurally rewritten. Superpowers has an exhaustive treatment (~370 lines): detailed Red-Green-Refactor with Good/Bad code examples, Iron Law with explicit "delete and start over" rules, a Verification Checklist, extensive Why Order Matters section, Common Rationalizations table, When Stuck guide, Testing Anti-Patterns reference, and Debugging Integration. Wazir condenses to ~45 lines with 3 steps (RED, GREEN, REFACTOR), adds a single-pass test quality check in RED phase ("Are these tests testing the right behavior? Are they real assertions?"), and removes all examples, rationalization tables, and elaboration. Different description and name (`wz:tdd` vs `test-driven-development`). | Delegating would lose the test quality check. The superpowers version's extensive rationalization prevention and examples are valuable for discipline enforcement but costly in tokens. |
+| using-git-worktrees | using-git-worktrees | **Own** | Reclassified from Augment to Own (R2). Skill shadowing is full-override, so Augment tier is not implementable via `~/.claude/skills/`. Wazir already carries the full content: superpowers core process (directory selection priority, safety verification with `git check-ignore`, creation steps, project setup auto-detection, clean baseline verification) preserved structurally intact. Wazir adds: Command Routing preamble, Codebase Exploration preamble, global directory changed from `~/.config/superpowers/worktrees/` to `~/.wazir/worktrees/`, Cleanup and Common Issues sections (submodules, lock files, stale worktrees). Drops superpowers-only sections: Example Workflow, Quick Reference table, Common Mistakes, Red Flags, Integration. | Dropped superpowers sections (Quick Reference, Common Mistakes, Red Flags, Integration) reduce operational guardrails. Could be recovered into the Own skill. |
+| using-skills | using-superpowers | **Own** | Structurally rewritten. Both enforce the same core rule (invoke skills before any response, even at 1% chance). But Wazir: (1) renames from `using-superpowers` to `using-skills`, (2) changes all internal skill references from `superpowers:` to `wz:` throughout flowchart and examples, (3) removes the Skill Types section detail about "Rigid vs Flexible" elaboration, (4) removes User Instructions elaboration. The name change and systematic `wz:` prefix replacement throughout the flowchart make this a namespace-level rewrite. | Could potentially be Augment if namespace mapping were handled at a routing layer rather than in-skill. |
+| verification | verification-before-completion | **Own** | Structurally rewritten. Superpowers has an exhaustive treatment (~140 lines): Iron Law, Gate Function (5-step IDENTIFY/RUN/READ/VERIFY/CLAIM), Common Failures table, Red Flags list, Rationalization Prevention table, Key Patterns (tests, regression, build, requirements, agent delegation), Why This Matters section with 24 failure memories, and When To Apply section. Wazir condenses to ~35 lines with 3 bullet requirements (what was verified, exact command, actual result), a minimum rule, and a brief "when verification fails" section. Different name (`wz:verification` vs `verification-before-completion`). | Delegating would lose the concise Wazir format. The superpowers version's extensive rationalization prevention is valuable for discipline but token-expensive. The Wazir version may be too terse to enforce the discipline effectively. |
+| wazir | _(none)_ | **Own** | Wazir-original. No superpowers counterpart exists. | -- |
+| writing-plans | writing-plans | **Own** | Structurally rewritten. Superpowers focuses on plan document format (header template, task structure with bite-sized steps, code examples in plan, execution handoff to subagent-driven or parallel session). Wazir: (1) changes inputs to "approved design or approved clarified direction" instead of "spec or requirements", (2) adds pipeline-aware output paths (`.wazir/runs/latest/clarified/execution-plan.md` and `.wazir/runs/latest/tasks/task-NNN/spec.md` vs. standalone `docs/plans/`), (3) removes the plan document format template entirely (no header template, no task structure template, no code examples), (4) adds Plan Review Loop section with `wz:reviewer --mode plan-review`, Codex integration via stdin pipe, Codex error handling, depth-aware pass counts, and standalone fallback. The plan review loop and pipeline path system are structural additions; the removal of the format template is a structural deletion. | Delegating would lose pipeline integration and plan review loop. The removed format template from superpowers is valuable for plan quality and could be worth recovering. |
+| writing-skills | writing-skills | **Own** | Structurally rewritten. Both share the TDD-for-skills philosophy and RED-GREEN-REFACTOR mapping. But Wazir: (1) condenses from ~650 lines to ~170 lines, (2) removes the extensive SKILL.md Structure template, CSO (Claude Search Optimization) section, Flowchart Usage guidelines, Code Examples guidelines, Token Efficiency section, File Organization examples, Testing All Skill Types section (discipline/technique/pattern/reference), Common Rationalizations for Skipping Testing table, Bulletproofing Skills Against Rationalization section (with Cialdini psychology reference), Skill Creation Checklist, Discovery Workflow, Anti-Patterns section, and STOP deployment gate, (3) adds "Be Prescriptive, Not Descriptive" guidance, "Use Rationalization Prevention" example, "Include Decision Trees" guidance, and skill reference syntax. The massive content reduction and different teaching approach make this a structural rewrite. | Delegating would lose the concise prescriptive format. The superpowers version's CSO guidelines, testing methodology, and anti-pattern catalog are extremely valuable reference material. |
+
+---
+
+## Superpowers Skills with No Wazir Counterpart
+
+These superpowers skills have no Wazir fork. They could be used as-is via the superpowers plugin.
+
+| Superpowers Skill | Status | Notes |
+|---|---|---|
+| using-superpowers | Replaced by `wz:using-skills` | See using-skills row above. |
+
+All 14 superpowers skills have a Wazir counterpart (using-superpowers maps to using-skills, systematic-debugging maps to debugging, test-driven-development maps to tdd, verification-before-completion maps to verification).
+
+---
+
+## Summary by Tier
+
+| Tier | Count | Skills |
+|---|---|---|
+| **Own** | 25 | brainstorming, clarifier, debugging, design, dispatching-parallel-agents, executing-plans, executor, finishing-a-development-branch, humanize, init-pipeline, prepare-next, receiving-code-review, requesting-code-review, reviewer, run-audit, scan-project, self-audit, subagent-driven-development, tdd, using-git-worktrees, using-skills, verification, wazir, writing-plans, writing-skills |
+| **Augment** | 0 | _(none -- tier not implementable, see [Augment Mechanism](#augment-mechanism))_ |
+| **Delegate** | 0 | _(none)_ |
+
+---
+
+## Common Wazir Additions (Appear in All Forked Skills)
+
+Every Wazir fork of a superpowers skill adds these two preamble sections:
+
+1. **Command Routing** -- routes large commands to context-mode tools and small commands to native Bash, following `hooks/routing-matrix.json`.
+2. **Codebase Exploration** -- prescribes symbol-first exploration via `wazir index search-symbols` and `wazir recall`, with fallback to direct file reads.
+
+These preambles alone would justify **Augment** tier for any skill where no other structural changes exist.
+
+---
+
+## Augment Mechanism
+
+**Research date:** 2026-03-19 (R2: Composition Infrastructure Validation)
+
+### Finding: Augment tier is not implementable
+
+The Augment tier assumed that placing a Wazir addendum at `~/.claude/skills/<skill-name>/SKILL.md` would layer Wazir context on top of the superpowers base skill. This assumption is wrong. **Skill shadowing is full-override, not merge/append.**
+
+### Evidence
+
+**1. `skills-core.js` `resolveSkillPath()` (superpowers v4.3.1)**
+
+The function at `lib/skills-core.js:108-140` checks personal skills directory first. If `~/.claude/skills/<name>/SKILL.md` exists, it returns that file immediately and never reads the superpowers version. There is no content merging.
+
+```
+// Try personal skills first (unless explicitly superpowers:)
+if (!forceSuperpowers && personalDir) {
+    const personalSkillFile = path.join(personalDir, actualSkillName, 'SKILL.md');
+    if (fs.existsSync(personalSkillFile)) {
+        return { skillFile: personalSkillFile, sourceType: 'personal', ... };
+        // ^^^ returns here -- superpowers version never consulted
+    }
+}
+```
+
+**2. Superpowers test suite confirms override behavior**
+
+`tests/opencode/test-skills-core.sh` line 336 asserts:
+```
+[PASS] Personal skills shadow superpowers skills
+```
+
+The test creates `personal-skills/shared-skill/SKILL.md` and `superpowers-skills/shared-skill/SKILL.md`, resolves `shared-skill`, and verifies `sourceType` is `"personal"` -- the superpowers version is invisible.
+
+**3. Superpowers RELEASE-NOTES.md v3.3.0**
+
+Line 385 documents the behavior explicitly: "Personal skills override superpowers skills when names match."
+
+**4. The `superpowers:` prefix bypass is not available in Claude Code**
+
+`skills-core.js` supports `superpowers:skill-name` syntax to force resolution to the superpowers version even when a personal skill shadows it. However, `skills-core.js` is only used by the OpenCode plugin (`/.opencode/plugins/superpowers.js`). Claude Code's native `Skill` tool has its own built-in resolution logic that does not expose this prefix bypass.
+
+### Alternatives Considered
+
+| Approach | Viable? | Why |
+|---|---|---|
+| Place addendum in `~/.claude/skills/<name>/` | No | Full override -- base skill content lost |
+| Merge base + addendum in SKILL.md at install time | Partial | Would work but creates a maintenance coupling: every superpowers update requires re-merging. This is functionally identical to Own tier. |
+| Inject Wazir context via CLAUDE.md | No | CLAUDE.md is project-scoped; skill behavior should be global across all projects |
+| Use `superpowers:` prefix to load base, then append | No | Prefix only works in OpenCode's `skills-core.js`, not in Claude Code's native Skill tool |
+| Propose upstream merge/append feature | Future | Would require a superpowers or Claude Code platform change |
+
+### Conclusion
+
+The Augment tier is architecturally impossible with the current skill discovery mechanism. All three former Augment skills (dispatching-parallel-agents, finishing-a-development-branch, using-git-worktrees) are reclassified to **Own** tier. Since the Wazir versions already carry the full superpowers base content plus Wazir additions, no content is lost -- the skills simply cannot delegate to a shared base.
+
+If superpowers or Claude Code introduces a composition/layering mechanism in the future (e.g., `extends: superpowers:dispatching-parallel-agents` in frontmatter), the Augment tier could be revisited.
+
+---
+
+## Observations
+
+1. **No Delegate candidates exist.** Every Wazir fork adds at minimum the Command Routing and Codebase Exploration preambles, which prevents pure delegation.
+
+2. **Augment tier is not implementable.** R2 validation (2026-03-19) found that skill shadowing in both superpowers `skills-core.js` and Claude Code's native Skill tool is full-override: placing a SKILL.md in `~/.claude/skills/<name>/` completely replaces the superpowers skill with the same name. There is no merge or append mechanism. The three former Augment candidates (dispatching-parallel-agents, finishing-a-development-branch, using-git-worktrees) have been reclassified to Own. See [Augment Mechanism](#augment-mechanism) for full analysis.
+
+3. **All 14 forked skills are Own** because either (a) they introduce structural process changes (review loops, pipeline mode, Codex integration, Agent Teams, content restructuring) or (b) the Augment composition mechanism does not exist in the platform.
+
+4. **Token cost tradeoff is significant.** Several Wazir Own skills (tdd, verification, debugging, writing-skills) are dramatically shorter than their superpowers counterparts. The superpowers versions contain valuable rationalization prevention tables, detailed examples, and anti-pattern catalogs that enforce discipline. The Wazir versions trade this for token efficiency. This tradeoff should be revisited -- some of the removed discipline content may be worth recovering as separate reference files.
+
+5. **The `wz:` prefix is already applied** in skill names within the Wazir SKILL.md frontmatter for all forked skills, consistent with the Own tier convention.
 
 ---
 ## Source: docs/reference/skills.md
@@ -1707,6 +2507,7 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 | `wazir validate commits` | implemented | Validates conventional commit format for commits in the range `--base..--head` (or auto-detected base to HEAD). |
 | `wazir validate changelog` | implemented | Validates `CHANGELOG.md` structure; with `--require-entries` and `--base`, enforces new entries since the base. |
 | `wazir validate docs-drift` | implemented | Detects when source files (roles, workflows, skills, hooks) change without corresponding documentation updates. Advisory by default; `--strict` exits non-zero on drift. |
+| `wazir validate skills` | implemented | Validates skill frontmatter and checks for name conflicts with superpowers skills (requires `wz:` prefix). Rejects any `CONTEXT.md` files (augment tier concluded not implementable in R2). |
 | `wazir validate artifacts` | reserved | Exits `2` until artifact-template and example validation expands. |
 | `wazir export build` | implemented | Generates host packages under `exports/hosts/*` from canonical sources. |
 | `wazir export --check` | implemented | Verifies generated host packages still match current canonical source hashes. |
@@ -1720,19 +2521,22 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 | `wazir recall file` | implemented | Returns an exact line-bounded slice from an indexed file. Supports `--tier L0\|L1` for summary recall. |
 | `wazir recall symbol` | implemented | Returns an exact slice for an indexed symbol match. Supports `--tier L0\|L1` for summary recall. |
 | `wazir doctor` | implemented | Validates the active repo surface for manifest, hooks, state-root policy, and host export directory presence. |
-| `wazir status` | implemented | Reads run status directly from `<state-root>/runs/<run-id>/status.json`. |
+| `wazir status` | implemented | Reads run status directly from `<state-root>/runs/<run-id>/status.json`. Includes a one-line context savings summary when usage data is available. |
+| `wazir stats` | implemented | Shows token savings statistics for a run, including total queries, estimated tokens saved, bytes avoided, per-tool breakdown, and overall savings ratio. |
 | `wazir capture init` | implemented | Creates a run ledger with `status.json`, `events.ndjson`, and a captures directory under the configured state root. |
 | `wazir capture event` | implemented | Appends a run event and can update phase, status, and loop counts in `status.json`. |
 | `wazir capture route` | implemented | Reserves a run-local capture file path for large tool output. |
 | `wazir capture output` | implemented | Writes captured tool output to a run-local file and records a `post_tool_capture` event. |
 | `wazir capture summary` | implemented | Writes `summary.md` and records the chosen summary or handoff event. |
 | `wazir capture usage` | implemented | Generates a token savings report for a run, showing capture routing statistics and context window savings. |
+| `wazir capture loop-check` | implemented | Records a loop iteration event and evaluates the loop cap guard. Exits 43 if the phase loop cap is exceeded. Accepts `--task-id` for task-scoped cap tracking. In standalone mode (no status.json), exits 0. |
 
 ## Exit codes
 
 - `0`: requested check passed
 - `1`: invalid input or validation failure
 - `2`: command surface exists but the implementation is intentionally not complete yet
+- `43`: phase loop cap exceeded (returned by `wazir capture loop-check`)
 
 ## Root discovery
 
@@ -1796,7 +2600,7 @@ Executable documentation claims are registered in:
   </picture>
 </p>
 
-<h3 align="center">Wazir: engineering with itqan.</h3>
+<h3 align="center">Engineering with itqan.</h3>
 
 <p align="center">
   <a href="https://github.com/MohamedAbdallah-14/Wazir/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/MohamedAbdallah-14/Wazir/ci.yml?branch=main&label=CI" alt="CI"></a>
@@ -1814,74 +2618,54 @@ Executable documentation claims are registered in:
   <img src="https://img.shields.io/badge/Cursor-supported-FF6B35" alt="Cursor">
 </p>
 
-<!-- Demo GIF: run assets/record-demo.sh to generate assets/demo.gif, then uncomment the img tag below -->
-<!-- <p align="center"><img src="assets/demo.gif" alt="Wazir Demo" width="700"></p> -->
-
-A host-native operating model for AI coding agents. Wazir gives Claude, Codex, Gemini, and Cursor a 14-phase delivery pipeline, 10 canonical roles with enforceable contracts, 3 adversarial review phases with 9 hard approval gates, and 261 curated expertise modules loaded automatically per task. No server. No wrapper. No custom orchestration.
-
-Install once. Your agent works the way your best engineer does.
 
 ---
 
-## Table of Contents
+> AI agents don't have a quality problem. They have a management problem.
 
-- [Why Wazir?](#why-wazir)
-- [Quick Start](#quick-start)
-- [The Pipeline](#the-pipeline)
-- [How It Works](#how-it-works)
-- [How Wazir Handles Complex Tasks](#how-wazir-handles-complex-tasks)
-- [Token Savings](#token-savings)
-- [What's Included](#whats-included)
-- [Compared to Other Tools](#compared-to-other-tools)
-- [Install](#install)
-- [Documentation](#documentation)
-- [Project Status](#project-status)
-- [Acknowledgments](#acknowledgments)
-- [Contributing](#contributing)
-- [License](#license)
+I'm Mohamed Abdallah. I kept watching AI agents write confident code that broke in production, skip tests, and forget what we agreed on yesterday. So I stopped asking them to be better and built them an engineering department instead.
 
----
-
-## Why Wazir?
-
-AI coding agents fail the same five ways. Every time.
-
-**Ambiguous specs become wrong code.** The clarifier role escalates unresolved ambiguity instead of guessing. No spec ships until material questions get answers. Escalation is a required output, not an option.
-
-**Output quality varies randomly.** The reviewer role is never the phase author. Adversarial review runs at three chokepoints -- spec-challenge, design-review, and final review -- always by a different model or model family. Nine hard approval gates block advancement until artifacts pass.
-
-**Context floods the window.** A 4-layer composition engine assembles only the relevant expertise modules per role per phase from a library of 261 curated modules across 12 domains. Max 15 modules per dispatch, token budget enforced. Three-tier recall (L0/L1/direct read) lets exploration roles load structural summaries instead of full files. Result: 60-80% fewer tokens on exploration-heavy phases. Run `wazir capture usage` to measure it.
-
-**Good solutions vanish between sessions.** Proposed learnings start isolated. Only learnings that pass explicit review and scope-tagging get promoted into future runs. Stale or disproven learnings are archived. The system improves per-project without drifting.
-
-**Nothing prevents structural failures.** Seven hook contracts enforce protected paths (exit 42), loop caps (exit 43), and session observability. Hooks are enforcement, not suggestions.
+**Wazir puts engineering discipline inside AI coding agents.**
+No wrapper. No server. Just structure -- inside Claude, Codex, Gemini, and Cursor. Built on 300+ research sources distilled into 268 curated expertise modules across 12 domains.
 
 ---
 
 ## Quick Start
-
-**Step 1: Install**
 
 ```bash
 /plugin marketplace add MohamedAbdallah-14/Wazir
 /plugin install wazir
 ```
 
-**Step 2: Initialize**
-
-```bash
-/init-pipeline
-```
-
-**Step 3: Build something**
-
-Drop your requirements in the input directory or just tell the agent what you want:
+Then tell your agent what to build:
 
 ```
-/clarifier Build a REST API for managing tasks with authentication
+/wazir Build a REST API for managing tasks with authentication
 ```
 
 That's it. The pipeline takes over -- clarifies your requirements, writes a spec, plans the work, implements with TDD, reviews, and learns for next time. You approve at the gates. Everything else is automatic.
+
+You can also control the depth and intent directly:
+
+```
+/wazir quick fix the login redirect bug
+/wazir deep design a new onboarding flow
+/wazir audit security
+```
+
+---
+
+### The reviewer is never the author.
+
+When your AI agent reviews its own code, it finds what it expected to find -- nothing. Wazir's adversarial reviewer is a separate agent with different expertise modules. It catches the mistakes your agent is structurally blind to.
+
+### Silence isn't confidence -- it's assumptions.
+
+Your AI agent doesn't ask questions because it's sure. It doesn't ask questions because it's trained to be helpful. Wazir's clarifier forces ambiguity to the surface before a single line is written.
+
+### Done means verified, not declared.
+
+AI agents love to announce they're finished. Wazir doesn't care. Every phase loops until the work and its verification converge. The agent doesn't get to say "done." The process decides.
 
 ---
 
@@ -1920,6 +2704,8 @@ graph LR
     style P8 fill:#c62828,color:#fff
 ```
 
+
+
 > **GATE** = Approval gate. The phase blocks until the reviewer explicitly approves. Rejection loops back to the authoring phase.
 
 ---
@@ -1930,23 +2716,9 @@ Three concepts.
 
 **1 -- Roles are isolation boundaries, not personas.** Each of the 10 roles has defined inputs, allowed tools, required outputs, escalation rules, and failure conditions. An agent inside a role cannot write to protected paths, cannot skip required outputs, and must escalate when ambiguity conditions are met. The discipline is structural, not instructional. See [Roles & Workflows](docs/concepts/roles-and-workflows.md).
 
-**2 -- Phases are artifact checkpoints, not conversation stages.** Every phase consumes a named artifact from the previous phase and produces a named artifact for the next. Nothing flows through conversation history. A session can end, a new agent can pick up the artifacts, and delivery continues. The handoff is explicit, structured, and schema-validated against 18 JSON schemas. See [Architecture](docs/concepts/architecture.md).
+**2 -- Phases are artifact checkpoints, not conversation stages.** Every phase consumes a named artifact from the previous phase and produces a named artifact for the next. Nothing flows through conversation history. A session can end, a new agent can pick up the artifacts, and delivery continues. The handoff is explicit, structured, and schema-validated against 19 JSON schemas. See [Architecture](docs/concepts/architecture.md).
 
-**3 -- The composition engine loads the right expert automatically.** A 4-layer system (always, auto, stacks, concerns) decides which of 261 expertise modules load into each role's context. The executor gets modules on how to build. The verifier gets modules on what to detect. The reviewer gets modules on what to flag. All resolved automatically from the task's declared stack and concerns. Max 15 modules per dispatch, token budget enforced.
-
----
-
-## How Wazir Handles Complex Tasks
-
-Large coding tasks fail when agents lose track of quality. Wazir addresses this with three reinforcing mechanisms.
-
-**14-phase pipeline with 9 hard approval gates.** Every task passes through clarify, research, specify, design, plan, execute, verify, review, and learn. Nine transitions have hard blocking conditions. No phase is skipped, no shortcut taken. The pipeline is defined in `workflows/` and enforced by the orchestrator.
-
-**Adversarial review built in.** The reviewer role operates independently from the executor. It starts with structural summaries (L1 recall) to triage, then reads full source for logic errors, security concerns, or ambiguous code. Review criteria come from expertise modules, not guesswork.
-
-**TDD and verification-before-completion.** The executor writes failing tests before implementation (red-green-refactor). The verifier independently runs all tests, checks truth claims, and validates exports. No task completes until the verifier confirms all acceptance criteria pass. This catches regressions that the executor's own testing misses.
-
-The output is code held to the same standard a senior engineering team would enforce.
+**3 -- The composition engine loads the right expert automatically.** One agent pretending to be an expert in everything is an expert in nothing. A 4-layer system (always, auto, stacks, concerns) decides which of 268 expertise modules load into each role's context. The executor gets modules on how to build. The verifier gets modules on what to detect. The reviewer gets modules on what to flag. All resolved automatically from the task's declared stack and concerns. Max 15 modules per dispatch, token budget enforced.
 
 ---
 
@@ -1954,11 +2726,13 @@ The output is code held to the same standard a senior engineering team would enf
 
 Wazir's tiered recall system loads the minimum context each role needs.
 
-| Tier | Tokens | Content | Used by |
-|------|--------|---------|---------|
-| L0 | ~100 | One-line identifier | learner (inventory scans) |
-| L1 | ~500-2k | Structural summary | clarifier, researcher, planner, reviewer (exploration) |
-| Direct read | Full file | Exact source lines | executor, verifier (implementation) |
+
+| Tier        | Tokens    | Content             | Used by                                                |
+| ----------- | --------- | ------------------- | ------------------------------------------------------ |
+| L0          | ~100      | One-line identifier | learner (inventory scans)                              |
+| L1          | ~500-2k   | Structural summary  | clarifier, researcher, planner, reviewer (exploration) |
+| Direct read | Full file | Exact source lines  | executor, verifier (implementation)                    |
+
 
 Capture routing redirects large tool output to run-local files. The agent gets a file path (~50 tokens) instead of the full output. Combined with tiered recall, this yields 60-80% token reduction on exploration-heavy phases.
 
@@ -1987,23 +2761,21 @@ Run `wazir capture usage` at the end of a session to see the savings:
 
 ## What's Included
 
-**10 canonical role contracts.** Clarifier, researcher, specifier, content-author, designer, planner, executor, verifier, reviewer, learner. Each has enforceable inputs, outputs, and escalation rules. The spec-challenge phase adversarially reviews every spec before planning begins. [Roles reference](docs/reference/roles-reference.md)
+**10 canonical role contracts.** Clarifier, researcher, specifier, content-author, designer, planner, executor, verifier, reviewer, learner. Each has enforceable inputs, outputs, and escalation rules. [Roles reference](docs/reference/roles-reference.md)
 
-**Adversarial review at three chokepoints.** Spec-challenge, plan-review, and final review run by the reviewer role, never the phase author. Three review phases and nine hard approval gates span the 14-phase pipeline. Nothing advances without explicit clearance. [Architecture](docs/concepts/architecture.md)
+**Adversarial review at three chokepoints.** Spec-challenge, plan-review, and final review run by the reviewer role, never the phase author. Nine hard approval gates span the 14-phase pipeline. Nothing advances without explicit clearance. [Architecture](docs/concepts/architecture.md)
 
-**261 curated expertise modules across 12 domains.** Loaded selectively per role per phase via a 4-layer composition engine. Max 15 modules per dispatch, token budget enforced. [Expertise index](docs/reference/expertise-index.md)
+**268 curated expertise modules across 12 domains.** Loaded selectively per role per phase via a 4-layer composition engine. Max 15 modules per dispatch, token budget enforced. Wazir ships with 268. Yours could be next. [Expertise index](docs/reference/expertise-index.md)
 
-**Three-tier recall for token savings.** L0 (~100 tokens), L1 (~500-2k tokens), direct read for full source. Symbol-first exploration searches the index before reading source. Capture routing redirects large tool output to files. Result: 60-80% token reduction on exploration-heavy phases, measured per-session by `wazir capture usage`. [Indexing and Recall](docs/concepts/indexing-and-recall.md)
+**Three-tier recall for token savings.** L0 (~~100 tokens), L1 (~~500-2k tokens), direct read for full source. Symbol-first exploration searches the index before reading source. Capture routing redirects large tool output to files. Result: 60-80% token reduction on exploration-heavy phases, measured per-session by `wazir capture usage`. [Indexing and Recall](docs/concepts/indexing-and-recall.md)
 
 **Structured learning.** Proposed learnings require explicit review and scope tagging before promotion. Only learnings whose file patterns overlap the current task get injected into context. The system improves per-project without drifting.
 
 **7 hook contracts for structural guardrails.** These enforce protected path writes (exit 42), loop caps (exit 43), and session observability. [Hooks](docs/reference/hooks.md)
 
-**20 callable skills.** wz:tdd, wz:verification, wz:debugging, wz:scan-project, wz:writing-plans, and 14 more. Each enforces an exact procedure with evidence at each step. [Skills](docs/reference/skills.md)
+**20+ callable skills.** `/wazir` runs the full pipeline. `/wazir audit security` runs a codebase audit. `/wazir prd` generates a product requirements document from completed runs. Plus TDD, verification, debugging, and more -- each enforcing an exact procedure with evidence at every step. [Skills](docs/reference/skills.md)
 
-**Built-in text humanization.** The `wz:humanize` skill and 7 dedicated expertise modules automatically remove AI vocabulary patterns from generated text. The composition engine loads domain-specific rules per role: code rules for the executor (commit messages, comments), content rules for the content-author (microcopy, glossary), and technical-docs rules for the specifier, planner, reviewer, and learner. A 61-item vocabulary blacklist, 24-pattern sentence taxonomy, and two-pass self-audit checklist keep all output sounding like it was written by a person.
-
-**Content-author role before design.** This role produces finalized i18n keys, microcopy, glossary entries, state coverage, and accessibility copy before design begins.
+**Built-in text humanization.** The composition engine loads domain-specific language rules per role: code rules for the executor (commit messages, comments), content rules for the content-author (microcopy, glossary), and technical-docs rules for the specifier, planner, reviewer, and learner. A 61-item vocabulary blacklist, 24-pattern sentence taxonomy, and two-pass self-audit checklist keep all output sounding like it was written by a person.
 
 **Runs on 4 platforms.** `wazir export build` compiles canonical sources into native packages for Claude, Codex, Gemini, and Cursor. SHA-256 drift detection catches stale exports in CI. [Host exports](docs/reference/host-exports.md)
 
@@ -2011,26 +2783,24 @@ Run `wazir capture usage` at the end of a session to see the savings:
 
 ## Compared to Other Tools
 
-The AI coding tool space is fragmenting. Developers bolt together separate plugins for workflow management, specification, memory, output compression, and orchestration. Research shows this approach has a cost: tool selection accuracy drops to 13.6% when models face too many tools (Gan & Sun, 2025), and 20 tools can consume 62% of an 8k context window before the task even begins (PromptForward, 2025).
+The AI coding tool space is fragmenting. Developers bolt together separate plugins for workflow management, specification, memory, output compression, and orchestration. Not every project needs 14 phases. For a weekend hack, prompting is fine. For production, you want structure.
 
-Wazir takes a different path: one integrated operating model instead of many independent plugins.
 
-| Dimension | Wazir | [Superpowers](https://github.com/obra/superpowers) | [Spec-Kit](https://github.com/github/spec-kit) | [Micro-Agent](https://github.com/BuilderIO/micro-agent) | [Distill](https://github.com/samuelfaj/distill) | [Claude-Mem](https://github.com/thedotmack/claude-mem) | [OMC](https://github.com/yeachan-heo/oh-my-claudecode) |
-|---|---|---|---|---|---|---|---|
-| **Category** | Engineering OS | Skills framework | Spec toolkit | Code gen agent | Output compressor | Memory plugin | Orchestration layer |
-| **Scope** | Full lifecycle (14 phases) | Dev workflow (~20 skills) | Specify / Plan / Implement | Single-file TDD loop | CLI output compression | Session memory | Multi-agent orchestration |
-| **Enforced roles** | 10 canonical, contractual | None (skills only) | None | None | None | None | 32 agents (behavioral) |
-| **Phase model** | 14 explicit, artifact-gated | 7-step (advisory) | 3-step | 1 (generate/test) | N/A | N/A | 5-step pipeline |
-| **Adversarial review** | 3 gate phases | Code review skill | No | No | No | No | team-verify step |
-| **Context management** | L0/L1 tiered recall | None | None | None | LLM compression | Vector DB (ChromaDB) | Token routing |
-| **Schema validation** | 18 JSON schemas | No | No | No | No | No | No |
-| **Guardrails** | 7 hook contracts | None | None | None | None | 5 hooks (memory) | Agent tracking |
-| **External deps** | None (host-native) | None (prompt-only) | Python CLI | Node.js CLI | Node.js + LLM | ChromaDB, SQLite, Bun | tmux, exp. teams API |
-| **Host support** | Claude, Codex, Gemini, Cursor | Claude, Codex, Gemini, Cursor, OpenCode | Claude, Copilot, Gemini | Any LLM provider | Any LLM | Claude Code only | Claude Code (+ workers) |
+| Dimension              | Wazir                         | [Superpowers](https://github.com/obra/superpowers) | [Spec-Kit](https://github.com/github/spec-kit) | [Micro-Agent](https://github.com/BuilderIO/micro-agent) | [Distill](https://github.com/samuelfaj/distill) | [Claude-Mem](https://github.com/thedotmack/claude-mem) | [OMC](https://github.com/yeachan-heo/oh-my-claudecode) |
+| ---------------------- | ----------------------------- | -------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
+| **Category**           | Engineering OS                | Skills framework                                   | Spec toolkit                                   | Code gen agent                                          | Output compressor                               | Memory plugin                                          | Orchestration layer                                    |
+| **Scope**              | Full lifecycle (14 phases)    | Dev workflow (~20 skills)                          | Specify / Plan / Implement                     | Single-file TDD loop                                    | CLI output compression                          | Session memory                                         | Multi-agent orchestration                              |
+| **Enforced roles**     | 10 canonical, contractual     | None (skills only)                                 | None                                           | None                                                    | None                                            | None                                                   | 32 agents (behavioral)                                 |
+| **Phase model**        | 14 explicit, artifact-gated   | 7-step (advisory)                                  | 3-step                                         | 1 (generate/test)                                       | N/A                                             | N/A                                                    | 5-step pipeline                                        |
+| **Adversarial review** | 3 gate phases                 | Code review skill                                  | No                                             | No                                                      | No                                              | No                                                     | team-verify step                                       |
+| **Context management** | L0/L1 tiered recall           | None                                               | None                                           | None                                                    | LLM compression                                 | Vector DB (ChromaDB)                                   | Token routing                                          |
+| **Schema validation**  | 19 JSON schemas               | No                                                 | No                                             | No                                                      | No                                              | No                                                     | No                                                     |
+| **Guardrails**         | 7 hook contracts              | None                                               | None                                           | None                                                    | None                                            | 5 hooks (memory)                                       | Agent tracking                                         |
+| **External deps**      | None (host-native)            | None (prompt-only)                                 | Python CLI                                     | Node.js CLI                                             | Node.js + LLM                                   | ChromaDB, SQLite, Bun                                  | tmux, exp. teams API                                   |
+| **Host support**       | Claude, Codex, Gemini, Cursor | Claude, Codex, Gemini, Cursor, OpenCode            | Claude, Copilot, Gemini                        | Any LLM provider                                        | Any LLM                                         | Claude Code only                                       | Claude Code (+ workers)                                |
+
 
 Each of these tools solves a real problem. Wazir's approach is to solve them together -- one system, shared context, structural enforcement -- instead of asking developers to wire separate plugins into a coherent workflow.
-
-**Research sources:** [RAG-MCP: Mitigating Prompt Bloat in LLM Tool Selection](https://arxiv.org/abs/2505.03275) (Gan & Sun, 2025). [MCP Overload: Why Your LLM Agent Doesn't Need 20 Tools](https://promptforward.dev/blog/mcp-overload) (PromptForward, 2025). [Less is More: Optimizing Function Calling for LLM Execution](https://arxiv.org/abs/2411.15399) (Paramanayakam et al., 2024). [Tool RAG: The Next Breakthrough in Scalable AI Agents](https://next.redhat.com/2025/11/26/tool-rag-the-next-breakthrough-in-scalable-ai-agents/) (Red Hat, 2025).
 
 ---
 
@@ -2043,25 +2813,14 @@ Each of these tools solves a real problem. Wazir's approach is to solve them tog
 /plugin install wazir
 ```
 
-The plugin loads skills, roles, and workflows into your Claude sessions. Done.
+The plugin loads skills, roles, and workflows into your Claude sessions. Then type `/wazir` and go.
 
 **npm / Homebrew:**
 
 ```bash
-npm install -g @wazir-dev/cli                                    # npm
-brew tap MohamedAbdallah-14/Wazir && brew install wazir    # Homebrew
+npm install -g @wazir-dev/cli                                              # npm
+brew tap MohamedAbdallah-14/homebrew-wazir && brew install wazir           # Homebrew
 ```
-
-**Deploy to your project:**
-
-| Host | Command |
-|------|---------|
-| **Claude** | `cp -r exports/hosts/claude/.claude ~/your-project/ && cp exports/hosts/claude/CLAUDE.md ~/your-project/` |
-| **Codex** | `cp exports/hosts/codex/AGENTS.md ~/your-project/` |
-| **Gemini** | `cp exports/hosts/gemini/GEMINI.md ~/your-project/` |
-| **Cursor** | `cp -r exports/hosts/cursor/.cursor ~/your-project/` |
-
-> npm/Homebrew users: clone the source and run `npx wazir export build` to generate host exports. See [Installation Guide](docs/getting-started/01-installation.md) for the full path.
 
 ---
 
@@ -2069,43 +2828,57 @@ brew tap MohamedAbdallah-14/Wazir && brew install wazir    # Homebrew
 
 **For users:**
 
-| I want to... | Go to |
-|---|---|
-| Install and get started | [Installation](docs/getting-started/01-installation.md) |
-| Run my first task | [First Run](docs/getting-started/02-first-run.md) |
-| Understand the architecture | [Architecture](docs/concepts/architecture.md) |
+
+| I want to...                    | Go to                                                     |
+| ------------------------------- | --------------------------------------------------------- |
+| Install and get started         | [Installation](docs/getting-started/01-installation.md)   |
+| Run my first task               | [First Run](docs/getting-started/02-first-run.md)         |
+| Understand the architecture     | [Architecture](docs/concepts/architecture.md)             |
 | Learn about roles and workflows | [Roles & Workflows](docs/concepts/roles-and-workflows.md) |
+
 
 **For contributors:**
 
-| I want to... | Go to |
-|---|---|
-| Set up for development | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Look up CLI commands | [CLI Reference](docs/reference/tooling-cli.md) |
-| Configure the manifest | [Configuration Reference](docs/reference/configuration-reference.md) |
-| Browse all documentation | [Documentation Hub](docs/README.md) |
+
+| I want to...             | Go to                                                                |
+| ------------------------ | -------------------------------------------------------------------- |
+| Set up for development   | [CONTRIBUTING.md](CONTRIBUTING.md)                                   |
+| Look up CLI commands     | [CLI Reference](docs/reference/tooling-cli.md)                       |
+| Configure the manifest   | [Configuration Reference](docs/reference/configuration-reference.md) |
+| Browse all documentation | [Documentation Hub](docs/README.md)                                  |
+
 
 ---
 
 ## Project Status
 
-Wazir is in active early development (**v0.1.0**, pre-1.0-alpha).
+Wazir is in active early development (pre-1.0-alpha).
 
 The pipeline, roles, and expertise modules are stable and used in production by the maintainers. The CLI, schemas, and hook contracts work. But this is early software -- APIs may change before 1.0.
 
 What's solid:
+
 - The 14-phase pipeline and 10 role contracts
-- 261 expertise modules across 12 domains
+- 268 expertise modules across 12 domains
 - Host exports for Claude, Codex, Gemini, and Cursor
 - The composition engine and tiered recall system
 
 What may change:
+
 - CLI command surface and flags
 - Schema field names
 - Hook contract signatures
 - State directory structure
 
 Feedback and contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Why "Wazir"?
+
+Wazir (وزير) -- the vizier. The operational mastermind who ran empires while the sultan held authority. In Arabic chess, the wazir became the queen: the most powerful piece on the board.
+
+The Arabic word *itqan* (إتقان) means mastery -- doing something so well that nothing remains to improve. This isn't a tagline. It's the test every commit runs against.
 
 ---
 
@@ -2120,6 +2893,7 @@ Wazir builds on ideas and patterns from these projects:
 - **[micro-agent](https://github.com/BuilderIO/micro-agent)** by Builder.io -- test-driven code generation patterns
 - **[distill](https://github.com/samuelfaj/distill)** by [@samuelfaj](https://github.com/samuelfaj) -- CLI output compression for token savings
 - **[claude-mem](https://github.com/thedotmack/claude-mem)** by [@thedotmack](https://github.com/thedotmack) -- persistent memory patterns for coding agents
+- **[ideation](https://github.com/bladnman/ideation_team_skill)** by [@bladnman](https://github.com/bladnman) -- multi-agent structured dialogue patterns
 
 ---
 
@@ -2132,7 +2906,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, branch conventions
 ## License
 
 MIT -- see [LICENSE](LICENSE).
-
 ---
 ## Source: CONTRIBUTING.md
 

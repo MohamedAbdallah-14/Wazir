@@ -17,6 +17,8 @@ Task tool (wz:code-reviewer):
   DESCRIPTION: [task summary]
 ```
 
+**Codebase Exploration:** Use wazir index search-symbols before direct file reads. Query `wazir index search-symbols <query>` to locate relevant code, then use `wazir recall file <path> --tier L1` for targeted reads.
+
 **In addition to standard code quality concerns, the reviewer should check:**
 - Does each file have one clear responsibility with a well-defined interface?
 - Are units decomposed so they can be understood and tested independently?

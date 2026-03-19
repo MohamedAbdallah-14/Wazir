@@ -1,117 +1,136 @@
-import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { select } from '@inquirer/prompts';
 
+import { autoInit, detectHost, detectProjectStack } from './auto-detect.js';
+
+/**
+ * wazir init [--auto|--interactive|--force]
+ *
+ * Default: --auto (zero-config, no prompts, infer everything)
+ * --interactive: legacy mode with @inquirer/prompts (may fail in non-TTY)
+ * --force: reinitialize even if already initialized
+ */
 export async function runInitCommand(parsed, context = {}) {
   const cwd = context.cwd ?? process.cwd();
   const wazirDir = path.join(cwd, '.wazir');
   const configPath = path.join(wazirDir, 'state', 'config.json');
+  const isForce = parsed.args.includes('--force');
+  const isInteractive = parsed.args.includes('--interactive');
 
-  if (fs.existsSync(configPath) && !parsed.args.includes('--force')) {
+  // Already initialized check
+  if (fs.existsSync(configPath) && !isForce) {
     return {
       exitCode: 1,
       stderr: 'Pipeline already initialized. Use --force to reinitialize.\n',
     };
   }
 
+  // Interactive mode — legacy prompts (may fail in non-TTY environments like Claude Code)
+  if (isInteractive) {
+    return runInteractiveInit(parsed, context);
+  }
+
+  // Default: auto mode — zero-config
   try {
-    // Create directories
+    const result = autoInit(cwd, { context, force: isForce });
+
+    if (result.alreadyInitialized && !isForce) {
+      return {
+        exitCode: 0,
+        stdout: `Already initialized. Host: ${result.host.host}, Stack: ${result.stack.language}\n`,
+      };
+    }
+
+    // Auto-export for detected host
+    let exportNote = '';
+    try {
+      const { buildHostExports } = await import('../export/compiler.js');
+      buildHostExports(cwd);
+      exportNote = `  Exports: generated for ${result.host.host}\n`;
+    } catch {
+      exportNote = '  Exports: skipped (run `wazir export build` manually)\n';
+    }
+
+    const lines = [
+      '',
+      'Wazir initialized (zero-config).',
+      '',
+      `  Host:    ${result.host.host} (${result.host.confidence} confidence)`,
+      `  Stack:   ${result.stack.language}${result.stack.framework ? ` / ${result.stack.framework}` : ''}`,
+      `  Mode:    ${result.config.model_mode}`,
+      `  Depth:   ${result.config.default_depth}`,
+      exportNote,
+      'Files created:',
+      ...result.filesCreated.map((f) => `  - ${f}`),
+      '',
+      'Next: /wazir <what you want to build>',
+      '',
+      'Power users: `wazir init --interactive` for manual config.',
+      'Override:    `wazir config set model_mode multi-tool`',
+      '',
+    ];
+
+    return { exitCode: 0, stdout: lines.join('\n') };
+  } catch (error) {
+    return { exitCode: 1, stderr: `Auto-init failed: ${error.message}\n` };
+  }
+}
+
+/**
+ * Legacy interactive init with @inquirer/prompts.
+ * Kept for power users who want manual control.
+ * Will fail in non-TTY environments (Claude Code Bash tool).
+ */
+async function runInteractiveInit(parsed, context = {}) {
+  const cwd = context.cwd ?? process.cwd();
+  const wazirDir = path.join(cwd, '.wazir');
+  const configPath = path.join(wazirDir, 'state', 'config.json');
+
+  try {
+    const { select } = await import('@inquirer/prompts');
+
     for (const dir of ['input', 'state', 'runs']) {
       fs.mkdirSync(path.join(wazirDir, dir), { recursive: true });
     }
 
-    // Pipeline mode
     const modelMode = await select({
       message: 'How should Wazir run in this project?',
       choices: [
-        { name: 'Single model (Recommended) — slash commands only', value: 'claude-only' },
-        { name: 'Multi-model — routes by complexity (Haiku/Sonnet/Opus)', value: 'multi-model' },
-        { name: 'Multi-tool — current model + external tools for reviews', value: 'multi-tool' },
+        { name: 'Single model (Recommended)', value: 'claude-only' },
+        { name: 'Multi-model (Haiku/Sonnet/Opus routing)', value: 'multi-model' },
+        { name: 'Multi-tool (current model + external reviewers)', value: 'multi-tool' },
       ],
       default: 'claude-only',
     });
 
-    // Multi-tool tools (conditional)
     let multiToolTools = [];
     if (modelMode === 'multi-tool') {
       const toolChoice = await select({
-        message: 'Which external tools should Wazir use for reviews?',
+        message: 'Which external tools for reviews?',
         choices: [
-          { name: 'Codex — Send reviews to OpenAI Codex', value: 'codex' },
-          { name: 'Gemini — Send reviews to Google Gemini', value: 'gemini' },
-          { name: 'Both — Use Codex and Gemini', value: 'both' },
+          { name: 'Codex', value: 'codex' },
+          { name: 'Gemini', value: 'gemini' },
+          { name: 'Both', value: 'both' },
         ],
       });
       multiToolTools = toolChoice === 'both' ? ['codex', 'gemini'] : [toolChoice];
     }
 
-    // Codex model (conditional)
     let codexModel = null;
     if (multiToolTools.includes('codex')) {
       codexModel = await select({
-        message: 'Which Codex model should Wazir use?',
+        message: 'Codex model?',
         choices: [
-          { name: 'gpt-5.3-codex-spark (Recommended) — fast, good for review loops', value: 'gpt-5.3-codex-spark' },
-          { name: 'gpt-5.4 — slower, deeper analysis for complex reviews', value: 'gpt-5.4' },
+          { name: 'gpt-5.3-codex-spark (Recommended)', value: 'gpt-5.3-codex-spark' },
+          { name: 'gpt-5.4', value: 'gpt-5.4' },
         ],
         default: 'gpt-5.3-codex-spark',
       });
     }
 
-    // Default depth
-    const defaultDepth = await select({
-      message: 'What default depth should runs use?',
-      choices: [
-        { name: 'Quick — minimal research, single-pass review', value: 'quick' },
-        { name: 'Standard (Recommended) — balanced research, multi-pass hardening', value: 'standard' },
-        { name: 'Deep — extended research, strict review thresholds', value: 'deep' },
-      ],
-      default: 'standard',
-    });
+    const host = detectHost();
+    const stack = detectProjectStack(cwd);
 
-    // Default intent
-    const defaultIntent = await select({
-      message: 'What kind of work does this project mostly involve?',
-      choices: [
-        { name: 'Feature (Recommended) — new functionality or enhancement', value: 'feature' },
-        { name: 'Bugfix — fix broken behavior', value: 'bugfix' },
-        { name: 'Refactor — restructure without changing behavior', value: 'refactor' },
-        { name: 'Docs — documentation only', value: 'docs' },
-        { name: 'Spike — research and exploration', value: 'spike' },
-      ],
-      default: 'feature',
-    });
-
-    // Agent Teams (conditional)
-    let teamMode = 'sequential';
-    let parallelBackend = 'none';
-
-    const depthAllows = defaultDepth === 'standard' || defaultDepth === 'deep';
-    const intentAllows = defaultIntent === 'feature' || defaultIntent === 'refactor';
-
-    if (depthAllows && intentAllows) {
-      const useTeams = await select({
-        message: 'Would you like to use Agent Teams for parallel execution?',
-        choices: [
-          { name: 'No (Recommended) — sequential, predictable, lower cost', value: 'sequential' },
-          { name: 'Yes — parallel teammates, faster but experimental (Opus only)', value: 'parallel' },
-        ],
-        default: 'sequential',
-      });
-      teamMode = useTeams;
-      parallelBackend = useTeams === 'parallel' ? 'claude_teams' : 'none';
-
-      if (teamMode === 'parallel') {
-        try {
-          execFileSync('claude', ['config', 'set', 'env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', '1'], { stdio: 'pipe' });
-        } catch {
-          // claude CLI not available — user will need to set it manually
-        }
-      }
-    }
-
-    // Write config
     const config = {
       model_mode: modelMode,
       ...(modelMode === 'multi-tool' && {
@@ -120,77 +139,18 @@ export async function runInitCommand(parsed, context = {}) {
           ...(codexModel && { codex: { model: codexModel } }),
         },
       }),
-      default_depth: defaultDepth,
-      default_intent: defaultIntent,
-      team_mode: teamMode,
-      parallel_backend: parallelBackend,
+      default_depth: 'standard',
+      default_intent: 'feature',
+      team_mode: 'sequential',
+      parallel_backend: 'none',
+      detected_host: host.host,
+      detected_stack: stack,
     };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
 
-    // Runtime-specific setup
-    const filesCreated = ['.wazir/input/', '.wazir/state/', '.wazir/runs/', '.wazir/state/config.json'];
-
-    if (multiToolTools.includes('codex')) {
-      const content = [
-        '# Wazir Pipeline',
-        '',
-        'Agent protocols are at `~/.claude/agents/` (global).',
-        '',
-        '## Running the Pipeline',
-        '1. Clarifier: read and follow `~/.claude/agents/clarifier.md` — tasks are in `.wazir/input/`',
-        '2. Orchestrator: read and follow `~/.claude/agents/orchestrator.md` — start from task 1',
-        '3. Opus Reviewer: read and follow `~/.claude/agents/opus-reviewer.md` — run all phases',
-        '',
-        '## Review Mode',
-        'This project uses Codex as a secondary reviewer. Review artifacts are in `.wazir/reviews/`.',
-        '',
-      ].join('\n');
-      fs.writeFileSync(path.join(cwd, 'AGENTS.md'), content);
-      filesCreated.push('AGENTS.md');
-    }
-
-    if (multiToolTools.includes('gemini')) {
-      const content = [
-        '# Wazir Pipeline',
-        '',
-        'Agent protocols are at `~/.claude/agents/` (global).',
-        '',
-        '## Running the Pipeline',
-        '1. Clarifier: read and follow `~/.claude/agents/clarifier.md` — tasks are in `.wazir/input/`',
-        '2. Orchestrator: read and follow `~/.claude/agents/orchestrator.md` — start from task 1',
-        '3. Opus Reviewer: read and follow `~/.claude/agents/opus-reviewer.md` — run all phases',
-        '',
-        '## Review Mode',
-        'This project uses Gemini as a secondary reviewer. Review artifacts are in `.wazir/reviews/`.',
-        '',
-      ].join('\n');
-      fs.writeFileSync(path.join(cwd, 'GEMINI.md'), content);
-      filesCreated.push('GEMINI.md');
-    }
-
-    const lines = [
-      '',
-      '\u2705 Pipeline initialized!',
-      '',
-      `  Mode:    ${modelMode}`,
-      `  Depth:   ${defaultDepth}`,
-      `  Intent:  ${defaultIntent}`,
-      `  Teams:   ${teamMode}`,
-      '',
-      'Files created:',
-      ...filesCreated.map((f) => `  - ${f}`),
-      '',
-      'You can now use:',
-      '  /wazir <your request>  \u2014 Run the full pipeline',
-      '  /clarifier             \u2014 Research, clarify, plan',
-      '  /executor              \u2014 Autonomous execution',
-      '  /reviewer              \u2014 Final review and scoring',
-      '',
-    ];
-
     return {
       exitCode: 0,
-      stdout: lines.join('\n'),
+      stdout: `\nInitialized (${modelMode}). Host: ${host.host}. Next: /wazir <request>\n`,
     };
   } catch (error) {
     if (error.name === 'ExitPromptError') {
