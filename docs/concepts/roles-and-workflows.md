@@ -31,6 +31,8 @@ The canonical workflow sequence is:
 13. **learn** — capture scoped learnings
 14. **prepare-next** — produce a clean handoff for the next run
 
+Additionally, **run-audit** is a standalone workflow that can be invoked outside the linear pipeline to perform structured codebase audits with source-backed findings.
+
 ## Role routing
 
 The orchestrator dispatches three roles per task: `executor`, `reviewer`, and `verifier`. By default, all three run for every task. The `required_roles` field in a task's YAML frontmatter controls which roles are dispatched, allowing the orchestrator to skip unnecessary roles and save context window budget.
