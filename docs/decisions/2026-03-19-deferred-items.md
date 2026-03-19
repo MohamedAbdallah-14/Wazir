@@ -508,6 +508,28 @@ One command. Everything else is automatic or deferred until needed.
 
 ---
 
+## 18. ENFORCE Pipeline — Agent Must Never Skip Phases
+
+**What:** The Wazir pipeline was completely bypassed in a real run. The agent saw a detailed input and skipped clarify/specify/design/plan/verify/review — went straight to parallel implementation. This defeats the purpose of Wazir.
+
+**Root cause:** The `/wazir` skill says "Run the entire pipeline end-to-end" but has no enforcement mechanism. The agent can rationalize "the spec is already clear" and jump to execution. There's no hard gate that prevents this.
+
+**How to enforce:**
+1. **Mandatory phase artifacts** — execution phase MUST NOT start without: clarification.md, spec-hardened.md, design.md, execution-plan.md in the run directory. The executor skill should CHECK for these files and REFUSE to start if they're missing.
+2. **Phase entry validation** — `wazir capture event --phase execute` should fail if the previous phases haven't completed (check events.ndjson for phase_exit events)
+3. **Skill-level hard gates** — each phase's skill should verify the previous phase's artifact exists before proceeding. Not a suggestion — a file-existence check that blocks.
+4. **Antipattern entry** — add "skipping pipeline phases because the input looks clear enough" to `expertise/antipatterns/process/ai-coding-antipatterns.md`
+
+**This is the most important enforcement in Wazir.** If the pipeline can be bypassed, nothing else matters.
+
+### Online Research
+- How CrewAI Task Guardrails enforce mandatory phase completion before advancing
+- How LangGraph's `interrupt()` creates hard gates that can't be rationalized away
+- How GitHub Actions enforces job dependencies — `needs:` field prevents out-of-order execution
+- How Temporal.io enforces workflow step ordering — each step must complete before the next starts
+
+---
+
 ## 17. Content Author Should Activate for Any Content Need
 
 **What:** Currently content-author phase is disabled by default and documented as "for content-heavy projects." Wrong framing — it should activate whenever ANY task needs content of any kind.
