@@ -132,6 +132,20 @@ Delegate to the specify workflow (`workflows/specify.md`):
 
 Save result to `.wazir/runs/latest/clarified/spec-hardened.md`.
 
+### Content-Author Detection
+
+After spec hardening, scan the spec for content needs. Auto-enable the `author` workflow if the spec mentions any of:
+- Database seeding, seed data, fixtures, sample records
+- Sample content, placeholder text, demo data
+- Test fixtures, mock API responses, test data files
+- Translations, i18n strings, localization
+- Copy (button labels, error messages, onboarding text)
+- Documentation content, user guides, API docs
+- Email templates, notification text
+
+If detected, set `workflow_policy.author.enabled = true` in the run config and note:
+> **Content needs detected.** The content-author workflow will run after design approval to produce: [list detected content types].
+
 ### Checkpoint: Hardened Spec Review
 
 > **Spec hardened. Changes made:**
