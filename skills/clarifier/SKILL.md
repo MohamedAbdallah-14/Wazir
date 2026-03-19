@@ -41,14 +41,27 @@ This applies to Phase 0 (research) and all subsequent phases.
 
 Delegate to the discover workflow (`workflows/discover.md`):
 
-1. The **researcher role** produces the research artifact
+1. **Keyword extraction:** Read the briefing and extract concepts/terms that are vague, reference external standards, or use unfamiliar terminology.
+   - **When to research:** concept references an external standard by name (e.g., "gitflow", "keepachangelog"), uses a tool/library not seen in the codebase, or is ambiguous enough that two agents could interpret it differently.
+   - **When NOT to research:** concept is fully defined in the input, or it's a well-known programming concept (e.g., "REST API", "TDD").
+2. **Fetch sources:** For each concept needing research:
+   - Construct a search URL or known canonical URL.
+   - Use `fetch_and_index` (if context-mode available) or `WebFetch` to fetch the source.
+   - Use `search` for follow-up queries on indexed content (skip if no context-mode).
+   - Save fetched content to `.wazir/runs/latest/sources/`.
+   - Track each fetch in `sources/manifest.json` with status (`"fetched"` or `"failed"`).
+3. **Error handling for failed fetches:**
+   - 404/unreachable: log failure in `sources/manifest.json` as `"status": "failed"`, note the error, continue. Research is best-effort — a failed fetch does not block the pipeline.
+   - Rate limit: wait and retry once. If still failing, log and continue.
+   - No canonical URL found: use a search engine query via `fetch_and_index` or skip with a note in the research brief.
+4. The **researcher role** produces the research artifact
    (codebase scan, external sources, source manifest, research brief).
-2. The **reviewer role** runs the research-review loop
+5. The **reviewer role** runs the research-review loop
    using research dimensions with `--mode research-review`
    (see `docs/reference/review-loop-pattern.md`).
-3. The researcher resolves findings from each pass.
-4. Loop runs for `pass_counts[depth]` passes.
-5. Research artifact flows back to the clarifier for Checkpoint 0.
+6. The researcher resolves findings from each pass.
+7. Loop runs for `pass_counts[depth]` passes.
+8. Research artifact flows back to the clarifier for Checkpoint 0.
 
 Save result to `.wazir/runs/latest/clarified/research-brief.md`.
 
