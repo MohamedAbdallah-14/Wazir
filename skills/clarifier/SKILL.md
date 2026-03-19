@@ -179,8 +179,17 @@ See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. Th
 
 Delegate to `wz:writing-plans`:
 
-1. `wz:writing-plans` (using **planner role**) produces the execution plan
-   and task specs.
+1. `wz:writing-plans` (using **planner role**) produces a SINGLE execution plan
+   at `.wazir/runs/latest/clarified/execution-plan.md` in spec-kit format
+   (see `templates/artifacts/tasks-template.md`). The plan must contain:
+   - `- [ ] T0XX` checklist items with sequential task IDs
+   - `[P]` parallel markers for independent tasks on different files
+   - `[US]` user story labels linking tasks to spec stories
+   - Phase headings: Setup, Foundational, User Story phases, Polish
+   - Each user story phase has: goal, independent test criteria, implementation tasks
+   - File paths in every task description
+   No `tasks/task-NNN/spec.md` files — all task detail lives inside the
+   single execution plan. The executor reads this file directly.
 2. Invoke `wz:reviewer --mode plan-review` to run the plan-review loop
    (`workflows/plan-review.md`).
 3. The planner resolves findings from each pass.
