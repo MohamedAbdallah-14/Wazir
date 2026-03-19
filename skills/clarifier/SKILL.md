@@ -60,6 +60,19 @@ Present the research brief to the user:
 
 ## Phase 1A: Clarify (autonomous, then review, then checkpoint)
 
+### Input Preservation (before producing clarification)
+
+1. Glob `.wazir/input/tasks/*.md`. If files exist:
+   - Count total lines: `wc -l` sum across all files. Record as `input_line_count`.
+   - Adopt those specs as the starting point — copy content verbatim into the clarification's item descriptions.
+   - Enhance with codebase scan + research findings (add missing file paths, resolve ambiguities, add dependencies). **Never remove detail — only add.**
+   - Every acceptance criterion from input must appear verbatim in the corresponding item description (not in a separate appendix).
+   - Every API endpoint, color hex code (`#RRGGBB`), and UI dimension (px, %, rem, vh, vw, `sm`/`md`/`lg`/`xl` breakpoints) from input must appear in the relevant item section.
+2. If `.wazir/input/tasks/` is empty or missing, synthesize from `briefing.md` alone (no error).
+3. Normalize line endings with `tr -d '\r'` before counting (CRLF mitigation).
+
+### Clarification Production
+
 Read the briefing, research brief, and codebase context. Produce:
 
 - **What** we're building — concrete deliverables, not vague descriptions
