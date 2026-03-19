@@ -203,8 +203,12 @@ Delegate to `wz:writing-plans`:
    - File paths in every task description
    No `tasks/task-NNN/spec.md` files — all task detail lives inside the
    single execution plan. The executor reads this file directly.
-2. Invoke `wz:reviewer --mode plan-review` to run the plan-review loop
-   (`workflows/plan-review.md`).
+2. **Gap analysis exit gate:** After the plan is produced:
+   a. Read ALL files in `.wazir/input/` (briefing.md, tasks/*.md) AND `.wazir/runs/latest/clarified/user-feedback.md` (if exists).
+   b. Read the produced execution plan.
+   c. Invoke `wz:reviewer --mode plan-review` with prompt: "Compare the original input against this plan. List every requirement from the input that is missing, weakened, or has less detail in the plan."
+   d. If reviewer finds gaps → planner fixes the plan → re-invoke reviewer → loop.
+   e. Exit when EITHER: (a) reviewer returns CLEAN, OR (b) pass cap reached and user approves with known issues via interactive checkpoint.
 3. The planner resolves findings from each pass.
 4. Loop runs for `pass_counts[depth]` passes.
 
