@@ -289,13 +289,17 @@ After building the run config, evaluate confidence:
 
 The full pipeline runs these phases in order. Each phase produces an artifact that must pass its review loop before flowing to the next phase. Review mode is always passed explicitly (`--mode`) -- no auto-detection.
 
-**Usage capture rule:** At EVERY `phase_exit` event, immediately after the exit event capture, run:
+**Phase exit protocol:** At EVERY `phase_exit` event, immediately after the exit event capture, run these steps in order:
 
-```bash
-wazir capture usage --run <run-id> --phase <phase> --json
-```
+1. **Usage capture:**
+   ```bash
+   wazir capture usage --run <run-id> --phase <phase> --json
+   ```
+   Output: `.wazir/runs/<run-id>/reviews/usage-<phase>.json`
 
-Output is written to `.wazir/runs/<run-id>/reviews/usage-<phase>.json`. This applies to all phases below — clarify, discover, specify, spec-challenge, design, design-review, plan, plan-review, execute, review.
+2. **End-of-phase report:** Generate a report at `.wazir/runs/<run-id>/reviews/<phase>-report.md` containing: Summary, Key Changes, Quality Delta (per-dimension before/after scores), Findings Log (per-pass finding counts by severity — e.g., "Pass 1: 6 findings (3 blocking, 2 warning, 1 note)"), Usage (from step 1), Context Savings (from context-mode stats if available, omit if not), Time Spent (wall-clock elapsed from phase start, omit if timestamps unavailable). See `docs/reference/review-loop-pattern.md` "End-of-Phase Report" for the full template.
+
+This applies to ALL phases: clarify, discover, specify, spec-challenge, design, design-review, plan, plan-review, execute, review.
 
 ### 4a: Source Capture
 
