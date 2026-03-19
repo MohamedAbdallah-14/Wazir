@@ -5,6 +5,19 @@ description: Run the review phase — adversarial review of implementation again
 
 # Reviewer
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 Run Phase 3 (Review) for the current project.
 
 The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
@@ -143,6 +156,63 @@ Save review results to `.wazir/runs/latest/reviews/review.md` with:
 - Rationale tied to evidence
 - Score breakdown
 - Verdict
+
+## Phase Report Generation
+
+After completing any review pass, generate a phase report following `schemas/phase-report.schema.json`:
+
+1. **`attempted_actions`** — Populate from the review findings. Each finding becomes an action entry:
+   - `description`: the finding summary
+   - `outcome`: `"success"` if the finding passed, `"fail"` if it is a blocking issue, `"uncertain"` if ambiguous
+   - `evidence`: the rationale or evidence supporting the outcome
+
+2. **`drift_analysis`** — Compare review findings against the approved spec:
+   - `delta`: count of deviations between implementation and spec (0 = no drift)
+   - `description`: summary of any drift detected and its impact
+
+3. **`quality_metrics`** — Populate from test, lint, and type-check results gathered during review:
+   - `test_pass_count`, `test_fail_count`: from test runner output
+   - `lint_errors`: from linter output
+   - `type_errors`: from type checker output
+
+4. **`risk_flags`** — Populate from any high-severity findings:
+   - `severity`: `"low"`, `"medium"`, or `"high"`
+   - `description`: what the risk is
+   - `mitigation`: recommended mitigation (if known)
+
+5. **`decisions`** — Populate from any scope or approach decisions made during the review:
+   - `description`: what was decided
+   - `rationale`: why
+   - `alternatives_considered`: other options evaluated (optional)
+   - `source`: `"[Wazir]"`, `"[Codex]"`, or `"[Both]"` (optional)
+
+6. **`verdict_recommendation`** — Set based on the gating rules in `config/gating-rules.yaml`:
+   - `verdict`: `"continue"` (PASS), `"loop_back"` (NEEDS MINOR FIXES / NEEDS REWORK), or `"escalate"` (FAIL with fundamental issues)
+   - `reasoning`: brief explanation of why this verdict was chosen
+
+### Report Output Paths
+
+Save reports to two formats under the run directory:
+- `.wazir/runs/<id>/reports/phase-<name>-report.json` — machine-readable, validated against `schemas/phase-report.schema.json`
+- `.wazir/runs/<id>/reports/phase-<name>-report.md` — human-readable Markdown summary
+
+The gating agent (`tooling/src/gating/agent.js`) consumes the JSON report to decide: **continue**, **loop_back**, or **escalate**.
+
+### Report Fields Reference
+
+All required fields per `schemas/phase-report.schema.json`:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `phase_name` | string | yes | Review mode name (e.g., `"final"`, `"task-review"`) |
+| `run_id` | string | yes | Current run identifier |
+| `timestamp` | string (date-time) | yes | ISO 8601 timestamp of report generation |
+| `attempted_actions` | array | yes | Findings mapped to action outcomes |
+| `drift_analysis` | object | yes | Spec-vs-implementation drift summary |
+| `quality_metrics` | object | yes | Test/lint/type results |
+| `risk_flags` | array | yes | High-severity risk items |
+| `decisions` | array | yes | Scope/approach decisions made |
+| `verdict_recommendation` | object | no | Gating verdict based on `config/gating-rules.yaml` |
 
 ## Done
 

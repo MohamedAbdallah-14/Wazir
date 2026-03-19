@@ -5,6 +5,19 @@ description: Run a self-audit loop in an isolated git worktree — validates, au
 
 # Self-Audit — Worktree-Isolated Audit-Fix Loop
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 ## Overview
 
 This skill runs a structured self-audit of the Wazir project itself, operating entirely in an isolated git worktree. It validates the project against all canonical checks, performs deeper structural analysis, fixes issues found, verifies the fixes pass, and only merges back on all-green.
@@ -14,6 +27,12 @@ This skill runs a structured self-audit of the Wazir project itself, operating e
 ## Trigger
 
 On-demand: operator invokes `/self-audit` or requests a self-audit loop.
+
+### Parameters
+
+| Flag | Default | Max | Description |
+|------|---------|-----|-------------|
+| `--loops N` | 5 | 10 | Number of audit-fix loops to run. Each loop executes the full Phase 1-5 cycle. If a loop finds 0 new issues, subsequent loops are skipped (convergence detection). |
 
 ## Worktree Isolation Model
 
@@ -78,6 +97,42 @@ Beyond CLI checks, inspect for:
 6. **Skill structure**
    - Each skill dir under `skills/` has a well-formed `SKILL.md` with frontmatter
    - Skills referenced in documentation actually exist
+
+7. **Code Quality**
+   - Run `node tooling/src/cli.js validate` (all subcommands) and capture exit codes
+   - If `eslint` is present in `package.json` scripts or devDependencies, run `npx eslint .` and capture results
+   - If `tsc` is present in `package.json` scripts or devDependencies, run `npx tsc --noEmit` and capture results
+   - Tools not found in `package.json` are skipped with a note in the report
+
+8. **Test Coverage**
+   - Run `npm test` and capture pass/fail counts from output
+   - Any test failure is a finding
+
+9. **Expertise Coverage**
+   - Read `expertise/composition-map.yaml`
+   - For every module path referenced, check that the file exists under `expertise/`
+   - Missing files are findings
+
+10. **Export Freshness**
+    - Run `wazir export --check`
+    - Any drift detected is a finding
+
+## Protected-Path Safety Rails
+
+Before applying ANY fix in Phase 3, check if the target file is in a protected path. The self-audit loop MUST NOT modify files in:
+
+- `skills/`
+- `workflows/`
+- `roles/`
+- `schemas/`
+- `wazir.manifest.yaml`
+- `docs/concepts/`
+- `docs/reference/`
+- `expertise/composition-map.yaml`
+- `docs/plans/`
+- `program.md`
+
+If a fix would touch a protected path, log it as a **manual-required** finding and skip. If `git diff --name-only` shows any protected path was modified during a loop iteration, **ABORT** the loop and discard the worktree.
 
 ## Phase 3: Fix
 
@@ -146,8 +201,13 @@ The worktree agent returns its results. If changes were made, the caller can mer
 
 ## Loop Behavior
 
+Default: **5 loops** (override with `--loops N`, max 10).
+
 When running multiple loops:
 - Loop 1 audits the current state, fixes what it finds
 - Loop 2 audits the result of Loop 1, catches anything missed or introduced
 - Each loop is independent and runs in its own fresh worktree
-- Convergence: if Loop N finds 0 issues, the project is clean
+- **Convergence detection:** if Loop N finds **0 new issues** (no new findings beyond what previous loops already reported), all subsequent loops are skipped and the audit terminates early
+- If a loop modifies a protected path (see Protected-Path Safety Rails above), the loop is aborted and the worktree is discarded
+
+The final branch is **NOT auto-merged** — it requires human review.

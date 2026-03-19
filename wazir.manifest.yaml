@@ -85,6 +85,7 @@ required_hooks:
   - stop_handoff_harvest
   - protected_path_write_guard
   - loop_cap_guard
+  - context_mode_router
 protected_paths:
   - input
   - roles

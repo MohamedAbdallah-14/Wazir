@@ -1,0 +1,45 @@
+{
+  "large": [
+    "npm test",
+    "vitest",
+    "jest",
+    "pytest",
+    "npm run build",
+    "tsc --noEmit",
+    "npm ls",
+    "pip list",
+    "eslint .",
+    "prettier --check .",
+    "tail -f"
+  ],
+  "small": [
+    "git status",
+    "git log",
+    "git branch",
+    "git rev-parse",
+    "ls",
+    "pwd",
+    "mkdir",
+    "cp",
+    "mv",
+    "rm",
+    "wazir doctor",
+    "wazir index",
+    "wazir capture",
+    "wazir validate",
+    "which",
+    "echo"
+  ],
+  "ambiguous_heuristic": {
+    "pipe_detected": true,
+    "redirect_detected": true,
+    "verbose_binaries": [
+      "find",
+      "rg",
+      "grep",
+      "awk",
+      "sed",
+      "curl"
+    ]
+  }
+}

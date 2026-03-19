@@ -15,6 +15,7 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 | `wazir validate commits` | implemented | Validates conventional commit format for commits in the range `--base..--head` (or auto-detected base to HEAD). |
 | `wazir validate changelog` | implemented | Validates `CHANGELOG.md` structure; with `--require-entries` and `--base`, enforces new entries since the base. |
 | `wazir validate docs-drift` | implemented | Detects when source files (roles, workflows, skills, hooks) change without corresponding documentation updates. Advisory by default; `--strict` exits non-zero on drift. |
+| `wazir validate skills` | implemented | Validates skill frontmatter and checks for name conflicts with superpowers skills (requires `wz:` prefix). Rejects any `CONTEXT.md` files (augment tier concluded not implementable in R2). |
 | `wazir validate artifacts` | reserved | Exits `2` until artifact-template and example validation expands. |
 | `wazir export build` | implemented | Generates host packages under `exports/hosts/*` from canonical sources. |
 | `wazir export --check` | implemented | Verifies generated host packages still match current canonical source hashes. |
@@ -28,7 +29,8 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 | `wazir recall file` | implemented | Returns an exact line-bounded slice from an indexed file. Supports `--tier L0\|L1` for summary recall. |
 | `wazir recall symbol` | implemented | Returns an exact slice for an indexed symbol match. Supports `--tier L0\|L1` for summary recall. |
 | `wazir doctor` | implemented | Validates the active repo surface for manifest, hooks, state-root policy, and host export directory presence. |
-| `wazir status` | implemented | Reads run status directly from `<state-root>/runs/<run-id>/status.json`. |
+| `wazir status` | implemented | Reads run status directly from `<state-root>/runs/<run-id>/status.json`. Includes a one-line context savings summary when usage data is available. |
+| `wazir stats` | implemented | Shows token savings statistics for a run, including total queries, estimated tokens saved, bytes avoided, per-tool breakdown, and overall savings ratio. |
 | `wazir capture init` | implemented | Creates a run ledger with `status.json`, `events.ndjson`, and a captures directory under the configured state root. |
 | `wazir capture event` | implemented | Appends a run event and can update phase, status, and loop counts in `status.json`. |
 | `wazir capture route` | implemented | Reserves a run-local capture file path for large tool output. |

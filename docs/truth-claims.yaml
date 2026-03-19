@@ -130,6 +130,12 @@
   subject: wazir status
   verifier: command_registry
   required: true
+- id: command-stats
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir stats
+  verifier: command_registry
+  required: true
 - id: command-capture-family
   file: docs/reference/tooling-cli.md
   claim_type: command
@@ -200,6 +206,12 @@
   file: docs/reference/tooling-cli.md
   claim_type: command
   subject: wazir validate docs-drift
+  verifier: command_registry
+  required: true
+- id: command-validate-skills
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir validate skills
   verifier: command_registry
   required: true
 - id: generated-claude-package

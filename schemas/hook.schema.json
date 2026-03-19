@@ -23,7 +23,8 @@
         "pre_compact_summary",
         "stop_handoff_harvest",
         "protected_path_write_guard",
-        "loop_cap_guard"
+        "loop_cap_guard",
+        "context_mode_router"
       ]
     },
     "description": { "type": "string", "minLength": 1 },

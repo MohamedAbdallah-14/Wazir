@@ -1,0 +1,173 @@
+#!/usr/bin/env node
+
+import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const hooksDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = dirname(hooksDir);
+const matrixPath = join(hooksDir, 'routing-matrix.json');
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function loadRoutingMatrix() {
+  return JSON.parse(readFileSync(matrixPath, 'utf8'));
+}
+
+function parseCommand(raw) {
+  return (raw || '').trim();
+}
+
+function firstToken(cmd) {
+  return cmd.split(/\s+/)[0] || '';
+}
+
+function hasPipe(cmd) {
+  return /(?<![\\])\|/.test(cmd);
+}
+
+function hasRedirect(cmd) {
+  return /(?<![\\])[>]/.test(cmd);
+}
+
+// ---------------------------------------------------------------------------
+// Classification
+// ---------------------------------------------------------------------------
+
+function classify(cmd, matrix) {
+  // 1. Explicit context-mode marker always wins
+  if (cmd.includes('# wazir:context-mode')) return 'large';
+
+  // 2. Check large patterns FIRST — AC-3.1: large commands are never
+  //    downgraded, even with a passthrough marker (AC-1.5).
+  for (const pattern of matrix.large) {
+    if (cmd === pattern || cmd.startsWith(pattern + ' ') || cmd.startsWith(pattern + '\t')) {
+      return 'large';
+    }
+  }
+
+  // 3. Passthrough marker — restricted to heuristic false positives (AC-1.5).
+  //    Only honoured when the command is NOT in the Large category (checked above).
+  if (cmd.includes('# wazir:passthrough')) return 'small';
+
+  // 4. Check small patterns
+  for (const pattern of matrix.small) {
+    if (cmd === pattern || cmd.startsWith(pattern + ' ') || cmd.startsWith(pattern + '\t')) {
+      return 'small';
+    }
+  }
+
+  // 5. Ambiguous heuristics
+  const heuristic = matrix.ambiguous_heuristic || {};
+
+  if (heuristic.pipe_detected && hasPipe(cmd)) return 'ambiguous';
+  if (heuristic.redirect_detected && hasRedirect(cmd)) return 'ambiguous';
+
+  const bin = firstToken(cmd);
+  if (Array.isArray(heuristic.verbose_binaries) && heuristic.verbose_binaries.includes(bin)) {
+    return 'ambiguous';
+  }
+
+  // Default: treat unknown commands as small (passthrough)
+  return 'small';
+}
+
+// ---------------------------------------------------------------------------
+// Context-mode enabled check
+// ---------------------------------------------------------------------------
+
+function isContextModeEnabled() {
+  // Check WAZIR_CONTEXT_MODE env var first
+  const envVal = process.env.WAZIR_CONTEXT_MODE;
+  if (envVal !== undefined) {
+    return envVal === '1' || envVal === 'true';
+  }
+
+  // Fall back to manifest adapter setting
+  try {
+    const manifestPath = join(projectRoot, 'wazir.manifest.yaml');
+    const manifestText = readFileSync(manifestPath, 'utf8');
+    // Simple YAML parse for enabled_by_default under context_mode
+    const match = manifestText.match(/context_mode:[\s\S]*?enabled_by_default:\s*(true|false)/);
+    if (match) return match[1] === 'true';
+  } catch {
+    // ignore
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
+// One-per-session warning when context-mode is disabled
+// ---------------------------------------------------------------------------
+
+const SESSION_WARNING_KEY = 'WAZIR_CM_WARNED';
+
+function emitDisabledWarning() {
+  if (process.env[SESSION_WARNING_KEY]) return;
+
+  process.stderr.write(
+    '[wazir:context-mode-router] context_mode adapter is disabled. ' +
+    'All commands pass through without routing. ' +
+    'Enable via WAZIR_CONTEXT_MODE=1 or set adapters.context_mode.enabled_by_default: true in manifest.\n',
+  );
+
+  // Mark so downstream child processes see it (best-effort session dedup)
+  process.env[SESSION_WARNING_KEY] = '1';
+}
+
+// ---------------------------------------------------------------------------
+// Logging
+// ---------------------------------------------------------------------------
+
+function logDecision(decision) {
+  const stateRoot = process.env.WAZIR_STATE_ROOT || join(process.env.HOME || '/tmp', '.wazir', 'projects', '_default');
+  const logDir = join(stateRoot, 'logs');
+
+  try {
+    if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+    const entry = JSON.stringify({
+      ts: new Date().toISOString(),
+      hook: 'context_mode_router',
+      ...decision,
+    });
+    appendFileSync(join(logDir, 'routing.ndjson'), entry + '\n');
+  } catch {
+    // Logging is best-effort; never fail the hook over it
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+try {
+  const input = readFileSync(0, 'utf8');
+  const payload = input.trim() ? JSON.parse(input) : {};
+  const cmd = parseCommand(payload.command || payload.tool_input?.command || '');
+  const matrix = loadRoutingMatrix();
+  const category = classify(cmd, matrix);
+  const contextModeEnabled = isContextModeEnabled();
+
+  let route = 'passthrough';
+
+  if (!contextModeEnabled) {
+    emitDisabledWarning();
+    route = 'passthrough';
+  } else if (category === 'large' || category === 'ambiguous') {
+    route = 'context-mode';
+  }
+
+  const decision = { command: cmd, category, route, context_mode_enabled: contextModeEnabled };
+
+  logDecision(decision);
+  process.stdout.write(`${JSON.stringify({ routing_decision: decision })}\n`);
+
+  // Exit 0 = passthrough, non-zero = route to context-mode
+  process.exit(route === 'passthrough' ? 0 : 1);
+} catch (error) {
+  process.stderr.write(`${error.message}\n`);
+  process.exit(0); // failure_behavior.mode = warn → always allow on error
+}

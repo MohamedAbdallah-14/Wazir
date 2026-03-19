@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wazir.dev/schemas/phase-report.schema.json",
+  "title": "Phase Report",
+  "type": "object",
+  "required": ["phase_name", "run_id", "timestamp", "attempted_actions", "drift_analysis", "quality_metrics", "risk_flags", "decisions"],
+  "properties": {
+    "phase_name": { "type": "string", "minLength": 1 },
+    "run_id": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "attempted_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["description", "outcome", "evidence"],
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "outcome": { "type": "string", "enum": ["success", "fail", "uncertain"] },
+          "evidence": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "drift_analysis": {
+      "type": "object",
+      "required": ["delta"],
+      "properties": {
+        "delta": { "type": "integer", "minimum": 0 },
+        "description": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "quality_metrics": {
+      "type": "object",
+      "properties": {
+        "test_pass_count": { "type": "integer", "minimum": 0 },
+        "test_fail_count": { "type": "integer", "minimum": 0 },
+        "lint_errors": { "type": "integer", "minimum": 0 },
+        "type_errors": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "description"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+          "description": { "type": "string", "minLength": 1 },
+          "mitigation": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["description", "rationale"],
+        "properties": {
+          "description": { "type": "string", "minLength": 1 },
+          "rationale": { "type": "string", "minLength": 1 },
+          "alternatives_considered": { "type": "array", "items": { "type": "string" } },
+          "source": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "verdict_recommendation": {
+      "type": "object",
+      "properties": {
+        "verdict": { "type": "string", "enum": ["continue", "loop_back", "escalate"] },
+        "reasoning": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

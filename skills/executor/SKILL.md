@@ -5,6 +5,19 @@ description: Run the execution phase — implement the approved plan with TDD, q
 
 # Executor
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 Run Phase 2 (Execute) for the current project.
 
 ## Prerequisites
@@ -54,8 +67,10 @@ If `team_mode: parallel` in config, spawn Agent Teams for independent tasks. Oth
 ## Context Retrieval
 
 - Use `wazir index search-symbols <query>` to locate relevant code before reading
+- Use wazir index search-symbols before direct file reads
 - Read full files directly when editing or verifying
 - Use `wazir recall file <path> --tier L1` for files you need to understand but not modify
+- When dispatching subagents, include this instruction: "Use wazir index search-symbols before direct file reads."
 
 ## Escalation
 

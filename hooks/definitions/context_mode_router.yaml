@@ -1,0 +1,19 @@
+id: context_mode_router
+trigger: context_mode_router
+description: Route large command output through context-mode tools to avoid flooding model context.
+input_contract:
+  required:
+    - command
+allowed_side_effects:
+  - route_to_context_mode
+output_contract:
+  produces:
+    - routing_decision
+failure_behavior:
+  mode: warn
+  exit_code: 0
+host_fallback:
+  claude: native_hook
+  codex: wrapper_command
+  gemini: wrapper_command
+  cursor: native_or_wrapper

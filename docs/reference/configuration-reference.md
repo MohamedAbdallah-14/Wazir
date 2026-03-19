@@ -143,6 +143,39 @@ They overlap heavily, but they are not identical:
 - `spec_challenge`, `plan_review`, and `prepare_next` are workflows that sit between or around the core execution phases.
 - Validators and exports should treat manifest-declared workflows as the canonical workflow file roster.
 
+## Hook configuration
+
+### `hooks/routing-matrix.json`
+
+The routing matrix defines how the context-mode router classifies commands:
+
+- `large` — array of command prefixes that always route to context-mode (AC-3.1). The `# wazir:passthrough` marker does NOT exempt commands in this category.
+- `small` — array of command prefixes that always pass through without context-mode processing.
+- `ambiguous_heuristic` — rules for commands that match neither large nor small:
+  - `pipe_detected` — classify piped commands as ambiguous
+  - `redirect_detected` — classify redirected commands as ambiguous
+  - `verbose_binaries` — array of binary names whose output is typically large
+
+### `config/gating-rules.yaml`
+
+The gating rules file defines conditions for phase transition decisions:
+
+- `rules.continue` — all conditions must pass for a phase to advance (test failures, lint errors, type errors, drift delta, risk flags, uncertain outcomes)
+- `rules.loop_back` — any deterministic failure (test failures, lint errors, or type errors) triggers a loop-back with actionable fix descriptions
+- `rules.escalate` — fallback when neither continue nor loop_back match
+- `default_verdict` — verdict when the report is empty or missing (defaults to `escalate`)
+
+### Composition proof artifacts
+
+The composition engine (`tooling/src/adapters/composition-engine.js`) writes a proof artifact per dispatch to `.wazir/runs/<id>/artifacts/composition-<role>-<task>.json` containing:
+
+- `modules_included[]` — `{ path, layer, tokens }` for each loaded module
+- `modules_dropped[]` — `{ path, layer, tokens, reason }` for each dropped module. Reason values:
+  - `module_cap_exceeded` — module count exceeded the 15-module cap
+  - `token_ceiling_exceeded` — total tokens exceeded the configurable ceiling (default: 50,000)
+- `total_tokens` — total token count of composed prompt
+- `prompt_hash` — SHA-256 hash of the composed prompt for audit traceability
+
 ## Current index parser roster
 
 The active manifest currently declares built-in heuristic extractors for:

@@ -9,6 +9,19 @@ The user typed `/wazir <their request>`. Run the entire pipeline end-to-end, han
 
 All questions use **numbered interactive options** — one question at a time, defaults marked "(Recommended)", wait for user response before proceeding.
 
+## Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+## Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
+
 ## Subcommand Detection
 
 Before anything else, check if the request starts with a known subcommand:

@@ -95,6 +95,15 @@ function renderClaudeSettings() {
             },
           ],
         },
+        {
+          matcher: 'Bash',
+          hooks: [
+            {
+              type: 'command',
+              command: './hooks/context-mode-router',
+            },
+          ],
+        },
       ],
       SessionStart: [
         {

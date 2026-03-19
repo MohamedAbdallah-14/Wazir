@@ -27,6 +27,7 @@
     "workflows/spec-challenge.md",
     "workflows/specify.md",
     "workflows/verify.md",
+    "hooks/definitions/context_mode_router.yaml",
     "hooks/definitions/loop_cap_guard.yaml",
     "hooks/definitions/post_tool_capture.yaml",
     "hooks/definitions/pre_compact_summary.yaml",

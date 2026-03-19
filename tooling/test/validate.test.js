@@ -918,3 +918,123 @@ describe('composition-map content-author concern wiring', () => {
     }
   });
 });
+
+describe('wazir validate skills', () => {
+  test('validates skills for the active repo', () => {
+    const result = runCli(['validate', 'skills']);
+
+    assert.strictEqual(result.exitCode, 0);
+    assert.match(result.stdout, /skill validation passed/i);
+  });
+
+  test('passes when skills have valid frontmatter', () => {
+    const fixtureRoot = createFixture();
+
+    fs.mkdirSync(path.join(fixtureRoot, 'skills', 'my-skill'), { recursive: true });
+    fs.writeFileSync(
+      path.join(fixtureRoot, 'skills', 'my-skill', 'SKILL.md'),
+      '---\nname: wz:my-skill\ndescription: A test skill\n---\n\n# My Skill\n',
+    );
+
+    try {
+      const result = runCli(['validate', 'skills'], { cwd: fixtureRoot });
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.match(result.stdout, /skill validation passed/i);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects SKILL.md without frontmatter', () => {
+    const fixtureRoot = createFixture();
+
+    fs.mkdirSync(path.join(fixtureRoot, 'skills', 'bad-skill'), { recursive: true });
+    fs.writeFileSync(
+      path.join(fixtureRoot, 'skills', 'bad-skill', 'SKILL.md'),
+      '# Bad Skill\n\nNo frontmatter here.\n',
+    );
+
+    try {
+      const result = runCli(['validate', 'skills'], { cwd: fixtureRoot });
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /missing YAML frontmatter/i);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects any CONTEXT.md as stale (augment tier removed)', () => {
+    const fixtureRoot = createFixture();
+
+    const skillDir = path.join(fixtureRoot, 'skills', 'my-augment');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      '---\nname: wz:my-augment\ndescription: An augment skill\n---\n\n# My Augment\n',
+    );
+    fs.writeFileSync(
+      path.join(skillDir, 'CONTEXT.md'),
+      '---\nname: wz:my-augment-context\ndescription: Test\ntype: augment\ntested_against: superpowers@4.3.1\n---\n\n# Context\n',
+    );
+
+    try {
+      const result = runCli(['validate', 'skills'], { cwd: fixtureRoot });
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /CONTEXT\.md is not supported/i);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects conflicting skill name without wz: prefix', () => {
+    const fixtureRoot = createFixture();
+
+    const skillDir = path.join(fixtureRoot, 'skills', 'dispatching-parallel-agents');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      '---\nname: dispatching-parallel-agents\ndescription: Dispatch agents\n---\n\n# Dispatching\n',
+    );
+
+    try {
+      const result = runCli(['validate', 'skills'], { cwd: fixtureRoot });
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.match(result.stderr, /conflicts with superpowers/i);
+      assert.match(result.stderr, /add wz: prefix/i);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('passes for superpowers-conflicting name with wz: prefix and no CONTEXT.md', () => {
+    const fixtureRoot = createFixture();
+
+    const skillDir = path.join(fixtureRoot, 'skills', 'dispatching-parallel-agents');
+    fs.mkdirSync(skillDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(skillDir, 'SKILL.md'),
+      '---\nname: wz:dispatching-parallel-agents\ndescription: Dispatch agents\n---\n\n# Dispatching\n',
+    );
+
+    try {
+      const result = runCli(['validate', 'skills'], { cwd: fixtureRoot });
+
+      assert.strictEqual(result.exitCode, 0);
+      assert.match(result.stdout, /skill validation passed/i);
+    } finally {
+      fs.rmSync(fixtureRoot, { recursive: true, force: true });
+    }
+  });
+
+  test('command registry includes wazir validate skills', async () => {
+    const { SUPPORTED_COMMAND_SUBJECTS } = await import('../src/checks/command-registry.js');
+    assert.ok(
+      SUPPORTED_COMMAND_SUBJECTS.has('wazir validate skills'),
+      'command registry must include "wazir validate skills"',
+    );
+  });
+});
