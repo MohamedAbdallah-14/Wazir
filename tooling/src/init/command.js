@@ -111,6 +111,20 @@ export async function runInitCommand(parsed, context = {}) {
       }
     }
 
+    // Detect context-mode MCP (silent — no user prompt)
+    const contextMode = { enabled: false, has_execute_file: false };
+    if (context.availableTools) {
+      const prefix = 'mcp__plugin_context-mode_context-mode__';
+      const hasExecute = context.availableTools.includes(`${prefix}execute`);
+      const hasFetchAndIndex = context.availableTools.includes(`${prefix}fetch_and_index`);
+      const hasSearch = context.availableTools.includes(`${prefix}search`);
+      const hasExecuteFile = context.availableTools.includes(`${prefix}execute_file`);
+      if (hasExecute && hasFetchAndIndex && hasSearch) {
+        contextMode.enabled = true;
+        contextMode.has_execute_file = hasExecuteFile;
+      }
+    }
+
     // Write config
     const config = {
       model_mode: modelMode,
@@ -124,6 +138,7 @@ export async function runInitCommand(parsed, context = {}) {
       default_intent: defaultIntent,
       team_mode: teamMode,
       parallel_backend: parallelBackend,
+      context_mode: contextMode,
     };
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
 

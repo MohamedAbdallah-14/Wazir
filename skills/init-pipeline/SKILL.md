@@ -31,6 +31,27 @@ If the user picks 3, warn that `wazir capture`, `wazir validate`, and `wazir ind
 
 After installing, run `wazir init` and let it handle the rest. Skip to Step 9.
 
+## Step 0.5: Detect context-mode MCP
+
+After CLI check, detect if the context-mode MCP plugin is installed by checking if ALL THREE core tools are available under the `mcp__plugin_context-mode_context-mode__` prefix:
+- `mcp__plugin_context-mode_context-mode__execute`
+- `mcp__plugin_context-mode_context-mode__fetch_and_index`
+- `mcp__plugin_context-mode_context-mode__search`
+
+Additionally, check if `mcp__plugin_context-mode_context-mode__execute_file` is available (optional, used for Codex output extraction in Item 17).
+
+Store in config as an object (not a bare boolean):
+```json
+"context_mode": {
+  "enabled": true,
+  "has_execute_file": true
+}
+```
+
+If none of the three core tools are found, set `"context_mode": { "enabled": false }`.
+
+This detection runs silently — no user prompt needed.
+
 ---
 
 **The steps below are the manual fallback — only used when the CLI is not installed and the user chose to skip installation.**
@@ -141,6 +162,7 @@ Create/update `.wazir/state/config.json`:
 - Set `team_mode` to the selected mode (`sequential` or `parallel`)
 - If `team_mode` is `parallel`, set `parallel_backend` to `claude_teams`
 - If Codex selected, set `multi_tool.codex.model` to the chosen model
+- Set `context_mode` to the detected value from Step 0.5 (object: `{ "enabled": true|false, "has_execute_file": true|false }`)
 
 Example for claude-only with defaults:
 ```json
