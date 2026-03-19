@@ -110,12 +110,42 @@ Check if `.wazir/state/config.json` exists.
 - **If missing** — invoke the `init-pipeline` skill. This will ask the user interactive questions to set up the config.
 - **If exists** — continue to Step 2.5.
 
-## Step 2.5: Create Run Directory
+## Step 2.5: Resume Detection
+
+Check if a previous incomplete run exists (via `latest` symlink pointing to a run without `completed_at` in its `run-config.yaml`).
+
+**If previous incomplete run found**, present interactive choice:
+
+> **A previous incomplete run was detected:** `<previous-run-id>`
+>
+> 1. **Resume** (Recommended) — copy artifacts from the previous run and continue from the last completed phase
+> 2. **Start fresh** — create a new empty run (previous artifacts remain in the old run directory)
+
+**Wait for the user to answer before continuing.**
+
+**If Resume:**
+- Copy `clarified/` from previous run into new run, EXCEPT `user-feedback.md` (starts empty per Item 11).
+- The `tasks/` directory is NOT copied (deprecated — all task detail lives in `execution-plan.md`).
+- Detect last completed phase by checking which artifacts exist in the copied directory.
+- Resume from the last completed phase.
+- **Staleness check:** Compare modification times of ALL files in `.wazir/input/` against copied artifacts. If ANY input file is newer than the copied artifacts, present interactive checkpoint:
+  > **Warning: The following input files were modified after the previous run's artifacts:**
+  > - `<file1>` (modified <date>)
+  > - `<file2>` (modified <date>)
+  >
+  > 1. **Re-run clarification from scratch** (Recommended) — discard copied artifacts and start Phase 0
+  > 2. **Continue with existing artifacts** — acknowledge stale risk and proceed
+
+  **Wait for the user to answer before continuing.**
+
+**If Start fresh** or no previous run: create empty run directory.
+
+## Step 2.6: Create Run Directory
 
 Generate a run ID using the current timestamp: `run-YYYYMMDD-HHMMSS`
 
 ```bash
-mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews}
+mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
 ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
 ```
 
