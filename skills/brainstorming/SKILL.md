@@ -5,6 +5,11 @@ description: Use before implementation work to turn operator briefings into an a
 
 # Brainstorming
 
+## Model Annotation
+When multi-model mode is enabled:
+- **Opus** for design exploration (brainstorm)
+- **Opus** for design decisions (design)
+
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 - Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools

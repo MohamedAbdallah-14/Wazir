@@ -4,6 +4,47 @@ import path from 'node:path';
 import { readYamlFile } from '../loaders.js';
 import { getRunPaths, readPhaseExitEvents } from '../capture/store.js';
 
+export function evaluateScopeCoverageGuard(payload) {
+  const { input_item_count: inputCount, plan_task_count: planCount, user_approved_reduction: userApproved } = payload;
+
+  const safeInputCount = inputCount ?? 0;
+  const safePlanCount = planCount ?? 0;
+
+  if (safeInputCount === 0) {
+    return {
+      allowed: true,
+      reason: 'No input items to check against.',
+      input_count: safeInputCount,
+      plan_count: safePlanCount,
+    };
+  }
+
+  if (safePlanCount >= safeInputCount) {
+    return {
+      allowed: true,
+      reason: `Plan covers all input items (${safePlanCount} tasks >= ${safeInputCount} items).`,
+      input_count: safeInputCount,
+      plan_count: safePlanCount,
+    };
+  }
+
+  if (userApproved === true) {
+    return {
+      allowed: true,
+      reason: `User explicitly approved scope reduction (${safePlanCount} tasks < ${safeInputCount} items).`,
+      input_count: safeInputCount,
+      plan_count: safePlanCount,
+    };
+  }
+
+  return {
+    allowed: false,
+    reason: `Scope reduction detected: plan has ${safePlanCount} tasks but input has ${safeInputCount} items. User approval required.`,
+    input_count: safeInputCount,
+    plan_count: safePlanCount,
+  };
+}
+
 export function evaluatePhasePrerequisiteGuard(payload) {
   const { run_id: runId, phase, state_root: stateRoot, project_root: projectRoot } = payload;
 

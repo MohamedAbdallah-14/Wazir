@@ -5,6 +5,11 @@ description: Use after a run or execution slice completes to produce a clean nex
 
 # Prepare Next
 
+## Model Annotation
+When multi-model mode is enabled:
+- **Haiku** for file operations (write-handoff, compress-archive)
+- **Sonnet** for learning extraction (extract-learnings)
+
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 - Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools

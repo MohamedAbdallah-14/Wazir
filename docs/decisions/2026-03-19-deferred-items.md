@@ -522,6 +522,8 @@ One command. Everything else is automatic or deferred until needed.
 
 **This is the most important enforcement in Wazir.** If the pipeline can be bypassed, nothing else matters.
 
+5. **No autonomous scope reduction** — the clarifier MUST NOT drop items from the user's input into "future tiers" or "deferred" categories without explicit user approval. If the user provides 10 items, all 10 must appear in the execution plan. The clarifier can suggest prioritization but CANNOT unilaterally cut scope. This is a hard rule: `items_in_plan >= items_in_input` unless the user explicitly approves the reduction.
+
 ### Online Research
 - How CrewAI Task Guardrails enforce mandatory phase completion before advancing
 - How LangGraph's `interrupt()` creates hard gates that can't be rationalized away

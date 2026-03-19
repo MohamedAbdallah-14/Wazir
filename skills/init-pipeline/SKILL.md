@@ -1,11 +1,11 @@
 ---
 name: wz:init-pipeline
-description: Initialize the Wazir pipeline with interactive setup. Creates project directories, selects mode, and configures the pipeline.
+description: Initialize the Wazir pipeline — zero-config by default, auto-detects host and project stack. No mandatory questions.
 ---
 
 # Initialize Pipeline
 
-Set up the Wazir pipeline for this project.
+Set up the Wazir pipeline for this project. **Zero-config by default** — everything is auto-detected and sensibly defaulted. No questions unless the user explicitly asks for interactive mode.
 
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
@@ -20,143 +20,98 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 4. Maximum 10 direct file reads without a justifying index query
 5. If no index exists: `wazir index build && wazir index summarize --tier all`
 
-## Step 0: Check Wazir CLI
+## Zero-Config Flow (Default)
+
+### Step 1: Check Wazir CLI
 
 Run `which wazir` to check if the CLI is installed.
 
-**If installed** — run `wazir init` and let it handle the interactive setup. If the pipeline was already initialized, use `wazir init --force` to reinitialize. Once it completes, skip to Step 5 (Confirm).
-
 **If not installed**, present:
 
-> **The Wazir CLI is not installed. It's required for event capture, validation, and indexing.**
->
-> **How would you like to install it?**
+> **The Wazir CLI is not installed. Install with:**
 >
 > 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
 > 2. **Local link** — `npm link` from the Wazir project root
-> 3. **Skip** — Continue without the CLI (some features will be unavailable)
 
-Wait for the user to answer before continuing.
+### Step 2: Auto-Initialize
 
-After installing, run `wazir init` and let it handle the rest. Skip to Step 5.
+Run `wazir init` (default: auto mode). This automatically:
 
-## Step 0.5: Detect context-mode MCP
+1. **Creates directories:** `.wazir/input/`, `.wazir/state/`, `.wazir/runs/`
+2. **Detects host:** Claude Code / Codex / Gemini / Cursor from environment variables and file markers
+3. **Detects project stack:** Language, framework, and stack from package files
+4. **Detects context-mode MCP:** Checks for core tools (`execute`, `fetch_and_index`, `search`)
+5. **Writes config** with sensible defaults:
+   - `model_mode: "claude-only"` (override: `wazir config set model_mode multi-model`)
+   - `default_depth: "standard"` (override per-run: `/wazir deep ...`)
+   - `default_intent: "feature"` (inferred per-run from request text)
+   - `team_mode: "sequential"` (always)
+6. **Auto-exports** for the detected host
 
-After CLI check, detect if the context-mode MCP plugin is installed by checking if ALL THREE core tools are available under the `mcp__plugin_context-mode_context-mode__` prefix:
-- `mcp__plugin_context-mode_context-mode__execute`
-- `mcp__plugin_context-mode_context-mode__fetch_and_index`
-- `mcp__plugin_context-mode_context-mode__search`
+**No questions asked.** The pipeline is ready to use immediately.
 
-Additionally, check if `mcp__plugin_context-mode_context-mode__execute_file` is available (optional).
+### Step 3: Confirm
 
-Store in config as an object:
-```json
-"context_mode": {
-  "enabled": true,
-  "has_execute_file": true
-}
-```
-
-This detection runs silently — no user prompt needed.
+> **Wazir initialized.**
+>
+> Host: [detected host] | Stack: [detected language/framework]
+>
+> Next: `/wazir <what you want to build>`
 
 ---
 
-**The steps below are the manual fallback — only used when the CLI is not installed and the user chose to skip installation.**
+## Interactive Flow (Power Users)
 
-## Step 1: Create Project Directories
+Triggered by `wazir init --interactive`. For users who want manual control.
 
-```bash
-mkdir -p .wazir/input .wazir/state .wazir/runs
-```
-
-## Step 2: Choose Pipeline Mode
+### Pipeline Mode
 
 > **How should Wazir run in this project?**
 >
-> 1. **Single model** (Recommended) — Everything runs in the current model. Single model, slash commands only.
-> 2. **Multi-model** — Still the current model, but routes tasks by complexity (Haiku for micro, Sonnet for standard, Opus for complex).
-> 3. **Multi-tool** — Current model + external tools for reviews.
+> 1. **Single model** (Recommended) — slash commands only
+> 2. **Multi-model** — routes sub-tasks to cheapest capable model (Haiku/Sonnet/Opus)
+> 3. **Multi-tool** — current model + external tools for reviews
 
-Wait for the user to answer before continuing.
+**If multi-model selected:** The model router (`tooling/src/adapters/model-router.js`) assigns automatically:
+- **Haiku** for mechanical tasks (URL fetching, file ops, compression)
+- **Sonnet** for comprehension tasks (implementation, reviews, learning extraction)
+- **Opus** for judgment tasks (orchestration, design, spec hardening, final review)
 
-## Step 3: If Multi-Tool, Choose Tools
+Override via `model_overrides` in config.
 
-Only ask this if the user selected option 3:
+### External Tools (if multi-tool)
 
-> **Which external tools should Wazir use for reviews?**
+> **Which external tools for reviews?**
 >
-> 1. **Codex** (Recommended) — Send reviews to OpenAI Codex
-> 2. **Gemini** — Send reviews to Google Gemini
-> 3. **Both** — Use Codex and Gemini as secondary reviewers
+> 1. **Codex** (Recommended)
+> 2. **Gemini**
+> 3. **Both**
 
-### Step 3.5: Codex Model (conditional)
-
-Only ask this if Codex was selected:
-
-> **Which Codex model should Wazir use?**
+If Codex selected:
+> **Codex model?**
 >
-> 1. **gpt-5.3-codex-spark** (Recommended) — Fast, good for review loops
-> 2. **gpt-5.4** — Slower, deeper analysis
+> 1. **gpt-5.3-codex-spark** (Recommended) — Fast review loops
+> 2. **gpt-5.4** — Deeper analysis
 
-## Step 4: Write Config
+---
 
-Create/update `.wazir/state/config.json`:
+## Install Paths
 
-- Set `model_mode` to the selected mode (`claude-only`, `multi-model`, or `multi-tool`)
-- If `multi-tool`, set `multi_tool.tools` to the selected tools
-- Set `default_depth` to `standard` (override per-run via inline modifiers)
-- Set `default_intent` to `feature` (inferred per-run from request text)
-- Set `team_mode` to `sequential`
-- Set `parallel_backend` to `none`
-- If Codex selected, set `multi_tool.codex.model` to the chosen model
-- Set `context_mode` to the detected value from Step 0.5
+| Path | Command | Who |
+|------|---------|-----|
+| Plugin marketplace | `/plugin install wazir` | Claude Code users |
+| npx (zero install) | `npx @wazir-dev/cli` | Any Node project |
+| Global install | `npm i -g @wazir-dev/cli` | Power users |
+| Clone + link | `git clone && npm link` | Contributors |
 
-Example for claude-only:
-```json
-{
-  "model_mode": "claude-only",
-  "default_depth": "standard",
-  "default_intent": "feature",
-  "team_mode": "sequential",
-  "parallel_backend": "none"
-}
-```
+## Deep When You Need It
 
-Example for multi-tool:
-```json
-{
-  "model_mode": "multi-tool",
-  "multi_tool": {
-    "tools": ["codex"],
-    "codex": {
-      "model": "gpt-5.3-codex-spark"
-    }
-  },
-  "default_depth": "standard",
-  "default_intent": "feature",
-  "team_mode": "sequential",
-  "parallel_backend": "none"
-}
-```
+- `wazir config set <key> <value>` — override any default
+- `wazir doctor` — see what's configured
+- `wazir stats` — see what Wazir saved you
+- `wazir init --interactive` — full manual setup
 
-## Step 4.5: Runtime-Specific Setup
-
-Based on `multi_tool.tools`:
-
-- If **codex** selected: Create `AGENTS.md` in project root
-- If **gemini** selected: Create `GEMINI.md` in project root
-- If **both**: Create both files
-
-## Step 5: Confirm
-
-List all files created and show the selected mode:
-
-> **Pipeline initialized. You can now use:**
->
-> - `/wazir <your request>` — Run the full pipeline (Init → Clarifier → Executor → Final Review)
-> - `/clarifier` — Run clarification only (research, clarify, brainstorm, plan)
-> - `/executor` — Run execution only (implement approved plan)
-> - `/reviewer` — Run final review only (review + learn + prepare next)
+**Principle:** Like git — `git init` is one command, `git config` is deep. Instant start, deep when you need it.
 
 ## Interaction Rules
 

@@ -5,6 +5,13 @@ description: Run the review phase — adversarial review of implementation again
 
 # Reviewer
 
+## Model Annotation
+When multi-model mode is enabled:
+- **Sonnet** for internal review passes (internal-review)
+- **Opus** for final review mode (final-review)
+- **Opus** for spec-challenge mode (spec-harden)
+- **Opus** for design-review mode (design)
+
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 - Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
@@ -25,11 +32,12 @@ The reviewer role owns all review loops across the pipeline: research-review, cl
 **Key principle for `final` mode:** Compare implementation against the **ORIGINAL INPUT** (briefing + input files), NOT the task specs. The executor's per-task reviewer already validated against task specs — that concern is covered. The final reviewer catches drift: does what we built match what the user actually asked for?
 
 **Reviewer-owned responsibilities** (callers must NOT replicate these):
-1. **Codex integration** — the reviewer runs `codex exec` / `codex review` calls, handles errors, and manages fallback to self-review
+1. **Two-tier review** — internal review first (fast, cheap, expertise-loaded), Codex second (fresh eyes on clean code)
 2. **Dimension selection** — the reviewer selects the correct dimension set for the review mode and depth
 3. **Pass counting** — the reviewer tracks pass numbers and enforces the depth-based cap (quick=3, standard=5, deep=7)
-4. **Finding attribution** — each finding is tagged `[Wazir]`, `[Codex]`, or `[Both]` based on source
+4. **Finding attribution** — each finding is tagged `[Internal]`, `[Codex]`, or `[Both]` based on source
 5. **Dimension set recording** — each review pass file records which canonical dimension set was used, enabling Phase Scoring (first vs final delta)
+6. **Learning pipeline** — ALL findings (internal + Codex) feed into `state.sqlite` and the learning system
 
 ## Review Modes
 
@@ -117,11 +125,28 @@ Score each dimension 0-10. Total out of 70.
 | **NEEDS REWORK** | 28-41 | Re-run affected tasks |
 | **FAIL** | 0-27 | Fundamental issues |
 
-## Secondary Review
+## Two-Tier Review Flow
 
-Read `.wazir/state/config.json`. If `multi_tool.tools` includes external reviewers, run them **after** your own review and **before** producing the final verdict.
+The review process has two tiers. Internal review catches ~80% of issues quickly and cheaply. Codex review provides fresh eyes on clean code.
 
-### Codex Review
+### Tier 1: Internal Review (Fast, Cheap, Expertise-Loaded)
+
+1. **Compose expertise:** Load relevant expertise modules from `expertise/composition-map.yaml` into context based on the review mode and detected stack. This gives the internal reviewer domain-specific knowledge.
+2. **Run internal review** using the dimension set for the current mode. When multi-model is enabled, use **Sonnet** (not Opus) for internal review passes — it's fast and good enough for pattern matching against expertise.
+3. **Produce findings:** Each finding is tagged `[Internal]` with severity (blocking, warning, note).
+4. **Fix cycle:** If blocking findings exist, the executor fixes them. Re-run internal review. Repeat until clean or cap reached.
+
+Internal review passes are logged to `.wazir/runs/latest/reviews/<mode>-internal-pass-<N>.md`.
+
+### Tier 2: External Review (Fresh Eyes on Clean Code)
+
+Only runs AFTER Tier 1 produces a clean pass (no blocking findings).
+
+Read `.wazir/state/config.json`. If `multi_tool.tools` includes external reviewers:
+
+#### Codex Review
+
+**For detailed Codex CLI usage, see `wz:codex-cli` skill.**
 
 If `codex` is in `multi_tool.tools`:
 
@@ -145,7 +170,7 @@ If `codex` is in `multi_tool.tools`:
 2. **Extract findings only** (context protection): After tee, use `execute_file` to extract only the final findings from the Codex output (everything after the last `codex` marker). If context-mode is unavailable, use `tac <file> | sed '/^codex$/q' | tac | tail -n +2`. If no marker found, fail closed (0 findings, warn user). See `docs/reference/review-loop-pattern.md` "Codex Output Context Protection" for full protocol.
 3. Incorporate extracted Codex findings into your scoring — if Codex flags something you missed, add it. If you disagree with a Codex finding, note it with your rationale.
 
-**Codex error handling:** If codex exits non-zero (auth/rate-limit/transport failure), log the full stderr, mark the pass as `codex-unavailable` in the review log, and use self-review findings only for that pass. Do NOT treat a Codex failure as a clean review. Do NOT skip the pass. The next pass still attempts Codex (transient failures may recover).
+**Codex error handling:** If codex exits non-zero (auth/rate-limit/transport failure), log the full stderr, mark the pass as `codex-unavailable` in the review log, and use internal review findings only for that pass. Do NOT treat a Codex failure as a clean review. Do NOT skip the pass. The next pass still attempts Codex (transient failures may recover).
 
 **Code review scoping by mode:**
 - Use `--uncommitted` when reviewing uncommitted changes (`task-review` mode).
@@ -153,16 +178,51 @@ If `codex` is in `multi_tool.tools`:
 - Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes).
 - See `docs/reference/review-loop-pattern.md` for code review scoping rules.
 
-### Gemini Review
+#### Gemini Review
 
-If `gemini` is in `multi_tool.tools`, follow the same pattern using the Gemini CLI when available.
+If `gemini` is in `multi_tool.tools`, follow the same pattern using the Gemini CLI when available. **For detailed Gemini CLI usage, see `wz:gemini-cli` skill.**
+
+### Fix Cycle (Codex Findings)
+
+If Codex produces blocking findings:
+1. Executor fixes the Codex findings
+2. Re-run internal review (quick pass) to verify fixes didn't introduce regressions
+3. Optionally re-run Codex for a clean pass
 
 ### Merging Findings
 
 The final review report must clearly attribute each finding:
-- `[Wazir]` — found by primary review
-- `[Codex]` — found by Codex secondary review
-- `[Both]` — found independently by both
+- `[Internal]` — found by Tier 1 internal review
+- `[Codex]` — found by Tier 2 Codex review
+- `[Gemini]` — found by Tier 2 Gemini review
+- `[Both]` — found independently by multiple sources
+
+### Finding Persistence (Learning Pipeline)
+
+ALL findings from both tiers are persisted to `state.sqlite` for cross-run learning:
+
+```javascript
+// After each review pass
+const { insertFinding, getRecurringFindingHashes } = require('tooling/src/state/db');
+const db = openStateDb(stateRoot);
+
+for (const finding of allFindings) {
+  insertFinding(db, {
+    run_id: runId,
+    phase: reviewMode,
+    source: finding.attribution, // 'internal', 'codex', 'gemini'
+    severity: finding.severity,
+    description: finding.description,
+    finding_hash: hashFinding(finding.description),
+  });
+}
+
+// Check for recurring patterns
+const recurring = getRecurringFindingHashes(db, 2);
+// Recurring findings → auto-propose as learnings in the learn phase
+```
+
+This is how Wazir evolves — findings that recur across runs become accepted learnings injected into future executor context, preventing the same mistakes.
 
 ## Task-Review Log Filenames
 

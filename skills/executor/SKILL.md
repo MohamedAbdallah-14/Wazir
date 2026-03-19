@@ -5,6 +5,13 @@ description: Run the execution phase — implement the approved plan with TDD, q
 
 # Executor
 
+## Model Annotation
+When multi-model mode is enabled, the executor phase uses:
+- **Sonnet** for per-task implementation (write-implementation)
+- **Sonnet** for per-task review (task-review)
+- **Sonnet** for test execution (run-tests)
+- **Opus** for orchestration decisions
+
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 - Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools

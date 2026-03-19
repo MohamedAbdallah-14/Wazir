@@ -274,6 +274,10 @@ Invoke the `wz:clarifier` skill. It handles all sub-workflows internally:
 
 Each sub-workflow has its own review loop. User checkpoints between major steps.
 
+### Scope Invariant
+
+**Hard rule:** `items_in_plan >= items_in_input` unless the user explicitly approves scope reduction. The clarifier MUST NOT autonomously tier, defer, or drop items from the user's input. It can suggest prioritization, but the decision belongs to the user.
+
 Output: approved spec + design + execution plan in `.wazir/runs/latest/clarified/`.
 
 ```bash

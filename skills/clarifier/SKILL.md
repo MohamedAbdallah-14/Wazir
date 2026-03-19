@@ -209,6 +209,27 @@ Delegate to `wz:writing-plans`:
 
 ---
 
+### Scope Coverage Gate (Hard Gate)
+
+Before presenting the plan to the user, verify ALL input items are covered:
+
+1. Count distinct items/deliverables in the input briefing (`.wazir/input/briefing.md` + any `input/*.md` files)
+2. Count tasks in the execution plan
+3. **If `tasks_in_plan < items_in_input`:** STOP and present:
+
+> **Scope reduction detected.** The input contains [N] items but the plan only covers [M].
+>
+> Missing items: [list]
+>
+> 1. **Add missing items to the plan** (Required)
+> 2. **User explicitly approves reduced scope** — only if user confirms
+
+**The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.**
+
+Invariant: `items_in_plan >= items_in_input` unless user explicitly approves reduction.
+
+---
+
 ## Done
 
 When the plan is approved:

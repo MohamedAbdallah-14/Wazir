@@ -13,11 +13,11 @@ function formatNumber(n) {
 }
 
 function buildStatsPayload(usage) {
-  const savings = usage.savings;
-  const cr = savings.capture_routing;
-  const cm = savings.context_mode;
-  const co = savings.compaction;
-  const iq = savings.index_queries;
+  const savings = usage.savings ?? {};
+  const cr = savings.capture_routing ?? {};
+  const cm = savings.context_mode ?? {};
+  const co = savings.compaction ?? {};
+  const iq = savings.index_queries ?? {};
 
   const totalQueriesFromPhases = Object.values(usage.phases)
     .reduce((sum, p) => sum + (p.events_count ?? 0), 0);

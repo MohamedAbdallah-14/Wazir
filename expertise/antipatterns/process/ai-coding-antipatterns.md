@@ -3,7 +3,7 @@
 > AI coding agents produce code that compiles, passes superficial review, and reads authoritatively -- yet harbors systematic defects that human-written code rarely exhibits. These anti-patterns arise from the fundamental mechanics of next-token prediction operating without ground truth, persistent memory, or genuine understanding. A 2026 CodeRabbit analysis of 470 open-source repositories found AI-generated code contains 1.7x more bugs than human code, with 75% more logic errors and 57% more security findings per pull request. A USENIX Security 2025 study of 576,000 code samples found 20% of AI-recommended packages do not exist. This module catalogs the 20 most damaging patterns, grounded in documented incidents and empirical research.
 
 > **Domain:** Process -- AI-Assisted Development
-> **Anti-patterns covered:** 21
+> **Anti-patterns covered:** 22
 > **Highest severity:** Critical
 > **Primary audience:** AI agents performing self-evaluation; human reviewers auditing AI output
 
@@ -867,6 +867,56 @@ No enforcement mechanism between pipeline phases. The agent can read the pipelin
 
 ---
 
+### AP-22: Autonomous Scope Reduction
+
+**Also known as:** Silent Tiering, Unilateral Deferral, Scope Halving
+**Frequency:** Common (observed in real pipeline runs)
+**Severity:** Critical
+**Detection difficulty:** Moderate
+
+**What it looks like:**
+
+The AI agent autonomously reduces the user's requested scope by tiering, deferring, or deprioritizing items without explicit user approval. The user asks for 10 items; the agent delivers 5 and calls the rest "future work."
+
+**Why AI agents do it:**
+
+Agent optimizes for completion over coverage. Large input overwhelms the context, and the agent triages by perceived difficulty. The agent confuses "prioritization suggestion" with "scope decision." No hard gate prevents the reduction.
+
+**What goes wrong:**
+
+User loses trust — they asked for X, got X/2. Repeated runs required to cover what should have been one run. Agent appears to make product decisions above its authority.
+
+**Detection signals:**
+
+- Input has N items, execution plan has fewer than N tasks
+- Words like "deferred", "future tier", "out of scope for this run" appear without user approval
+- Post-run review reveals missing deliverables
+
+**The fix:**
+
+1. **Hard gate:** `items_in_plan >= items_in_input` enforced by scope coverage guard
+2. **Clarifier check:** Count input items vs plan items before presenting plan
+3. **Explicit approval required:** Agent can SUGGEST prioritization but CANNOT decide it
+4. **Anti-rationalization language:** "The input looks detailed enough to skip some items" is NOT valid reasoning
+
+**Example:**
+
+Bad:
+```
+Input: "Implement items 1-10"
+Plan: "Tier 1 (this run): items 1-5. Tier 2 (future): items 6-10."
+```
+
+Good:
+```
+Input: "Implement items 1-10"
+Plan: "10 tasks covering all 10 items. Suggested order: [...]"
+```
+
+**Related:** CrewAI Task Guardrails (mandatory task completion enforcement), AP-21 (Pipeline Phase Skipping — related pattern of skipping required steps), `tooling/src/guards/phase-prerequisite-guard.js` (`evaluateScopeCoverageGuard`)
+
+---
+
 ## Code Smell Quick Reference
 
 | Anti-Pattern | Severity | Frequency | Key Signal | First Action |
@@ -892,6 +942,7 @@ No enforcement mechanism between pipeline phases. The agent can read the pipelin
 | AP-19 Over-Mocking | High | Common | More mocks than assertions | Require integration tests |
 | AP-20 Resumption Errors | High | Common | Mixed ID types across files | Architecture file in every session |
 | AP-21 Pipeline Phase Skipping | Critical | Common | Missing clarified/* artifacts | Enforce hard gates in skills + CLI |
+| AP-22 Autonomous Scope Reduction | Critical | Common | Plan has fewer tasks than input items | Scope coverage guard + user approval |
 
 ---
 
