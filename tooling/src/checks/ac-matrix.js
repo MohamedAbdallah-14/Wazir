@@ -26,7 +26,11 @@ function sectionContains(rel, sectionHeading, pattern) {
   let sectionContent = '';
   const headingLevel = sectionHeading.match(/^#+/)?.[0]?.length || 2;
   for (const line of lines) {
-    if (line.includes(sectionHeading)) {
+    // Match exact heading: "## Step 2:" should NOT match "## Step 2.5:" or "## Step 2.6:"
+    // Use word boundary check: heading text must be followed by end-of-line, colon, or space
+    const trimmed = line.replace(/^#+\s*/, '');
+    const probe = sectionHeading.replace(/^#+\s*/, '');
+    if (trimmed === probe || trimmed.startsWith(probe + ':') || trimmed.startsWith(probe + ' ')) {
       inSection = true;
       sectionContent = '';
       continue;

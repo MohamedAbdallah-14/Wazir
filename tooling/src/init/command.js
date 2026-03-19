@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { select } from '@inquirer/prompts';
 
@@ -112,6 +113,9 @@ export async function runInitCommand(parsed, context = {}) {
     }
 
     // Detect context-mode MCP (silent — no user prompt)
+    // Two detection paths:
+    // 1. When called from a host (Claude Code), context.availableTools is populated
+    // 2. When called from CLI, probe for the plugin cache directory
     const contextMode = { enabled: false, has_execute_file: false };
     if (context.availableTools) {
       const prefix = 'mcp__plugin_context-mode_context-mode__';
@@ -122,6 +126,13 @@ export async function runInitCommand(parsed, context = {}) {
       if (hasExecute && hasFetchAndIndex && hasSearch) {
         contextMode.enabled = true;
         contextMode.has_execute_file = hasExecuteFile;
+      }
+    } else {
+      // CLI fallback: check if context-mode plugin is installed
+      const pluginDir = path.join(os.homedir(), '.claude', 'plugins', 'cache', 'context-mode');
+      if (fs.existsSync(pluginDir)) {
+        contextMode.enabled = true;
+        contextMode.has_execute_file = true;
       }
     }
 
