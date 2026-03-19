@@ -77,8 +77,8 @@
 ### Other Features
 | File | Description |
 |------|-------------|
-| [expertise/README.md](features/expertise/README.md) | Expertise system — 308 modules across 11 domains |
-| [schemas/README.md](features/schemas/README.md) | Schema system — 16 JSON schemas for artifact validation |
+| [expertise/README.md](features/expertise/README.md) | Expertise system — 268 modules across 12 domains |
+| [schemas/README.md](features/schemas/README.md) | Schema system — 19 JSON schemas for artifact validation |
 | [tooling/README.md](features/tooling/README.md) | CLI tooling — all commands with options and examples |
 | [exports/README.md](features/exports/README.md) | Host exports — Claude, Codex, Gemini, Cursor packages |
 

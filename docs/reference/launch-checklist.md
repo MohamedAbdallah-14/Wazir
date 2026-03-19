@@ -26,7 +26,7 @@ Submit pull requests to these curated lists (one PR per list, follow each repo's
 ### awesome-claude-code
 - **Repo:** `github.com/anthropics/awesome-claude-code` (or the most-starred community fork)
 - **Section:** Tools / Plugins / Extensions
-- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 4 phases (15 workflows), and 308 expertise modules.`
+- **Entry format:** `[Wazir](https://github.com/MohamedAbdallah-14/Wazir) - Host-native engineering OS kit with 10 roles, 4 phases (15 workflows), and 268 expertise modules.`
 - **Tips:** Keep the description under 120 characters. Link directly to the repo.
 
 ### awesome-ai-agents
@@ -56,7 +56,7 @@ Show HN: Wazir – Engineering OS kit for AI coding agents (Claude, Codex, Gemin
 ### First comment
 Post a comment immediately after submission explaining:
 1. What problem Wazir solves (AI agents lack structured engineering workflows)
-2. How it works (10 canonical roles, 14-phase pipeline, 308 expertise modules)
+2. How it works (10 canonical roles, 14-phase pipeline, 268 expertise modules)
 3. What makes it different (host-native, works across Claude/Codex/Gemini/Cursor)
 4. Quick install: `npx @wazir-dev/cli init`
 5. Invite feedback -- HN readers appreciate genuine requests for input

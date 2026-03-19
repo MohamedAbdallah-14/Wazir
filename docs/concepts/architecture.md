@@ -10,7 +10,7 @@ Wazir is a host-native engineering OS kit. The host environment (Claude, Codex, 
 | Workflows | Phase entrypoints that sequence roles through delivery |
 | Skills | Reusable procedures (wz:tdd, wz:debugging, wz:verification, wz:brainstorming) |
 | Hooks | Guardrails enforcing protected paths, loop caps, and capture routing |
-| Expertise | 308 curated knowledge modules composed into agent prompts |
+| Expertise | 268 curated knowledge modules composed into agent prompts |
 | Templates | Artifact templates for phase outputs and handoff |
 | Schemas | Validation schemas for manifest, hooks, artifacts, and exports |
 | Exports | Generated host packages tailored per supported host |

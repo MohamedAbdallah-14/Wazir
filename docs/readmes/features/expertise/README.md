@@ -1,6 +1,6 @@
 # Expertise System
 
-Wazir's expertise system is a curated library of **308 knowledge modules** spanning
+Wazir's expertise system is a curated library of **268 knowledge modules** spanning
 architecture, security, performance, design, and more. Modules are loaded selectively into
 agent prompts — giving the right knowledge to the right role at the right phase — without
 flooding context with irrelevant content.
