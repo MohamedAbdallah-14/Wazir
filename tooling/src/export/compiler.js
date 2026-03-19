@@ -40,12 +40,18 @@ function listDeclaredWorkflowFiles(projectRoot, manifest) {
 }
 
 function collectCanonicalSources(projectRoot, manifest) {
-  return [
+  const sources = [
     path.join(projectRoot, 'wazir.manifest.yaml'),
     ...listDeclaredRoleFiles(projectRoot, manifest),
     ...listDeclaredWorkflowFiles(projectRoot, manifest),
     ...listHookDefinitions(path.join(projectRoot, 'hooks', 'definitions')),
   ];
+  // hooks.json is a canonical source for Claude settings generation
+  const hooksJson = path.join(projectRoot, 'hooks', 'hooks.json');
+  if (fs.existsSync(hooksJson)) {
+    sources.push(hooksJson);
+  }
+  return sources;
 }
 
 function toRelativeMap(projectRoot, filePaths) {
@@ -82,14 +88,27 @@ function renderCommonInstructions(host, manifest) {
   ].join('\n');
 }
 
+const DEFAULT_CLAUDE_HOOKS = {
+  hooks: {
+    PreToolUse: [
+      { matcher: 'Write|Edit', hooks: [{ type: 'command', command: './hooks/protected-path-write-guard' }] },
+      { matcher: 'Bash', hooks: [{ type: 'command', command: './hooks/context-mode-router' }] },
+    ],
+    SessionStart: [
+      { hooks: [{ type: 'command', command: './hooks/loop-cap-guard' }] },
+      { matcher: 'startup|resume|clear|compact', hooks: [{ type: 'command', command: './hooks/session-start' }] },
+    ],
+  },
+};
+
 function renderClaudeSettings(projectRoot) {
   const hooksPath = path.join(projectRoot, 'hooks', 'hooks.json');
   if (fs.existsSync(hooksPath)) {
     const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
     return JSON.stringify(hooksContent, null, 2);
   }
-  // Fallback: empty hooks when hooks.json doesn't exist (e.g., new projects)
-  return JSON.stringify({ hooks: {} }, null, 2);
+  // Fallback: default hooks when hooks.json doesn't exist (e.g., new projects)
+  return JSON.stringify(DEFAULT_CLAUDE_HOOKS, null, 2);
 }
 
 function renderCursorHooks() {

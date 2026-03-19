@@ -34,7 +34,8 @@
     "hooks/definitions/pre_tool_capture_route.yaml",
     "hooks/definitions/protected_path_write_guard.yaml",
     "hooks/definitions/session_start.yaml",
-    "hooks/definitions/stop_handoff_harvest.yaml"
+    "hooks/definitions/stop_handoff_harvest.yaml",
+    "hooks/hooks.json"
   ],
   "files": [
     ".cursor/hooks.json",

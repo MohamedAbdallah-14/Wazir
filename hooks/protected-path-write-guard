@@ -8,9 +8,11 @@ try {
   const input = readFileSync(0, 'utf8');
   const payload = input.trim() ? JSON.parse(input) : {};
 
-  // Map Claude Code payload format (file_path) to guard format (target_path)
-  if (payload.file_path && !payload.target_path) {
-    payload.target_path = payload.file_path;
+  // Map Claude Code payload format to guard format (target_path)
+  // Claude may send file_path at top level or nested under tool_input
+  if (!payload.target_path) {
+    payload.target_path = payload.file_path
+      ?? payload.tool_input?.file_path;
   }
 
   const decision = evaluateProtectedPathWriteGuard(payload);

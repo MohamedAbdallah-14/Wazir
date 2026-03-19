@@ -47,8 +47,8 @@ function refreshIndex() {
         cwd: projectRoot,
       });
       const stats = JSON.parse(statsOut);
-      if (stats.index_path) {
-        const mtime = statSync(stats.index_path).mtimeMs;
+      if (stats.database_path) {
+        const mtime = statSync(stats.database_path).mtimeMs;
         const age = Date.now() - mtime;
         if (age < FRESHNESS_THRESHOLD_MS) {
           needsRefresh = false;

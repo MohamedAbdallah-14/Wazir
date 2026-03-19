@@ -257,6 +257,23 @@ describe('protected-path-write-guard — Claude Code payload format (I9)', () =>
     }
   });
 
+  test('blocks writes when Claude Code sends nested tool_input.file_path', () => {
+    const fixture = createGuardFixture();
+
+    try {
+      const result = runHook('protected-path-write-guard', {
+        project_root: fixture.fixtureRoot,
+        tool_input: { file_path: 'input/brief.md', content: '# test' },
+      });
+
+      assert.strictEqual(result.exitCode, 42);
+      const output = JSON.parse(result.stdout);
+      assert.strictEqual(output.guard_decision.allowed, false);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   test('runs 5 consecutive times on allowed paths without errors', () => {
     const fixture = createGuardFixture();
 
