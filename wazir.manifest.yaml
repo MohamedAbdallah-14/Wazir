@@ -99,6 +99,7 @@ required_hooks:
   - context_mode_router
   - stop_pipeline_gate
   - pretooluse_pipeline_guard
+  - pretooluse_dispatcher
 protected_paths:
   - input
   - roles

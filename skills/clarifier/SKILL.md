@@ -366,6 +366,44 @@ Invariant: `items_in_plan >= items_in_input` unless user explicitly approves red
 
 ---
 
+## Progress Reporting
+
+### Phase Map
+At the start of each sub-workflow, display the clarifier progress map:
+
+```
+[RESEARCH] → CLARIFY → SPEC-HARDEN → DESIGN → PLAN
+```
+
+Current sub-workflow in brackets. Skipped workflows omitted.
+
+### Meaningful Updates
+Follow the formula: **"Name the action. State the dependency. Omit the journey."**
+
+Examples:
+- `"Running research-review pass 2/5 on research brief..."`
+- `"Clarification complete. Starting spec-hardening (depends on approved clarification)..."`
+- `"Brainstorming 3 design approaches from hardened spec..."`
+
+### Artifact Previews
+After producing each artifact, show first 3-5 lines as preview.
+
+### Time Estimates
+At sub-workflow entry: `"Starting spec-hardening (estimated ~10-20 min at standard depth)..."`
+
+### Heartbeat
+Never exceed the silence threshold for the run's depth level:
+- Quick: max 3 minutes
+- Standard: max 2 minutes
+- Deep: max 90 seconds
+
+If processing takes long, emit: `"Still analyzing input item 7/13..."`
+
+### Depth Table Reference
+All depth-dependent values (review passes, loop caps, challenge intensity) come from the canonical depth table in `tooling/src/config/depth-table.js`. Never hardcode depth values.
+
+---
+
 ## Reasoning Output
 
 Throughout the clarifier phase, produce reasoning at two layers:

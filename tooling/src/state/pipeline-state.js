@@ -165,6 +165,89 @@ export function setStopHookActive(stateRoot, active) {
 }
 
 // ---------------------------------------------------------------------------
+// Artifact dependency graph
+// ---------------------------------------------------------------------------
+
+/**
+ * Canonical artifact dependency graph for the pipeline.
+ * Each artifact lists the artifacts it requires as inputs.
+ */
+export const ARTIFACT_DEPENDENCY_GRAPH = {
+  'clarification.md': { requires: [] },
+  'spec-hardened.md': { requires: ['clarification.md'] },
+  'design.md': { requires: ['spec-hardened.md'] },
+  'execution-plan.md': { requires: ['design.md'] },
+};
+
+/**
+ * Store artifact dependencies in pipeline state.
+ */
+export function setArtifactDependencies(stateRoot, depGraph) {
+  const state = readPipelineState(stateRoot);
+  if (!state) throw new Error('No pipeline state found.');
+  state.artifact_dependencies = depGraph;
+  state.updated_at = new Date().toISOString();
+  atomicWriteJson(statePath(stateRoot), state);
+  return state;
+}
+
+/**
+ * Compute all artifacts downstream of a changed artifact.
+ * Walks the dependency graph to find everything that transitively requires
+ * the changed artifact.
+ *
+ * @param {string} changedArtifact — the artifact that was modified
+ * @param {object} depGraph — the dependency graph
+ * @returns {string[]} downstream artifact names
+ */
+export function computeDownstreamArtifacts(changedArtifact, depGraph) {
+  const downstream = [];
+  const visited = new Set();
+
+  function walk(target) {
+    for (const [name, meta] of Object.entries(depGraph)) {
+      if (visited.has(name)) continue;
+      if (meta.requires.includes(target)) {
+        visited.add(name);
+        downstream.push(name);
+        walk(name);
+      }
+    }
+  }
+
+  walk(changedArtifact);
+  return downstream;
+}
+
+/**
+ * Classify the mutation level of a changed artifact.
+ *
+ * - L0 (cosmetic): unknown artifact, no graph impact
+ * - L1 (local): leaf artifact with no downstream dependents
+ * - L2 (structural): mid-graph artifact with some downstream dependents
+ * - L3 (fundamental): root artifact — everything downstream is affected
+ *
+ * @param {string} changedArtifact
+ * @param {object} depGraph
+ * @returns {'L0'|'L1'|'L2'|'L3'}
+ */
+export function classifyMutation(changedArtifact, depGraph) {
+  if (!(changedArtifact in depGraph)) return 'L0';
+
+  const downstream = computeDownstreamArtifacts(changedArtifact, depGraph);
+  const entry = depGraph[changedArtifact];
+
+  // Root artifact (no requirements) with downstream dependents
+  if (entry.requires.length === 0 && downstream.length > 0) return 'L3';
+
+  // Mid-graph: has downstream dependents
+  if (downstream.length > 0) return 'L2';
+
+  // Leaf: no downstream dependents
+  return 'L1';
+}
+
+// ---------------------------------------------------------------------------
 // Artifact digest
 // ---------------------------------------------------------------------------
 

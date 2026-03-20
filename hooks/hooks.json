@@ -12,29 +12,11 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./hooks/protected-path-write-guard"
-          }
-        ]
-      },
-      {
         "matcher": "Write|Edit|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/pretooluse-pipeline-guard"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "./hooks/context-mode-router"
+            "command": "./hooks/pretooluse-dispatcher"
           }
         ]
       }

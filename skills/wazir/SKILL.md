@@ -224,26 +224,28 @@ entry_point: "/wazir"
 depth: standard
 interaction_mode: guided  # auto | guided | interactive
 
-# Workflow policy — individual workflows within each phase
+# Workflow policy — loop_cap is set from the depth table:
+#   quick: loop_cap=5, standard: loop_cap=10, deep: loop_cap=15
+# See tooling/src/config/depth-table.js for the canonical values.
 workflow_policy:
   # Clarifier phase workflows
-  discover:       { enabled: true, loop_cap: 10 }
-  clarify:        { enabled: true, loop_cap: 10 }
-  specify:        { enabled: true, loop_cap: 10 }
-  spec-challenge: { enabled: true, loop_cap: 10 }
-  author:         { enabled: false, loop_cap: 10 }
-  design:         { enabled: true, loop_cap: 10 }
-  design-review:  { enabled: true, loop_cap: 10 }
-  plan:           { enabled: true, loop_cap: 10 }
-  plan-review:    { enabled: true, loop_cap: 10 }
+  discover:       { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  clarify:        { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  specify:        { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  spec-challenge: { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  author:         { enabled: false, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  design:         { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  design-review:  { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  plan:           { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  plan-review:    { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
   # Executor phase workflows
-  execute:        { enabled: true, loop_cap: 10 }
-  verify:         { enabled: true, loop_cap: 5 }
+  execute:        { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  verify:         { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
   # Final Review phase workflows
-  review:         { enabled: true, loop_cap: 10 }
-  learn:          { enabled: true, loop_cap: 5 }
-  prepare_next:   { enabled: true, loop_cap: 5 }
-  run_audit:      { enabled: false, loop_cap: 10 }
+  review:         { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  learn:          { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  prepare_next:   { enabled: true, loop_cap: DEPTH_TABLE[depth].loop_cap }
+  run_audit:      { enabled: false, loop_cap: DEPTH_TABLE[depth].loop_cap }
 
 research_topics: []
 
@@ -832,6 +834,114 @@ Ask the user via AskUserQuestion:
   3. "Edit before committing"
 
 Wait for the user's selection before continuing.
+
+---
+
+## Depth Table Reference
+
+All depth-dependent values come from the canonical depth table (`tooling/src/config/depth-table.js`):
+
+| Parameter | Quick | Standard | Deep |
+|-----------|-------|----------|------|
+| review_passes | 3 | 5 | 7 |
+| loop_cap | 5 | 10 | 15 |
+| heartbeat_max_silence_s | 180 | 120 | 90 |
+| research_intensity | minimal | balanced | thorough |
+| challenge_intensity | surface | balanced | adversarial |
+| spec_hardening_passes | 1 | 3 | 5 |
+| design_review_passes | 1 | 3 | 5 |
+| time_estimate_label | ~15-30 min | ~45-90 min | ~2-3 hrs |
+
+When any skill or workflow needs a depth-dependent value, look it up from this table. Never hardcode depth values.
+
+---
+
+## Progressive Disclosure Progress Reporting
+
+Apply these 5 patterns throughout the pipeline:
+
+### Pattern 1: Phase Map
+At every phase transition, display the enabled phases with a position indicator:
+
+```
+[CLARIFY] → SPECIFY → DESIGN → PLAN → EXECUTE → VERIFY → REVIEW
+```
+
+Skipped phases are omitted from the map. The current phase is wrapped in brackets.
+
+### Pattern 2: Meaningful Updates
+Follow this formula: **"Name the action. State the dependency. Omit the journey."**
+
+Good: `"Running spec-challenge pass 3/5 on spec-hardened.md..."`
+Bad: `"Now I'm going to start the process of challenging the spec to make sure it's robust..."`
+
+### Pattern 3: Artifact Previews
+After producing any artifact, show the first 3-5 meaningful lines:
+
+```
+> clarification.md (preview):
+> ## Scope: 5 features from deep research
+> - Interactive checkpoints via AskUserQuestion
+> - Progressive disclosure progress reporting
+> ...
+```
+
+### Pattern 4: Time Estimates
+At phase entry, show the rough duration from the depth table:
+
+```
+"Entering EXECUTE phase (estimated ~45-90 min at standard depth)..."
+```
+
+### Pattern 5: Heartbeat
+Never exceed the silence threshold for the current depth level:
+- **Quick:** max 3 minutes between outputs
+- **Standard:** max 2 minutes between outputs
+- **Deep:** max 90 seconds between outputs
+
+If a long operation is running, emit a heartbeat: `"Still running tests (47 passed, 2 remaining)..."`
+
+---
+
+## Steerability: Mutation Classification and Selective Regeneration
+
+When the user requests changes to an already-produced artifact:
+
+### Step 1: Classify the Mutation Level
+
+| Level | Name | Trigger | Action |
+|-------|------|---------|--------|
+| **L0** | Cosmetic | Typo, formatting, wording only | Apply fix. No regeneration. |
+| **L1** | Local | Change to a leaf artifact with no downstream dependents | Regenerate only this artifact. |
+| **L2** | Structural | Change to a mid-graph artifact (e.g., design.md) | Regenerate this artifact and all downstream dependents. |
+| **L3** | Fundamental | Change to scope, intent, or root artifact (clarification.md) | Restart from the clarification phase onward. |
+
+### Step 2: Show Impact Preview
+
+Before regenerating, tell the user what will be affected:
+
+```
+"This change to design.md is L2 (structural). It will regenerate:
+  - execution-plan.md (depends on design.md)
+Preserved (unaffected): clarification.md, spec-hardened.md"
+```
+
+Use AskUserQuestion:
+1. **Proceed with regeneration** (Recommended) — regenerate affected artifacts
+2. **Apply change only** — update this artifact without regenerating downstream
+3. **Cancel** — discard the change
+
+### Step 3: Selective Regeneration
+
+Walk the artifact dependency graph (from `pipeline-state.js`) starting from the changed artifact. Regenerate only downstream artifacts. Preserve all completed artifacts that are not downstream.
+
+### Artifact Dependency Graph
+
+```
+clarification.md → spec-hardened.md → design.md → execution-plan.md
+```
+
+Each arrow means "is required by." Change an upstream artifact and everything downstream may need regeneration.
 
 ---
 

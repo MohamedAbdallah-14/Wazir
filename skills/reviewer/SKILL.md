@@ -450,6 +450,38 @@ Write to `.wazir/runs/<run-id>/handoff.md`:
 - Do NOT mutate `input/` — it belongs to the user
 - Do NOT auto-load proposed learnings into the next run
 
+## Progress Reporting
+
+### Phase Map
+At review start, display the review progress:
+
+```
+REVIEW: Pass [1/5] — Checking 7 dimensions across implementation...
+```
+
+### Meaningful Updates
+Follow the formula: **"Name the action. State the dependency. Omit the journey."**
+
+Examples:
+- `"Review pass 2/5: Found 3 findings (1 blocking). Re-checking after fixes..."`
+- `"Tier 1 (internal) complete: 5 findings. Starting Tier 2 (Codex) review..."`
+- `"Codex review returned 2 additional findings. Merging with internal findings..."`
+
+### Heartbeat
+Never exceed the silence threshold for the run's depth level:
+- Quick: max 3 minutes
+- Standard: max 2 minutes
+- Deep: max 90 seconds
+
+During long reviews, emit: `"Checking dimension 5/7 (Drift) — comparing spec to implementation..."`
+
+### Depth Table Reference
+Review pass count comes from the canonical depth table (`tooling/src/config/depth-table.js`):
+- Quick: 3 passes, Standard: 5 passes, Deep: 7 passes
+Never hardcode these values.
+
+---
+
 ## Reasoning Output
 
 Throughout the reviewer phase, produce reasoning at two layers:

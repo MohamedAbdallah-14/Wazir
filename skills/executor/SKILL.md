@@ -168,6 +168,46 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing.
 
+## Progress Reporting
+
+### Phase Map
+At the start of execution and after each task commit, display the task progress map:
+
+```
+EXECUTE: [Task 1/8] ████░░░░ 12% — "Add depth table module"
+```
+
+### Meaningful Updates
+Follow the formula: **"Name the action. State the dependency. Omit the journey."**
+
+Examples:
+- `"Task 3/8: Implementing pretooluse-dispatcher (depends on depth-table from Task 1)..."`
+- `"RED: Writing tests for artifact-dependencies. 0/13 passing..."`
+- `"GREEN: 13/13 tests passing. Committing task 3..."`
+
+### Artifact Previews
+After each task commit, show the key files changed:
+```
+> Committed: feat(hooks): consolidate PreToolUse hooks into single dispatcher
+> Files: pretooluse-dispatcher.js (+185), hooks.json (modified), 2 settings synced
+```
+
+### Time Estimates
+At task start: `"Starting task 4/8 (estimated ~10-15 min)..."`
+
+### Heartbeat
+Never exceed the silence threshold for the run's depth level:
+- Quick: max 3 minutes
+- Standard: max 2 minutes
+- Deep: max 90 seconds
+
+During long test runs or implementations, emit: `"Still running tests (23/38 passed)..."`
+
+### Depth Table Reference
+All depth-dependent values (review passes, loop caps) come from the canonical depth table in `tooling/src/config/depth-table.js`. Never hardcode depth values.
+
+---
+
 ## Reasoning Output
 
 Throughout the executor phase, produce reasoning at two layers:
