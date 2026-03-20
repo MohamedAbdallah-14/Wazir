@@ -720,7 +720,7 @@ describe('design skill', () => {
     assert.ok(fs.existsSync(skillPath), 'skills/design/SKILL.md missing');
     const content = fs.readFileSync(skillPath, 'utf8');
     assert.ok(content.startsWith('---'), 'missing YAML frontmatter');
-    assert.ok(content.includes('name: design'), 'missing name in frontmatter');
+    assert.ok(content.includes('name: wz:design'), 'missing name in frontmatter');
     assert.ok(content.includes('description:'), 'missing description in frontmatter');
     assert.ok(content.includes('## Prerequisites'), 'missing Prerequisites section');
     assert.ok(content.includes('## Workflow'), 'missing Workflow section');

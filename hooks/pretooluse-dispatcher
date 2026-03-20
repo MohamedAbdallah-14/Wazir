@@ -79,6 +79,6 @@ try {
   process.exit(0);
 } catch (error) {
   process.stderr.write(`[pretooluse-dispatcher] ${error.message}\n`);
-  process.stdout.write(JSON.stringify({ decision: 'allow' }) + '\n');
-  process.exit(0); // fail-open on errors
+  process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny' }, systemMessage: `[pretooluse-dispatcher] Hook error: ${error.message}. Blocking to be safe.` }) + '\n');
+  process.exit(2); // fail-closed on errors
 }

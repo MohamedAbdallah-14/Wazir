@@ -1,5 +1,5 @@
 ---
-name: run-audit
+name: wz:run-audit
 description: "Use when running a structured codebase audit — security, code quality, architecture, performance, dependencies, or custom."
 ---
 

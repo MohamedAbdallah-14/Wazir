@@ -1,5 +1,5 @@
 ---
-name: design
+name: wz:design
 description: "Use when an approved spec needs visual design artifacts via open-pencil MCP workflow."
 ---
 
