@@ -290,6 +290,44 @@ Output the report content to the user in the conversation.
 
 ---
 
+# Two-Level Phase Model
+
+The pipeline has 4 top-level **phases**, each containing multiple **workflows** with review loops:
+
+```
+Phase 1: Init
+  └── (inline — no sub-workflows)
+
+Phase 2: Clarifier
+  ├── discover (research) ← research-review loop
+  ├── clarify ← clarification-review loop
+  ├── specify ← spec-challenge loop
+  ├── author (adaptive) ← approval gate
+  ├── design ← design-review loop
+  └── plan ← plan-review loop
+
+Phase 3: Executor
+  ├── execute (per-task) ← task-review loop per task
+  └── verify
+
+Phase 4: Final Review
+  ├── review (final) ← scored review
+  ├── learn
+  └── prepare_next
+```
+
+**Event capture uses both levels.** When emitting phase events, include `--parent-phase`:
+```bash
+wazir capture event --run <id> --event phase_enter --phase discover --parent-phase clarifier --status in_progress
+```
+
+**Progress markers between workflows:** After each workflow completes, output:
+> Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
+
+**`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"
+
+---
+
 # Phase 2: Clarifier
 
 **Before starting this phase, output to the user:**

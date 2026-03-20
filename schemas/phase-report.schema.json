@@ -6,6 +6,15 @@
   "required": ["phase_name", "run_id", "timestamp", "attempted_actions", "drift_analysis", "quality_metrics", "risk_flags", "decisions"],
   "properties": {
     "phase_name": { "type": "string", "minLength": 1 },
+    "parent_phase": {
+      "type": "string",
+      "enum": ["init", "clarifier", "executor", "final_review"],
+      "description": "Top-level phase this workflow belongs to"
+    },
+    "workflow": {
+      "type": "string",
+      "description": "Specific workflow name within the parent phase (e.g. discover, specify, execute)"
+    },
     "run_id": { "type": "string", "minLength": 1 },
     "timestamp": { "type": "string", "format": "date-time" },
     "attempted_actions": {
