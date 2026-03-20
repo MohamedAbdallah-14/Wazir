@@ -17,8 +17,8 @@ output_contract:
     - reason
     - routing_decision
 failure_behavior:
-  mode: warn
-  exit_code: 0
+  mode: block
+  exit_code: 1
 host_fallback:
   claude: native_hook
   codex: wrapper_command
