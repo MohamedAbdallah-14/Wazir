@@ -39,6 +39,22 @@ The plan must include:
 - verification commands or manual checks per section
 - cleanup steps where needed
 
+### User Output: Before Planning
+
+```
+Building execution plan from the approved design.
+Ordering tasks by: [dependency rationale — what must exist before what]
+Parallelizable: [which tasks can run simultaneously and why]
+```
+
+### User Output: Plan Presentation
+
+```
+Plan: [N] tasks ([X small, Y medium, Z large])
+Critical path: Task [A] → Task [B] → Task [C]
+Estimated complexity: [summary]
+```
+
 Rules:
 
 - do not write implementation code during planning

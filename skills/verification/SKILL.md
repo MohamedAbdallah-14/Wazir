@@ -52,6 +52,24 @@ Use `proof-collector` (`tooling/src/verify/proof-collector.js`) for automated ev
 
 All commands use `execFileSync` (never shell `exec`) for security. Evidence is returned as `{ type, evidence: [{ check, ok, output }] }`.
 
+### User Output: Before Proof Collection
+
+```
+Collecting proof of implementation. Running:
+1. [check type] — verifies [what it proves]
+2. [check type] — verifies [what it proves]
+Without proof: claims are unverified assertions.
+```
+
+### User Output: After Evidence
+
+```
+Evidence collected:
+- [N] checks passed, [M] failed
+- [specific results per check type]
+Proof artifact saved to: [path]
+```
+
 ## Minimum Rules
 
 - no success claim without fresh evidence from the current change

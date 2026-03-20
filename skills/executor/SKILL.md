@@ -172,7 +172,38 @@ Wait for the user's selection before continuing.
 
 Throughout the executor phase, produce reasoning at two layers:
 
-**Conversation (Layer 1):** Before each task, explain what you're about to implement and why. After each task, state what would have gone wrong without this task.
+### User Output: Before Execution
+
+```
+Starting implementation. Here's what I'm building and in what order:
+- Task 1: [what] — depends on nothing, starting first
+- Task 2: [what] — needs Task 1's [specific output]
+I'll commit after each task and show you what changed.
+```
+
+### User Output: Before Each Task
+
+```
+Implementing Task [N]: [title]
+This enables: [what downstream tasks or user value depends on this]
+Key concern: [the main technical risk or decision point]
+```
+
+### User Output: After Each Task
+
+```
+Task [N] complete: [one-line summary]
+- Changed: [files]
+- Tests: [pass/fail count]
+- Commit: [hash]
+Next: Task [N+1] — [title]
+```
+
+### User Output: Progress
+
+```
+Progress: Task [N] of [M] complete ([X]%)
+```
 
 **File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-executor-reasoning.md` with structured entries per implementation decision:
 - **Trigger** — what prompted the decision (e.g., "task spec requires auth middleware")

@@ -375,7 +375,39 @@ Invariant: `items_in_plan >= items_in_input` unless user explicitly approves red
 
 Throughout the clarifier phase, produce reasoning at two layers:
 
-**Conversation (Layer 1):** Before each sub-workflow, explain the trigger and why it matters. After each sub-workflow, state what was found and the counterfactual — what would have gone wrong without it.
+### User Output: Before Research
+
+```
+I'm about to research your request. Here's what I need to figure out:
+1. [specific thing] — because [why it matters for YOUR request]
+2. [specific thing] — because [risk if we skip this]
+3. [specific thing] — because [what could go wrong]
+```
+
+### User Output: After Research
+
+```
+Research complete. Here's what I found and why it matters:
+1. [finding] — this means [impact on your project]
+   Without this: [what would have gone wrong]
+2. [finding] — this changes [specific decision]
+   Without this: [concrete mistake avoided]
+```
+
+### User Output: Before Clarification Questions
+
+```
+I have [N] questions before we proceed. These aren't bureaucratic — each one prevents a specific mistake:
+1. [question] — asking because [what goes wrong if I assume]
+2. [question] — asking because [concrete risk]
+```
+
+### User Output: Between Sub-Workflows
+
+```
+[Previous workflow] complete. Moving to [next workflow] because [concrete reason].
+Key input from previous step: [what carries forward and why it matters].
+```
 
 **File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-clarifier-reasoning.md` with structured entries per decision:
 - **Trigger** — what prompted the decision

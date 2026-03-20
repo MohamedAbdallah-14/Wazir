@@ -45,6 +45,33 @@ Rules:
 5. Write the approved design to `.wazir/runs/latest/clarified/design.md` (if inside a pipeline run) or `docs/plans/YYYY-MM-DD-<topic>-design.md` (if standalone).
 6. After user approves the design concept, the reviewer role runs the design-review loop with `--mode design-review` using canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. The designer resolves any findings. If the design-review loop completes all passes clean, hand off to `wz:writing-plans`. Planning does not start until design-review is complete.
 
+### User Output: Before Exploration
+
+```
+Exploring design approaches for [concept]. Key constraints:
+1. [constraint] — because [impact on design]
+2. [constraint] — because [impact on design]
+```
+
+### User Output: Approach Proposals
+
+```
+Approach [A/B/C]: [one-line summary]
+- Enables: [what this unlocks]
+- Prevents: [what this rules out]
+- Risk: [main risk]
+- Effort: [S/M/L]
+Recommendation: [approach] because [trade-off reasoning]
+```
+
+### User Output: After Approval
+
+```
+Design approved: [approach name]
+Key decisions locked: [list]
+Moving to implementation planning.
+```
+
 Required outputs:
 
 - design summary
