@@ -557,6 +557,8 @@ Extract durable learnings from the completed run:
 - Findings that recur across 2+ runs → auto-proposed as learnings
 - Learnings require explicit scope tags (roles, stacks, concerns)
 
+**Learn workflow completion guard:** If `workflow_policy.learn.enabled: true` in run config AND no files exist in `memory/learnings/proposed/` matching the current run ID pattern (`run-<current-id>-*.md`): log a warning finding: 'Learn workflow enabled but no proposed learnings written for this run'. This ensures the learn workflow always produces output when enabled.
+
 ### 4c: Prepare Next (planner role)
 
 Prepare context and handoff for the next run:
