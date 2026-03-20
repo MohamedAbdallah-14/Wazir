@@ -92,6 +92,9 @@ Parse the request for inline modifiers before the main text:
 
 Recognized modifiers:
 - **Depth:** `quick`, `deep` (standard is default when omitted)
+- **Interaction mode:** `auto`, `interactive` (guided is default when omitted)
+  - `/wazir auto fix the auth bug` → interaction_mode = auto
+  - `/wazir interactive design the onboarding` → interaction_mode = interactive
 - **Intent:** `bugfix`, `feature`, `refactor`, `docs`, `spike`
 
 ## Step 2: Check Prerequisites
@@ -219,6 +222,7 @@ parsed_intent: feature
 entry_point: "/wazir"
 
 depth: standard
+interaction_mode: guided  # auto | guided | interactive
 
 # Workflow policy — individual workflows within each phase
 workflow_policy:
@@ -287,6 +291,54 @@ wazir report phase --run <run-id> --phase init
 ```
 
 Output the report content to the user in the conversation.
+
+---
+
+# Interaction Modes
+
+The `interaction_mode` field in run-config controls how the pipeline interacts with the user:
+
+| Mode | Inline modifier | Behavior | Best for |
+|------|----------------|----------|----------|
+| **`guided`** | (default) | Pipeline runs, pauses at phase checkpoints for user approval. Current default behavior. | Most work |
+| **`auto`** | `/wazir auto ...` | No human checkpoints. Codex reviews all. Gating agent decides continue/loop_back/escalate. Stops ONLY on escalate. | Overnight, clear spec, well-understood domain |
+| **`interactive`** | `/wazir interactive ...` | More questions, more discussion, co-designs with user. Researcher presents options. Executor checks approach before coding. | Ambiguous requirements, new domain, learning |
+
+## `auto` mode constraints
+
+- **Codex REQUIRED** — refuse to start auto mode if `multi_tool.codex` is not configured in `.wazir/state/config.json`. Error: "Auto mode requires an external reviewer (Codex). Configure it first or use guided mode."
+- **On escalate:** STOP immediately, write the escalation reason to `.wazir/runs/<id>/escalations/`, and wait for user input
+- **Wall-clock limit:** default 4 hours. If exceeded, stop with escalation.
+- **Never auto-commits to main** — always work on feature branch
+- All checkpoints (AskUserQuestion) are skipped — gating agent evaluates phase reports and decides
+
+## `guided` mode (default)
+
+Current behavior — no changes needed. Checkpoints at phase boundaries, user approves before advancing.
+
+## `interactive` mode
+
+- **Clarifier:** asks more detailed questions, presents research findings with options: "I found 3 approaches — which interests you?"
+- **Executor:** checks approach before coding: "I'm about to implement auth with Supabase — sound right?"
+- **Reviewer:** discusses findings with user, not just presents verdict: "I found a potential auth bypass — here's why I think it's high severity, do you agree?"
+- Slower but highest quality for complex/ambiguous work
+
+## Mode checking in phase skills
+
+All phase skills check `interaction_mode` from run-config at every checkpoint:
+
+```
+# Read from run-config
+interaction_mode = run_config.interaction_mode ?? 'guided'
+
+# At each checkpoint:
+if interaction_mode == 'auto':
+    # Skip checkpoint, let gating agent decide
+elif interaction_mode == 'interactive':
+    # More detailed question, present options, discuss
+else:
+    # guided — standard checkpoint with AskUserQuestion
+```
 
 ---
 

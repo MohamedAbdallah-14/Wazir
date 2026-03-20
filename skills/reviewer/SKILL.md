@@ -242,6 +242,14 @@ const recurring = getRecurringFindingHashes(db, 2);
 
 This is how Wazir evolves — findings that recur across runs become accepted learnings injected into future executor context, preventing the same mistakes.
 
+## Interaction Mode Awareness
+
+Read `interaction_mode` from run-config:
+
+- **`auto`:** No user checkpoints. Present verdict and let gating agent decide. On escalation, write reason and STOP.
+- **`guided`:** Standard behavior — present verdict, ask user how to proceed.
+- **`interactive`:** Discuss findings with user: "I found a potential auth bypass in `src/auth.js:42` — here's why I rated it high severity. Do you agree, or is there context I'm missing?" Show detailed reasoning for each dimension score.
+
 ## CLI/Context-Mode Enforcement
 
 In ALL review modes, check for these violations:

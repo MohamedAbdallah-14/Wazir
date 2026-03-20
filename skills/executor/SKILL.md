@@ -141,6 +141,14 @@ This is NOT a review loop — it produces proof, not findings. If verification f
 - Use `wazir recall file <path> --tier L1` for files you need to understand but not modify
 - When dispatching subagents, include: "Use wazir index search-symbols before direct file reads."
 
+## Interaction Mode Awareness
+
+Read `interaction_mode` from run-config at the start of execution:
+
+- **`auto`:** Skip user checkpoints. On escalation, write reason to `.wazir/runs/<id>/escalations/` and STOP (do not proceed without user). Gating agent evaluates phase reports.
+- **`guided`:** Standard behavior — ask user on escalation, show per-task completion summaries.
+- **`interactive`:** Before implementing each task, briefly describe the approach and ask: "About to implement [task] using [approach] — sound right?" Show more detail in per-task summaries.
+
 ## Escalation
 
 Pause and ask the user when:
