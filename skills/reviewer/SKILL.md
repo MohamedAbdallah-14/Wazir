@@ -45,7 +45,7 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 
 | Mode | Invoked during | Prerequisites | Dimensions | Output |
 |------|---------------|---------------|------------|--------|
-| `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
+| `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 9 final-review dims, scored 0-90 | Scored verdict (PASS/FAIL) |
 | `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Pass/fix loop, no score |
 | `design-review` | After design approval | Design artifact, approved spec | 5 design-review dims (canonical) | Pass/fix loop, no score |
 | `plan-review` | After planning | Draft plan artifact | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
@@ -107,7 +107,7 @@ If any file is missing:
 
 **Before starting this phase, output to the user:**
 
-> **Final Review** — About to run adversarial 7-dimension review comparing your implementation against the original input, not just the task specs. The executor's per-task reviewer already validated correctness per-task — this catches drift between what you asked for and what was actually built.
+> **Final Review** — About to run adversarial 9-dimension review comparing your implementation against the original input, not just the task specs. The executor's per-task reviewer already validated correctness per-task — this catches drift between what you asked for and what was actually built.
 >
 > **Why this matters:** Without this, implementation drift ships undetected. Per-task review confirms each task matches its spec, but cannot catch: tasks that collectively miss the original intent, scope creep that added unrequested features, or acceptance criteria that were rewritten to match implementation instead of input.
 >
@@ -115,7 +115,13 @@ If any file is missing:
 
 **Input:** Read the ORIGINAL user input (`.wazir/input/briefing.md`, `input/` directory files) and compare against what was built. This catches intent drift that task-level review misses.
 
-Perform adversarial review across 7 dimensions:
+### Input Sources (read before scoring)
+1. Read the original input: `.wazir/input/briefing.md` or `.wazir/runs/<id>/sources/input.md`
+2. Read user feedback: `.wazir/runs/<id>/user-input-log.ndjson` (parse each JSON line)
+3. Count distinct items/requirements in the original input
+4. If `user-input-log.ndjson` does not exist: log a finding — "User input not captured — cannot verify intent alignment" (severity: warning)
+
+Perform adversarial review across 9 dimensions:
 
 1. **Correctness** — Does the code do what the original input asked for? *(catches: logic errors, wrong behavior, spec violations)*
 2. **Completeness** — Are all requirements from the original input met? *(catches: missing features, unimplemented acceptance criteria, partially delivered items)*
@@ -124,6 +130,8 @@ Perform adversarial review across 7 dimensions:
 5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT) *(catches: scope creep, plan deviations, unauthorized changes, gold-plating)*
 6. **Quality** — Code style, naming, error handling, security *(catches: security vulnerabilities, poor error handling, inconsistent naming, missing input validation)*
 7. **Documentation** — Changelog entries, commit messages, comments *(catches: missing changelogs, wrong commit messages, stale comments, undocumented breaking changes)*
+8. **Intent Alignment** — Does the implementation match what the user originally asked for, including any mid-run corrections from `user-input-log.ndjson`? Compare against the RAW INPUT, not the spec (which may have drifted). Score 0 if implementation contradicts a user correction. *(catches: spec drift from user intent, ignored user corrections, misinterpreted requirements)*
+9. **Scope Coverage** — Count distinct items in the original input. Count items implemented (via commits/diffs). If any input item is missing from the implementation, flag as HIGH finding with the specific missing item. Score = (implemented items / input items) * 10. *(catches: dropped requirements, partial delivery, silent scope reduction)*
 
 ## Context Retrieval
 
@@ -134,14 +142,14 @@ Perform adversarial review across 7 dimensions:
 
 ## Scoring (`final` mode)
 
-Score each dimension 0-10. Total out of 70.
+Score each dimension 0-10. Total out of 90 (9 dimensions x 10 each).
 
 | Verdict | Score | Action |
 |---------|-------|--------|
-| **PASS** | 56+ | Ready for PR or merge |
-| **NEEDS MINOR FIXES** | 42-55 | Auto-fix and re-review |
-| **NEEDS REWORK** | 28-41 | Re-run affected tasks |
-| **FAIL** | 0-27 | Fundamental issues |
+| **PASS** | 72+ | Ready for PR or merge |
+| **NEEDS MINOR FIXES** | 54-71 | Auto-fix and re-review |
+| **NEEDS REWORK** | 36-53 | Re-run affected tasks |
+| **FAIL** | 0-35 | Fundamental issues |
 
 ## Two-Tier Review Flow
 
@@ -453,7 +461,27 @@ Write to `.wazir/runs/<run-id>/handoff.md`:
 
 Throughout the reviewer phase, produce reasoning at two layers:
 
-**Conversation (Layer 1):** Before each review pass, explain what dimensions are being checked and why. After findings, explain the reasoning behind severity assignments.
+### User Output: Before Review
+
+```
+Running [N]-dimension adversarial review against the original input.
+Why: without this, implementation drift from your request ships undetected.
+Checking: [dimension list]
+```
+
+### User Output: Per Dimension
+
+```
+[Dimension]: [score]/10 — [specific reason citing evidence from the code]
+```
+
+### User Output: After Review
+
+```
+Review complete. Verdict: [PASS/FAIL] ([score]/[max])
+[N] findings across [M] dimensions.
+Most critical: [top finding summary]
+```
 
 **File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-reviewer-reasoning.md` with structured entries:
 - **Trigger** — what prompted the finding (e.g., "diff adds SQL query without parameterization")
@@ -471,7 +499,7 @@ Key reviewer reasoning moments: severity assignments, PASS/FAIL decisions, dimen
 
 > **Final Review complete.**
 >
-> **Found:** [N] findings across 7 dimensions — [N] blocking, [N] warnings, [N] notes. Score: [score]/70 ([VERDICT]).
+> **Found:** [N] findings across 9 dimensions — [N] blocking, [N] warnings, [N] notes. Score: [score]/90 ([VERDICT]).
 >
 > **Without this phase:** [N] blocking issues would have shipped — including [specific examples: e.g., "missing error handler on /api/users endpoint", "auth middleware not wired to 3 routes", "CHANGELOG missing entry for breaking API change"]
 >
@@ -479,7 +507,7 @@ Key reviewer reasoning moments: severity assignments, PASS/FAIL decisions, dimen
 
 Present the verdict and offer next steps:
 
-> **Review complete: [VERDICT] ([score]/70)**
+> **Review complete: [VERDICT] ([score]/90)**
 >
 > [Score breakdown and findings summary]
 >

@@ -28,9 +28,9 @@ These are two structurally different constructs:
 | | Per-Task Review | Final Review |
 |---|---|---|
 | **When** | During execution, after each task | After all execution + verification complete |
-| **Dimensions** | 5 task-execution dims (correctness, tests, wiring, drift, quality) | 7 scored dims (correctness, completeness, wiring, verification, drift, quality, documentation) |
+| **Dimensions** | 5 task-execution dims (correctness, tests, wiring, drift, quality) | 9 scored dims (correctness, completeness, wiring, verification, drift, quality, documentation, intent alignment, scope coverage) |
 | **Scope** | Single task's uncommitted changes | Entire implementation vs spec/plan |
-| **Output** | Pass/fix loop, no score | Scored verdict (0-70), PASS/FAIL |
+| **Output** | Pass/fix loop, no score | Scored verdict (0-90), PASS/FAIL |
 | **Workflow** | Inline in execution flow | `workflows/review.md` |
 | **Skill** | `wz:reviewer` in `task-review` mode | `wz:reviewer` in `final` mode |
 | **Log filename** | `<phase>-task-<NNN>-review-pass-<N>.md` | `final-review.md` |
@@ -235,7 +235,7 @@ For code artifacts, use `codex review -c model="$CODEX_MODEL" --uncommitted` (or
 For each task during execution:
 
 1. Implement the task (changes are uncommitted).
-2. Review the uncommitted changes using the **5 task-execution dimensions** (NOT the 7 final-review dimensions):
+2. Review the uncommitted changes using the **5 task-execution dimensions** (NOT the 9 final-review dimensions):
    ```bash
    CODEX_MODEL=$(jq -r '.multi_tool.codex.model // empty' .wazir/state/config.json 2>/dev/null)
 CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
@@ -314,7 +314,7 @@ Used for per-task review during execution:
 4. **Drift** -- matches task spec
 5. **Quality** -- naming, error handling
 
-### Final Review Dimensions (7)
+### Final Review Dimensions (9)
 
 Used for `workflows/review.md` scored gate:
 
@@ -325,8 +325,10 @@ Used for `workflows/review.md` scored gate:
 5. **Drift** -- does the implementation match the approved plan?
 6. **Quality** -- code style, naming, error handling, security
 7. **Documentation** -- changelog entries, commit messages, comments
+8. **Intent Alignment** -- does the implementation match what the user originally asked for, including mid-run corrections from `user-input-log.ndjson`? Compare against the RAW INPUT, not the spec. Score 0 if implementation contradicts a user correction.
+9. **Scope Coverage** -- count distinct items in the original input vs items implemented. Flag missing items as HIGH. Score = (implemented / input items) * 10.
 
-The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. `workflows/review.md` is not modified by this pattern.
+The final review dimensions are the existing 9 from `skills/reviewer/SKILL.md`. `workflows/review.md` is not modified by this pattern.
 
 ---
 
@@ -334,11 +336,11 @@ The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. 
 
 | Depth | Research | Spec | Design-Review | Plan | Task Execution | Final Review |
 |-------|----------|------|---------------|------|----------------|--------------|
-| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
-| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
-| Deep | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-7, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
+| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 9 dims, 1 pass |
+| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 9 dims, 1 pass |
+| Deep | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-7, 7 passes | dims 1-5, 7 passes | always 9 dims, 1 pass |
 
-Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 7 dimensions -- it is a gate, not a loop.
+Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 9 dimensions -- it is a gate, not a loop.
 
 ---
 
@@ -386,7 +388,7 @@ The reviewer skill operates in different modes depending on the phase. **Mode is
 
 | Mode | Invoked during | Prerequisites | Dimensions | Output |
 |------|---------------|---------------|------------|--------|
-| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
+| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 9 final-review dims, scored 0-90 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
 | `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Findings with severity, no score |
 | `design-review` | After design approval | Design artifact, approved spec, accessibility guidelines | 5 design-review dims (canonical) | Findings with severity (blocking/advisory) |
 | `plan-review` | After planning | Draft plan, approved spec, design artifact | 7 plan dims | Findings with severity, no score |
@@ -502,7 +504,7 @@ These are the fixed rubrics — no ad-hoc dimension selection:
 | design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
 | plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy, Input coverage |
 | task-review | Correctness, Tests, Wiring, Drift, Quality |
-| final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
+| final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation, Intent Alignment, Scope Coverage |
 
 ### Scoring Rules
 
