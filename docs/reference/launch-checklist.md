@@ -56,7 +56,7 @@ Show HN: Wazir – Engineering OS kit for AI coding agents (Claude, Codex, Gemin
 ### First comment
 Post a comment immediately after submission explaining:
 1. What problem Wazir solves (AI agents lack structured engineering workflows)
-2. How it works (10 canonical roles, 4-phase pipeline with 15 workflows, 315 expertise modules)
+2. How it works (10 canonical roles, 15-workflow pipeline, 315 expertise modules)
 3. What makes it different (host-native, works across Claude/Codex/Gemini/Cursor)
 4. Quick install: `npx @wazir-dev/cli init`
 5. Invite feedback -- HN readers appreciate genuine requests for input

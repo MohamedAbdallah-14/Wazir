@@ -179,7 +179,7 @@ Run `wazir capture usage` at the end of a session to see the savings:
 
 **8 hook contracts for structural guardrails.** These enforce protected path writes (exit 42), loop caps (exit 43), and session observability. [Hooks](docs/reference/hooks.md)
 
-**20+ callable skills.** `/wazir` runs the full pipeline. `/wazir audit security` runs a codebase audit. `/wazir prd` generates a product requirements document from completed runs. Plus TDD, verification, debugging, and more -- each enforcing an exact procedure with evidence at every step. [Skills](docs/reference/skills.md)
+**28 callable skills.** `/wazir` runs the full pipeline. `/wazir audit security` runs a codebase audit. `/wazir prd` generates a product requirements document from completed runs. Plus TDD, verification, debugging, and more -- each enforcing an exact procedure with evidence at every step. [Skills](docs/reference/skills.md)
 
 **Built-in text humanization.** The composition engine loads domain-specific language rules per role: code rules for the executor (commit messages, comments), content rules for the content-author (microcopy, glossary), and technical-docs rules for the specifier, planner, reviewer, and learner. A 61-item vocabulary blacklist, 24-pattern sentence taxonomy, and two-pass self-audit checklist keep all output sounding like it was written by a person.
 
@@ -264,7 +264,7 @@ The pipeline, roles, and expertise modules are stable and used in production by 
 
 What's solid:
 
-- The 4-phase pipeline (15 workflows) and 10 role contracts
+- The 15-workflow pipeline and 10 role contracts
 - 315 expertise modules across 12 domains
 - Host exports for Claude, Codex, Gemini, and Cursor
 - The composition engine and tiered recall system
