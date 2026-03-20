@@ -77,7 +77,7 @@ AI agents love to announce they're finished. Wazir doesn't care. Every phase loo
 
 ## The Pipeline
 
-Every task flows through 14 phases. Three are adversarial review gates that block progress until the reviewer explicitly approves. Rejection loops back to the authoring phase.
+Every task flows through 15 workflows grouped into 4 phases. Three are adversarial review gates that block progress until the reviewer explicitly approves. Rejection loops back to the authoring phase.
 
 ```mermaid
 graph LR
@@ -169,7 +169,7 @@ Run `wazir capture usage` at the end of a session to see the savings:
 
 **10 canonical role contracts.** Clarifier, researcher, specifier, content-author, designer, planner, executor, verifier, reviewer, learner. Each has enforceable inputs, outputs, and escalation rules. [Roles reference](docs/reference/roles-reference.md)
 
-**Adversarial review at three chokepoints.** Spec-challenge, plan-review, and final review run by the reviewer role, never the phase author. Nine hard approval gates span the 14-phase pipeline. Nothing advances without explicit clearance. [Architecture](docs/concepts/architecture.md)
+**Adversarial review at three chokepoints.** Spec-challenge, plan-review, and final review run by the reviewer role, never the phase author. Nine hard approval gates span the 15-workflow pipeline. Nothing advances without explicit clearance. [Architecture](docs/concepts/architecture.md)
 
 **315 curated expertise modules across 12 domains.** Loaded selectively per role per phase via a 4-layer composition engine. Max 15 modules per dispatch, token budget enforced. Wazir ships with 315. Yours could be next. [Expertise index](docs/reference/expertise-index.md)
 
@@ -189,15 +189,15 @@ Run `wazir capture usage` at the end of a session to see the savings:
 
 ## Compared to Other Tools
 
-The AI coding tool space is fragmenting. Developers bolt together separate plugins for workflow management, specification, memory, output compression, and orchestration. Not every project needs 14 phases. For a weekend hack, prompting is fine. For production, you want structure.
+The AI coding tool space is fragmenting. Developers bolt together separate plugins for workflow management, specification, memory, output compression, and orchestration. Not every project needs 15 workflows. For a weekend hack, prompting is fine. For production, you want structure.
 
 
 | Dimension              | Wazir                         | [Superpowers](https://github.com/obra/superpowers) | [Spec-Kit](https://github.com/github/spec-kit) | [Micro-Agent](https://github.com/BuilderIO/micro-agent) | [Distill](https://github.com/samuelfaj/distill) | [Claude-Mem](https://github.com/thedotmack/claude-mem) | [OMC](https://github.com/yeachan-heo/oh-my-claudecode) |
 | ---------------------- | ----------------------------- | -------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------ |
 | **Category**           | Engineering OS                | Skills framework                                   | Spec toolkit                                   | Code gen agent                                          | Output compressor                               | Memory plugin                                          | Orchestration layer                                    |
-| **Scope**              | Full lifecycle (14 phases)    | Dev workflow (~20 skills)                          | Specify / Plan / Implement                     | Single-file TDD loop                                    | CLI output compression                          | Session memory                                         | Multi-agent orchestration                              |
+| **Scope**              | Full lifecycle (15 workflows) | Dev workflow (~20 skills)                          | Specify / Plan / Implement                     | Single-file TDD loop                                    | CLI output compression                          | Session memory                                         | Multi-agent orchestration                              |
 | **Enforced roles**     | 10 canonical, contractual     | None (skills only)                                 | None                                           | None                                                    | None                                            | None                                                   | 32 agents (behavioral)                                 |
-| **Phase model**        | 14 explicit, artifact-gated   | 7-step (advisory)                                  | 3-step                                         | 1 (generate/test)                                       | N/A                                             | N/A                                                    | 5-step pipeline                                        |
+| **Phase model**        | 15 explicit, artifact-gated   | 7-step (advisory)                                  | 3-step                                         | 1 (generate/test)                                       | N/A                                             | N/A                                                    | 5-step pipeline                                        |
 | **Adversarial review** | 3 gate phases                 | Code review skill                                  | No                                             | No                                                      | No                                              | No                                                     | team-verify step                                       |
 | **Context management** | L0/L1 tiered recall           | None                                               | None                                           | None                                                    | LLM compression                                 | Vector DB (ChromaDB)                                   | Token routing                                          |
 | **Schema validation**  | 19 JSON schemas               | No                                                 | No                                             | No                                                      | No                                              | No                                                     | No                                                     |
@@ -264,7 +264,7 @@ The pipeline, roles, and expertise modules are stable and used in production by 
 
 What's solid:
 
-- The 14-phase pipeline and 10 role contracts
+- The 4-phase pipeline (15 workflows) and 10 role contracts
 - 315 expertise modules across 12 domains
 - Host exports for Claude, Codex, Gemini, and Cursor
 - The composition engine and tiered recall system
