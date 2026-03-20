@@ -159,7 +159,6 @@ describe('autoInit', () => {
     assert.equal(config.model_mode, 'claude-only');
     assert.equal(config.default_depth, 'standard');
     assert.equal(config.default_intent, 'feature');
-    assert.equal(config.team_mode, 'sequential');
     assert.equal(config.auto_initialized, true);
   });
 

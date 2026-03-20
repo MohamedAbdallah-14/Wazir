@@ -4,6 +4,64 @@ import path from 'node:path';
 import { readYamlFile } from '../loaders.js';
 import { getRunPaths, readPhaseExitEvents } from '../capture/store.js';
 
+/**
+ * Validates that every enabled workflow has a phase_exit event
+ * in the run's events.ndjson before the run can be marked complete.
+ *
+ * If a run-config with workflow_policy exists, only workflows with
+ * enabled: true are checked. Otherwise falls back to the manifest list.
+ */
+export function validateRunCompletion(runDir, manifestPath) {
+  const manifest = readYamlFile(manifestPath);
+  const declaredWorkflows = manifest.workflows ?? [];
+
+  if (declaredWorkflows.length === 0) {
+    return { complete: true, missing: [] };
+  }
+
+  // Filter to enabled workflows if run-config exists
+  const runConfigPath = path.join(runDir, 'run-config.yaml');
+  let enabledWorkflows = declaredWorkflows;
+  if (fs.existsSync(runConfigPath)) {
+    try {
+      const runConfig = readYamlFile(runConfigPath);
+      const policy = runConfig.workflow_policy;
+      if (policy && typeof policy === 'object') {
+        enabledWorkflows = declaredWorkflows.filter(w => {
+          const wPolicy = policy[w] ?? policy[w.replace(/_/g, '-')];
+          // If no policy entry, assume enabled; if entry exists, check enabled field
+          return wPolicy ? (wPolicy.enabled !== false) : true;
+        });
+      }
+    } catch {
+      // If run-config can't be read, fall back to full manifest list
+    }
+  }
+
+  const eventsPath = path.join(runDir, 'events.ndjson');
+  const completedWorkflows = new Set();
+
+  if (fs.existsSync(eventsPath)) {
+    const content = fs.readFileSync(eventsPath, 'utf8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const event = JSON.parse(trimmed);
+        if (event.event === 'phase_exit' && event.status === 'completed' && event.phase) {
+          completedWorkflows.add(event.phase);
+        }
+      } catch {
+        // Skip malformed lines
+      }
+    }
+  }
+
+  const missing = enabledWorkflows.filter(w => !completedWorkflows.has(w));
+
+  return { complete: missing.length === 0, missing };
+}
+
 export function evaluateScopeCoverageGuard(payload) {
   const { input_item_count: inputCount, plan_task_count: planCount, user_approved_reduction: userApproved } = payload;
 

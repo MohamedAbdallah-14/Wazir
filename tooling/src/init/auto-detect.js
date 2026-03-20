@@ -244,8 +244,6 @@ export function autoInit(projectRoot, opts = {}) {
     model_mode: 'claude-only',
     default_depth: 'standard',
     default_intent: 'feature',
-    team_mode: 'sequential',
-    parallel_backend: 'none',
     context_mode: contextMode,
     detected_host: host.host,
     detected_stack: stack,

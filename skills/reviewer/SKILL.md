@@ -48,7 +48,7 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 | `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
 | `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Pass/fix loop, no score |
 | `design-review` | After design approval | Design artifact, approved spec | 5 design-review dims (canonical) | Pass/fix loop, no score |
-| `plan-review` | After planning | Draft plan artifact | 7 plan dims | Pass/fix loop, no score |
+| `plan-review` | After planning | Draft plan artifact | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
 | `task-review` | During execution, per task | Uncommitted changes or `--base` SHA | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
 | `research-review` | During discover | Research artifact | 5 research dims | Pass/fix loop, no score |
 | `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Pass/fix loop, no score |
@@ -88,24 +88,42 @@ If any file is missing:
 ### `task-review` mode
 1. Uncommitted changes exist for the current task, or a `--base` SHA is provided for committed changes.
 2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+3. **Commit discipline check:** If uncommitted changes span work from multiple tasks (e.g., files from task N and task N+1 are both modified), REJECT immediately: "REJECTED: Multiple tasks in single commit. Split into per-task commits before review." This is a blocking finding — no other dimensions are evaluated until resolved.
+4. **Security sensitivity check:** Run `detectSecurityPatterns` from `tooling/src/checks/security-sensitivity.js` against the diff. If `triggered === true`, add the 6 security review dimensions (injection, auth bypass, data exposure, CSRF/SSRF, XSS, secrets leakage) to the standard 5 task-execution dimensions for this review pass. Security findings use severity levels: critical (exploitable), high (likely exploitable), medium (defense-in-depth gap), low (best-practice deviation).
 
 ### `spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
 2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+3. **`plan-review` additional dimension — Input Coverage:**
+   - Read the original input/briefing from `.wazir/input/briefing.md` and any `input/*.md` files
+   - Count distinct items/requirements in the input
+   - Count tasks in the execution plan
+   - If `tasks_in_plan < items_in_input` → **HIGH** finding: "Plan covers [N] of [M] input items. Missing: [list of uncovered items]"
+   - If `tasks_in_plan >= items_in_input` → dimension passes
+   - One task MAY cover multiple input items if justified in the task description
+   - This is the review-level enforcement of the "no scope reduction" rule
 
 ## Review Process (`final` mode)
+
+**Before starting this phase, output to the user:**
+
+> **Final Review** — About to run adversarial 7-dimension review comparing your implementation against the original input, not just the task specs. The executor's per-task reviewer already validated correctness per-task — this catches drift between what you asked for and what was actually built.
+>
+> **Why this matters:** Without this, implementation drift ships undetected. Per-task review confirms each task matches its spec, but cannot catch: tasks that collectively miss the original intent, scope creep that added unrequested features, or acceptance criteria that were rewritten to match implementation instead of input.
+>
+> **Looking for:** Logic errors, missing features, dead code, unsubstantiated "it works" claims, scope creep, security gaps, stale documentation
 
 **Input:** Read the ORIGINAL user input (`.wazir/input/briefing.md`, `input/` directory files) and compare against what was built. This catches intent drift that task-level review misses.
 
 Perform adversarial review across 7 dimensions:
 
-1. **Correctness** — Does the code do what the original input asked for?
-2. **Completeness** — Are all requirements from the original input met?
-3. **Wiring** — Are all paths connected end-to-end?
-4. **Verification** — Is there evidence (tests, type checks) for each claim?
-5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT)
-6. **Quality** — Code style, naming, error handling, security
-7. **Documentation** — Changelog entries, commit messages, comments
+1. **Correctness** — Does the code do what the original input asked for? *(catches: logic errors, wrong behavior, spec violations)*
+2. **Completeness** — Are all requirements from the original input met? *(catches: missing features, unimplemented acceptance criteria, partially delivered items)*
+3. **Wiring** — Are all paths connected end-to-end? *(catches: dead code, disconnected paths, missing imports, orphaned routes)*
+4. **Verification** — Is there evidence (tests, type checks) for each claim? *(catches: false claims of "it works" without evidence, untested code paths, missing type coverage)*
+5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT) *(catches: scope creep, plan deviations, unauthorized changes, gold-plating)*
+6. **Quality** — Code style, naming, error handling, security *(catches: security vulnerabilities, poor error handling, inconsistent naming, missing input validation)*
+7. **Documentation** — Changelog entries, commit messages, comments *(catches: missing changelogs, wrong commit messages, stale comments, undocumented breaking changes)*
 
 ## Context Retrieval
 
@@ -224,6 +242,24 @@ const recurring = getRecurringFindingHashes(db, 2);
 
 This is how Wazir evolves — findings that recur across runs become accepted learnings injected into future executor context, preventing the same mistakes.
 
+## Interaction Mode Awareness
+
+Read `interaction_mode` from run-config:
+
+- **`auto`:** No user checkpoints. Present verdict and let gating agent decide. On escalation, write reason and STOP.
+- **`guided`:** Standard behavior — present verdict, ask user how to proceed.
+- **`interactive`:** Discuss findings with user: "I found a potential auth bypass in `src/auth.js:42` — here's why I rated it high severity. Do you agree, or is there context I'm missing?" Show detailed reasoning for each dimension score.
+
+## CLI/Context-Mode Enforcement
+
+In ALL review modes, check for these violations:
+
+1. **Index usage enforcement:** If the agent performed >5 direct file reads (Read tool) without a preceding `wazir index search-symbols` query, flag as **[warning]** finding: "Agent performed [N] direct file reads without using wazir index. Use `wazir index search-symbols <query>` before reading files to reduce context consumption."
+
+2. **Context-mode enforcement:** If the agent ran a large-category command (test runners, builds, diffs, dependency trees, linting — as classified by `hooks/routing-matrix.json`) using native Bash instead of context-mode tools (when context-mode is available), flag as **[warning]** finding: "Large command `[cmd]` run without context-mode. Route through `mcp__plugin_context-mode_context-mode__execute` to reduce context usage."
+
+These are warnings, not blocking findings — they improve efficiency but don't affect correctness.
+
 ## Task-Review Log Filenames
 
 In `task-review` mode, use task-scoped log filenames and cap tracking:
@@ -237,6 +273,13 @@ Save review results to `.wazir/runs/latest/reviews/review.md` with:
 - Rationale tied to evidence
 - Score breakdown
 - Verdict
+
+Run the phase report and display it to the user:
+```bash
+wazir report phase --run <run-id> --phase <review-mode>
+```
+
+Output the report content to the user in the conversation.
 
 ## Phase Report Generation
 
@@ -406,7 +449,33 @@ Write to `.wazir/runs/<run-id>/handoff.md`:
 - Do NOT mutate `input/` — it belongs to the user
 - Do NOT auto-load proposed learnings into the next run
 
+## Reasoning Output
+
+Throughout the reviewer phase, produce reasoning at two layers:
+
+**Conversation (Layer 1):** Before each review pass, explain what dimensions are being checked and why. After findings, explain the reasoning behind severity assignments.
+
+**File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-reviewer-reasoning.md` with structured entries:
+- **Trigger** — what prompted the finding (e.g., "diff adds SQL query without parameterization")
+- **Options considered** — severity options, fix approaches
+- **Chosen** — assigned severity and recommendation
+- **Reasoning** — why this severity level
+- **Confidence** — high/medium/low
+- **Counterfactual** — what would ship if this finding were missed
+
+Key reviewer reasoning moments: severity assignments, PASS/FAIL decisions, dimension score justifications, and escalation decisions.
+
 ## Done
+
+**After completing this phase, output to the user:**
+
+> **Final Review complete.**
+>
+> **Found:** [N] findings across 7 dimensions — [N] blocking, [N] warnings, [N] notes. Score: [score]/70 ([VERDICT]).
+>
+> **Without this phase:** [N] blocking issues would have shipped — including [specific examples: e.g., "missing error handler on /api/users endpoint", "auth middleware not wired to 3 routes", "CHANGELOG missing entry for breaking API change"]
+>
+> **Changed because of this work:** [List of issues caught and fixed during review passes, score improvement from first to final pass]
 
 Present the verdict and offer next steps:
 
@@ -416,8 +485,12 @@ Present the verdict and offer next steps:
 >
 > **Learnings proposed:** [count] (see `memory/learnings/proposed/`)
 > **Handoff:** `.wazir/runs/<run-id>/handoff.md`
->
-> **What would you like to do?**
-> 1. **Create a PR** (if PASS)
-> 2. **Auto-fix and re-review** (if MINOR FIXES)
-> 3. **Review findings in detail**
+
+Ask the user via AskUserQuestion:
+- **Question:** "How would you like to proceed with the review results?"
+- **Options:**
+  1. "Create a PR" *(Recommended if PASS)*
+  2. "Auto-fix and re-review" *(Recommended if MINOR FIXES)*
+  3. "Review findings in detail"
+
+Wait for the user's selection before continuing.

@@ -54,7 +54,12 @@ function success(payload, options = {}) {
     };
   }
 
-  let output = `${payload.run_id} ${payload.phase} ${payload.status}\n`;
+  const parentPhase = payload.parent_phase ?? payload.phase;
+  const workflow = payload.workflow;
+  const phaseLabel = workflow
+    ? `Phase: ${parentPhase} > Workflow: ${workflow}`
+    : `Phase: ${parentPhase}`;
+  let output = `${payload.run_id} ${phaseLabel} ${payload.status}\n`;
 
   if (payload.savings_summary) {
     output += `${payload.savings_summary}\n`;

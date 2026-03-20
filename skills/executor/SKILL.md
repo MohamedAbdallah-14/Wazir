@@ -61,11 +61,28 @@ Run these checks before implementing:
 
 If either fails, surface the failure and do NOT proceed until resolved.
 
+> **Output to the user** before execution begins:
+> Each task is implemented with TDD (test first, then code) and reviewed before commit. This catches correctness bugs, missing tests, wiring errors, and spec drift at the task level — before they compound across tasks and become expensive to fix.
+
+## Security Awareness
+
+Before implementing each task, check if the task touches security-sensitive areas. Run `detectSecurityPatterns` (from `tooling/src/checks/security-sensitivity.js`) mentally against the planned changes. If security patterns are detected (auth, token, password, session, SQL, fetch, upload, secret, env, API key, cookie, CORS, CSRF, JWT, OAuth, encrypt, decrypt, hash, salt):
+
+- Load security expertise from the composition map for the relevant concern
+- Apply defense-in-depth: validate inputs, parameterize queries, escape outputs, use secure defaults
+- The per-task reviewer will automatically add security dimensions when patterns are detected — expect and address security findings
+
 ## Execute (execute workflow)
 
 Implement tasks in the order defined by the execution plan.
 
 For each task:
+
+**Before starting each task, output to the user:**
+
+> **Implementing Task [NNN]: [task title]** — This enables [what downstream tasks or user-facing features depend on this task].
+>
+> **Looking for:** [Key technical concerns for this specific task — e.g., "correct API contract", "database migration safety", "backwards compatibility"]
 
 1. **Read** the task from the execution plan
 2. **Implement** using TDD (write test first, make it pass, refactor)
@@ -82,14 +99,28 @@ For each task:
    - See `docs/reference/review-loop-pattern.md` for full protocol
    - NOTE: this is the per-task review (5 dims), not the final scored review (7 dims) which runs in Phase 4
 5. **Commit** — only after review passes, commit with conventional commit format: `<type>(<scope>): <description>`
+   - **HARD RULE: One task = one commit.** Commit after EACH task completes its review. Never batch multiple tasks into a single commit. If the reviewer detects multi-task batching, the commit is REJECTED.
 6. **CHANGELOG** — if user-facing change, update `CHANGELOG.md` under `[Unreleased]` using keepachangelog types: Added, Changed, Fixed, Removed, Deprecated, Security.
 7. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
+
+**After completing each task, output to the user:**
+
+> **Completed Task [NNN]: [task title].**
+>
+> **Changed:** [List of files created/modified, tests added, key implementation decisions]
+>
+> **Without this task:** [Concrete risk — e.g., "no auth middleware means all routes are publicly accessible", "no migration means schema change would require manual DB intervention"]
+>
+> **Review result:** [N] findings in [N] review passes, [N] fixed before commit
 
 Review loops follow `docs/reference/review-loop-pattern.md`. Code review scoping: review uncommitted changes before commit. If changes are committed, use `--base <pre-task-sha>`.
 
 Tasks always run sequentially.
 
 **Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/`.
+
+> **Output to the user** before verification:
+> Verification produces deterministic proof — actual command output, not claims. It confirms that tests pass, types check, linters are clean, and every acceptance criterion has evidence. This is the evidence gate that separates "I think it works" from "here is proof it works."
 
 ## Verify (verify workflow)
 
@@ -110,12 +141,48 @@ This is NOT a review loop — it produces proof, not findings. If verification f
 - Use `wazir recall file <path> --tier L1` for files you need to understand but not modify
 - When dispatching subagents, include: "Use wazir index search-symbols before direct file reads."
 
+## Interaction Mode Awareness
+
+Read `interaction_mode` from run-config at the start of execution:
+
+- **`auto`:** Skip user checkpoints. On escalation, write reason to `.wazir/runs/<id>/escalations/` and STOP (do not proceed without user). Gating agent evaluates phase reports.
+- **`guided`:** Standard behavior — ask user on escalation, show per-task completion summaries.
+- **`interactive`:** Before implementing each task, briefly describe the approach and ask: "About to implement [task] using [approach] — sound right?" Show more detail in per-task summaries.
+
 ## Escalation
 
 Pause and ask the user when:
 - The plan is blocked or contradictory
 - Implementation would require unapproved scope change
 - A task's acceptance criteria can't be met
+
+When escalating, use this pattern:
+
+Ask the user via AskUserQuestion:
+- **Question:** "[Describe the specific blocker or conflict]"
+- **Options:**
+  1. "Adjust the plan to work around the blocker" *(Recommended)*
+  2. "Expand scope to handle the new requirement"
+  3. "Skip this task and continue with the rest"
+  4. "Abort the run"
+
+Wait for the user's selection before continuing.
+
+## Reasoning Output
+
+Throughout the executor phase, produce reasoning at two layers:
+
+**Conversation (Layer 1):** Before each task, explain what you're about to implement and why. After each task, state what would have gone wrong without this task.
+
+**File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-executor-reasoning.md` with structured entries per implementation decision:
+- **Trigger** — what prompted the decision (e.g., "task spec requires auth middleware")
+- **Options considered** — implementation alternatives
+- **Chosen** — selected approach
+- **Reasoning** — why this approach over alternatives
+- **Confidence** — high/medium/low
+- **Counterfactual** — what would break without this decision
+
+Key executor reasoning moments: architecture choices, library selections, API design decisions, test strategy decisions, and any deviation from the plan.
 
 ## Done
 

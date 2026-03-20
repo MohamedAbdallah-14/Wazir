@@ -116,6 +116,38 @@ export function readPhaseExitEvents(runPaths) {
   return completedPhases;
 }
 
+/**
+ * Read phase exit events with full two-level detail (parent_phase + workflow).
+ */
+export function readPhaseExitEventsDetailed(runPaths) {
+  if (!fs.existsSync(runPaths.eventsPath)) {
+    return [];
+  }
+
+  const content = fs.readFileSync(runPaths.eventsPath, 'utf8');
+  const events = [];
+
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      const event = JSON.parse(trimmed);
+      if (event.event === 'phase_exit' && event.phase) {
+        events.push({
+          phase: event.phase,
+          parent_phase: event.parent_phase ?? event.phase,
+          workflow: event.workflow ?? event.phase,
+          status: event.status,
+        });
+      }
+    } catch {
+      // Skip malformed lines
+    }
+  }
+
+  return events;
+}
+
 export function writeSummary(runPaths, content) {
   ensureRunDirectories(runPaths);
   fs.writeFileSync(runPaths.summaryPath, content);
