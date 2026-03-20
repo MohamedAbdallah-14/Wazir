@@ -57,14 +57,20 @@ function isGitMutating(command) {
 // Protected path check
 // ---------------------------------------------------------------------------
 
-function checkProtectedPath(projectRoot, filePath) {
+const APPROVED_FLOWS = new Set([
+  'host_export_regeneration',
+  'pipeline_integration',
+]);
+
+function checkProtectedPath(projectRoot, filePath, approvedFlow) {
   if (!filePath || !projectRoot) return null;
 
   let manifest;
   try {
     manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
   } catch {
-    return null; // no manifest = no protected paths
+    // If manifest can't be read, block writes defensively
+    return { decision: 'deny', reason: 'Cannot read manifest to check protected paths.' };
   }
 
   if (!manifest?.protected_paths) return null;
@@ -84,6 +90,10 @@ function checkProtectedPath(projectRoot, filePath) {
   );
 
   if (blocked) {
+    // Check approved flow override
+    if (APPROVED_FLOWS.has(approvedFlow)) {
+      return null; // approved flow may write protected paths
+    }
     return { decision: 'deny', reason: `Protected path blocked: ${relTarget}` };
   }
 
@@ -183,7 +193,7 @@ export function evaluateDispatch(stateRoot, projectRoot, hookInput) {
 
   // 4. Protected path check (Write/Edit only — always enforced regardless of phase)
   if (tool === 'Write' || tool === 'Edit') {
-    const protectedResult = checkProtectedPath(projectRoot, input.file_path);
+    const protectedResult = checkProtectedPath(projectRoot, input.file_path, input.approved_flow);
     if (protectedResult) return protectedResult;
   }
 
@@ -225,11 +235,39 @@ export function evaluateDispatch(stateRoot, projectRoot, hookInput) {
   return addRoutingIfBash(tool, input, projectRoot);
 }
 
+function isContextModeEnabled(projectRoot) {
+  const envVal = process.env.WAZIR_CONTEXT_MODE;
+  if (envVal !== undefined) return envVal === '1' || envVal === 'true';
+
+  try {
+    const manifestPath = path.join(projectRoot, 'wazir.manifest.yaml');
+    const manifestText = fs.readFileSync(manifestPath, 'utf8');
+    const match = manifestText.match(/context_mode:[\s\S]*?enabled_by_default:\s*(true|false)/);
+    if (match) return match[1] === 'true';
+  } catch { /* ignore */ }
+
+  return false;
+}
+
 function addRoutingIfBash(tool, input, projectRoot) {
   if (tool === 'Bash') {
     const matrix = loadRoutingMatrix(projectRoot);
     const cmd = (input.command || '').trim();
-    const routing_decision = classifyCommand(cmd, matrix);
+    const classification = classifyCommand(cmd, matrix);
+    const contextModeEnabled = isContextModeEnabled(projectRoot);
+
+    let route = 'passthrough';
+    if (contextModeEnabled && (classification.category === 'large' || classification.category === 'ambiguous')) {
+      route = 'context-mode';
+    }
+
+    const routing_decision = {
+      command: cmd,
+      category: classification.category,
+      reason: classification.reason,
+      route,
+      context_mode_enabled: contextModeEnabled,
+    };
     return { decision: 'allow', routing_decision };
   }
   return { decision: 'allow' };

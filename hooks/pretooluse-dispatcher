@@ -70,6 +70,12 @@ try {
   });
 
   process.stdout.write(JSON.stringify(result) + '\n');
+
+  // Exit non-zero when context-mode routing is active (preserves old
+  // context-mode-router behavior where exit 1 = route to context-mode)
+  if (result.routing_decision?.route === 'context-mode') {
+    process.exit(1);
+  }
   process.exit(0);
 } catch (error) {
   process.stderr.write(`[pretooluse-dispatcher] ${error.message}\n`);

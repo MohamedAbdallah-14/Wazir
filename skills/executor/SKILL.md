@@ -93,7 +93,7 @@ For each task:
    - Uses `codex review -c model="$CODEX_MODEL" --uncommitted` for the current task's changes
    - Codex error handling: if codex exits non-zero, log error, mark pass as `codex-unavailable`, use self-review only for that pass. Do NOT skip. Next pass still attempts Codex.
    - Executor resolves findings, reviewer re-reviews
-   - Loop runs for `pass_counts[depth]` passes (quick=3, standard=5, deep=7). No extension.
+   - Loop runs for `DEPTH_TABLE[depth].review_passes` passes (see `tooling/src/config/depth-table.js`). No extension.
    - Review logs: `.wazir/runs/latest/reviews/execute-task-<NNN>-review-pass-<N>.md`
    - Loop cap tracking: `wazir capture loop-check --task-id <NNN>`
    - See `docs/reference/review-loop-pattern.md` for full protocol

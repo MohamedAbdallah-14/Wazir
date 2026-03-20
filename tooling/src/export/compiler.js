@@ -91,8 +91,7 @@ function renderCommonInstructions(host, manifest) {
 const DEFAULT_CLAUDE_HOOKS = {
   hooks: {
     PreToolUse: [
-      { matcher: 'Write|Edit', hooks: [{ type: 'command', command: './hooks/protected-path-write-guard' }] },
-      { matcher: 'Bash', hooks: [{ type: 'command', command: './hooks/context-mode-router' }] },
+      { matcher: 'Write|Edit|Bash', hooks: [{ type: 'command', command: './hooks/pretooluse-dispatcher' }] },
     ],
     SessionStart: [
       { hooks: [{ type: 'command', command: './hooks/loop-cap-guard' }] },
@@ -115,16 +114,12 @@ function renderCursorHooks() {
   return JSON.stringify({
     hooks: [
       {
-        name: 'protected-path-write-guard',
-        command: './hooks/protected-path-write-guard',
+        name: 'pretooluse-dispatcher',
+        command: './hooks/pretooluse-dispatcher',
       },
       {
         name: 'loop-cap-guard',
         command: './hooks/loop-cap-guard',
-      },
-      {
-        name: 'context-mode-router',
-        command: './hooks/context-mode-router',
       },
       {
         name: 'session-start',
@@ -133,10 +128,6 @@ function renderCursorHooks() {
       {
         name: 'stop-pipeline-gate',
         command: './hooks/stop-pipeline-gate',
-      },
-      {
-        name: 'pretooluse-pipeline-guard',
-        command: './hooks/pretooluse-pipeline-guard',
       },
     ],
   }, null, 2);

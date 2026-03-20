@@ -34,7 +34,7 @@ The reviewer role owns all review loops across the pipeline: research-review, cl
 **Reviewer-owned responsibilities** (callers must NOT replicate these):
 1. **Two-tier review** — internal review first (fast, cheap, expertise-loaded), Codex second (fresh eyes on clean code)
 2. **Dimension selection** — the reviewer selects the correct dimension set for the review mode and depth
-3. **Pass counting** — the reviewer tracks pass numbers and enforces the depth-based cap (quick=3, standard=5, deep=7)
+3. **Pass counting** — the reviewer tracks pass numbers and enforces `DEPTH_TABLE[depth].review_passes` (see `tooling/src/config/depth-table.js`)
 4. **Finding attribution** — each finding is tagged `[Internal]`, `[Codex]`, or `[Both]` based on source
 5. **Dimension set recording** — each review pass file records which canonical dimension set was used, enabling Phase Scoring (first vs final delta)
 6. **Learning pipeline** — ALL findings (internal + Codex) feed into `state.sqlite` and the learning system
@@ -53,7 +53,7 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 | `research-review` | During discover | Research artifact | 5 research dims | Pass/fix loop, no score |
 | `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Pass/fix loop, no score |
 
-Each mode follows the review loop pattern in `docs/reference/review-loop-pattern.md`. Pass counts are fixed by depth (quick=3, standard=5, deep=7). No extension.
+Each mode follows the review loop pattern in `docs/reference/review-loop-pattern.md`. Pass counts come from `DEPTH_TABLE[depth].review_passes` (see `tooling/src/config/depth-table.js`). No extension.
 
 ### CHANGELOG Enforcement
 
