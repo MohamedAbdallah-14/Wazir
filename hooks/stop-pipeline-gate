@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Stop hook: blocks conversation completion when pipeline is incomplete.
+# Reads pipeline-state.json to determine if all phases are done.
+set -euo pipefail
+
+STATE_ROOT="${WAZIR_STATE_ROOT:-$HOME/.wazir/projects/wazir}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+node "$SCRIPT_DIR/../tooling/src/hooks/stop-pipeline-gate.js" "$STATE_ROOT"
