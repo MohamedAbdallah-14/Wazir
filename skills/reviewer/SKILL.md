@@ -48,7 +48,7 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 | `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
 | `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Pass/fix loop, no score |
 | `design-review` | After design approval | Design artifact, approved spec | 5 design-review dims (canonical) | Pass/fix loop, no score |
-| `plan-review` | After planning | Draft plan artifact | 7 plan dims | Pass/fix loop, no score |
+| `plan-review` | After planning | Draft plan artifact | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
 | `task-review` | During execution, per task | Uncommitted changes or `--base` SHA | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
 | `research-review` | During discover | Research artifact | 5 research dims | Pass/fix loop, no score |
 | `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Pass/fix loop, no score |
@@ -94,6 +94,14 @@ If any file is missing:
 ### `spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
 2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+3. **`plan-review` additional dimension — Input Coverage:**
+   - Read the original input/briefing from `.wazir/input/briefing.md` and any `input/*.md` files
+   - Count distinct items/requirements in the input
+   - Count tasks in the execution plan
+   - If `tasks_in_plan < items_in_input` → **HIGH** finding: "Plan covers [N] of [M] input items. Missing: [list of uncovered items]"
+   - If `tasks_in_plan >= items_in_input` → dimension passes
+   - One task MAY cover multiple input items if justified in the task description
+   - This is the review-level enforcement of the "no scope reduction" rule
 
 ## Review Process (`final` mode)
 
@@ -422,6 +430,22 @@ Write to `.wazir/runs/<run-id>/handoff.md`:
 - Update `.wazir/runs/latest` symlink if creating a new run
 - Do NOT mutate `input/` — it belongs to the user
 - Do NOT auto-load proposed learnings into the next run
+
+## Reasoning Output
+
+Throughout the reviewer phase, produce reasoning at two layers:
+
+**Conversation (Layer 1):** Before each review pass, explain what dimensions are being checked and why. After findings, explain the reasoning behind severity assignments.
+
+**File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-reviewer-reasoning.md` with structured entries:
+- **Trigger** — what prompted the finding (e.g., "diff adds SQL query without parameterization")
+- **Options considered** — severity options, fix approaches
+- **Chosen** — assigned severity and recommendation
+- **Reasoning** — why this severity level
+- **Confidence** — high/medium/low
+- **Counterfactual** — what would ship if this finding were missed
+
+Key reviewer reasoning moments: severity assignments, PASS/FAIL decisions, dimension score justifications, and escalation decisions.
 
 ## Done
 

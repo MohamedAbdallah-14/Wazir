@@ -160,6 +160,22 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing.
 
+## Reasoning Output
+
+Throughout the executor phase, produce reasoning at two layers:
+
+**Conversation (Layer 1):** Before each task, explain what you're about to implement and why. After each task, state what would have gone wrong without this task.
+
+**File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-executor-reasoning.md` with structured entries per implementation decision:
+- **Trigger** — what prompted the decision (e.g., "task spec requires auth middleware")
+- **Options considered** — implementation alternatives
+- **Chosen** — selected approach
+- **Reasoning** — why this approach over alternatives
+- **Confidence** — high/medium/low
+- **Counterfactual** — what would break without this decision
+
+Key executor reasoning moments: architecture choices, library selections, API design decisions, test strategy decisions, and any deviation from the plan.
+
 ## Done
 
 When all tasks are complete and verified:

@@ -366,6 +366,24 @@ Invariant: `items_in_plan >= items_in_input` unless user explicitly approves red
 
 ---
 
+## Reasoning Output
+
+Throughout the clarifier phase, produce reasoning at two layers:
+
+**Conversation (Layer 1):** Before each sub-workflow, explain the trigger and why it matters. After each sub-workflow, state what was found and the counterfactual — what would have gone wrong without it.
+
+**File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-clarifier-reasoning.md` with structured entries per decision:
+- **Trigger** — what prompted the decision
+- **Options considered** — alternatives evaluated
+- **Chosen** — selected option
+- **Reasoning** — why
+- **Confidence** — high/medium/low
+- **Counterfactual** — what would go wrong without this info
+
+Examples of clarifier reasoning entries:
+- "Trigger: input says 'auth' without specifying provider. Options: ask user, assume OAuth2, assume magic links. Chosen: ask user. Counterfactual: assuming OAuth2 when user wanted Supabase auth = wrong middleware, 2 days rework."
+- "Trigger: 13 items in input. Options: plan all 13, tier into must/should/could. Chosen: plan all 13 (user explicitly said 'do not tier'). Counterfactual: tiering would silently drop 5 items."
+
 ## Done
 
 When the plan is approved:

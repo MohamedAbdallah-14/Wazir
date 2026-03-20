@@ -615,6 +615,36 @@ Wait for the user's selection before continuing.
 
 ---
 
+## Reasoning Chain Output
+
+Every phase produces reasoning output at two layers:
+
+### Layer 1: Conversation Output (concise — for the user)
+
+Before each major decision, output one trigger sentence and one reasoning sentence:
+
+> "Your request mentions 'overnight autonomous run' — researching how Devin and Karpathy's autoresearch handle this, because unattended runs need different safety constraints than interactive ones."
+
+After each phase, output what was found and a counterfactual:
+
+> "Found: you use Supabase auth (not custom JWT). If I'd skipped research, I would have built JWT middleware — completely wrong."
+
+### Layer 2: File Output (detailed — for learning and reports)
+
+Save full reasoning chain to `.wazir/runs/<id>/reasoning/phase-<name>-reasoning.md` with entries:
+
+```markdown
+### Decision: [title]
+- **Trigger:** What prompted this decision
+- **Options considered:** List of alternatives
+- **Chosen:** The selected option
+- **Reasoning:** Why this option was chosen
+- **Confidence:** high | medium | low
+- **Counterfactual:** What would have gone wrong without this information
+```
+
+Create the `reasoning/` directory during run init. Every phase skill (clarifier, executor, reviewer) writes its own reasoning file. Counterfactuals appear in BOTH conversation output AND reasoning files.
+
 ## Interaction Rules
 
 - **One question at a time** — never combine multiple questions
