@@ -1,0 +1,84 @@
+#!/usr/bin/env node
+
+import { dirname, join, resolve } from 'node:path';
+import { readFileSync, existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { fileURLToPath } from 'node:url';
+import { appendFileSync, mkdirSync } from 'node:fs';
+
+import { evaluateDispatch } from '../tooling/src/hooks/pretooluse-dispatcher.js';
+
+const hooksDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = dirname(hooksDir);
+
+// ---------------------------------------------------------------------------
+// Derive state root from manifest (same logic as context-mode-router)
+// ---------------------------------------------------------------------------
+
+function deriveStateRoot() {
+  if (process.env.WAZIR_STATE_ROOT) return process.env.WAZIR_STATE_ROOT;
+  try {
+    const manifestPath = join(projectRoot, 'wazir.manifest.yaml');
+    const raw = readFileSync(manifestPath, 'utf8');
+    const nameMatch = raw.match(/^\s+name:\s*(.+)$/m);
+    const templateMatch = raw.match(/state_root_default:\s*(.+)$/m);
+    if (nameMatch && templateMatch) {
+      const slug = nameMatch[1].trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'wazir-project';
+      const template = templateMatch[1].trim();
+      const expanded = template.startsWith('~/') ? join(homedir(), template.slice(2)) : template;
+      return resolve(expanded.replace('{project_slug}', slug));
+    }
+  } catch { /* fall through */ }
+  return join(homedir(), '.wazir', 'projects', '_default');
+}
+
+// ---------------------------------------------------------------------------
+// Logging (preserves context-mode routing log)
+// ---------------------------------------------------------------------------
+
+function logDecision(stateRoot, decision) {
+  const logDir = join(stateRoot, 'logs');
+  try {
+    if (!existsSync(logDir)) mkdirSync(logDir, { recursive: true });
+    const entry = JSON.stringify({
+      ts: new Date().toISOString(),
+      hook: 'pretooluse_dispatcher',
+      ...decision,
+    });
+    appendFileSync(join(logDir, 'routing.ndjson'), entry + '\n');
+  } catch {
+    // Logging is best-effort
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+
+try {
+  const stdin = readFileSync(0, 'utf8');
+  const hookInput = stdin.trim() ? JSON.parse(stdin) : {};
+
+  const stateRoot = deriveStateRoot();
+  const result = evaluateDispatch(stateRoot, projectRoot, hookInput);
+
+  logDecision(stateRoot, {
+    tool: hookInput.tool,
+    decision: result.decision,
+    reason: result.reason,
+    routing: result.routing_decision,
+  });
+
+  process.stdout.write(JSON.stringify(result) + '\n');
+
+  // Exit non-zero when context-mode routing is active (preserves old
+  // context-mode-router behavior where exit 1 = route to context-mode)
+  if (result.routing_decision?.route === 'context-mode') {
+    process.exit(1);
+  }
+  process.exit(0);
+} catch (error) {
+  process.stderr.write(`[pretooluse-dispatcher] ${error.message}\n`);
+  process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny' }, systemMessage: `[pretooluse-dispatcher] Hook error: ${error.message}. Blocking to be safe.` }) + '\n');
+  process.exit(2); // fail-closed on errors
+}

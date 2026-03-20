@@ -32,9 +32,12 @@
     "hooks/definitions/post_tool_capture.yaml",
     "hooks/definitions/pre_compact_summary.yaml",
     "hooks/definitions/pre_tool_capture_route.yaml",
+    "hooks/definitions/pretooluse_dispatcher.yaml",
+    "hooks/definitions/pretooluse_pipeline_guard.yaml",
     "hooks/definitions/protected_path_write_guard.yaml",
     "hooks/definitions/session_start.yaml",
     "hooks/definitions/stop_handoff_harvest.yaml",
+    "hooks/definitions/stop_pipeline_gate.yaml",
     "hooks/hooks.json"
   ],
   "files": [

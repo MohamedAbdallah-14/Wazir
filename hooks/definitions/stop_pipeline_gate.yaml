@@ -1,0 +1,22 @@
+id: stop_pipeline_gate
+trigger: stop_pipeline_gate
+description: Blocks conversation completion when the pipeline has incomplete phases. Reads pipeline-state.json and returns block/allow decision.
+input_contract:
+  required: []
+  optional:
+    - stop_reason
+allowed_side_effects:
+  - read_pipeline_state
+  - write_stop_hook_active_flag
+output_contract:
+  produces:
+    - decision (allow|block)
+    - reason
+failure_behavior:
+  mode: block
+  exit_code: 1
+host_fallback:
+  claude: native_hook
+  codex: wrapper_command
+  gemini: wrapper_command
+  cursor: native_or_wrapper

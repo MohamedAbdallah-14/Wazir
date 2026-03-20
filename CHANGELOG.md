@@ -7,6 +7,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- Three-layer enforcement architecture: Stop hook blocks completion, PreToolUse hooks enforce phase gates, subagent-per-phase controller isolates workflows
+- Pipeline state machine (`tooling/src/state/pipeline-state.js`) with session isolation, atomic writes, and crash recovery
+- Per-phase guardrail validators with concrete pass/fail criteria per workflow boundary
+- Consolidated PreToolUse dispatcher replacing 3 separate hooks (reduces false "hook error" labels)
+- Psychology-driven 3-zone skill architecture across all 29 SKILL.md files (primacy Iron Laws → structured process → recency re-anchoring)
+- Rationalization tables, red flags, IF-THEN implementation intentions in every discipline skill
+- CSO description fixes — triggers only, never process summaries
+- Priority stack P0-P5 with conflict examples in every skill
+- Identity framing: "pipeline compliance IS helpfulness"
+- Mode-specific reviewer composition with 8 digest modules (3-5K tokens each)
+- Findings-to-antipattern learning pipeline with LLM-assisted clustering and threshold-based promotion
+- Depth parameter table (`tooling/src/config/depth-table.js`) with 40+ parameters across all phases
+- Artifact dependency graph with digest verification and selective regeneration
+- Decision logging module (`tooling/src/capture/decision.js`) with NDJSON audit trail
+- 33-agent architecture research + 8-agent psychology research (docs/research/)
 - Workflow completion enforcement — `validateRunCompletion()` ensures all enabled workflows complete before run finalizes (`wazir capture summary --complete`)
 - Mandatory security gate — pattern-based diff scanner (`tooling/src/checks/security-sensitivity.js`) auto-adds 6 security review dimensions when auth/token/SQL/etc. patterns detected
 - Three interaction modes: `auto` (overnight, Codex-required), `guided` (default), `interactive` (co-design) via `/wazir auto|interactive ...`

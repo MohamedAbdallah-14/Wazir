@@ -1,21 +1,22 @@
 {
   "hooks": {
-    "PreToolUse": [
+    "Stop": [
       {
-        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/protected-path-write-guard"
+            "command": "./hooks/stop-pipeline-gate"
           }
         ]
-      },
+      }
+    ],
+    "PreToolUse": [
       {
-        "matcher": "Bash",
+        "matcher": "Write|Edit|Bash",
         "hooks": [
           {
             "type": "command",
-            "command": "./hooks/context-mode-router"
+            "command": "./hooks/pretooluse-dispatcher"
           }
         ]
       }

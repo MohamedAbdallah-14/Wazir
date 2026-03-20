@@ -1,0 +1,22 @@
+id: pretooluse_pipeline_guard
+trigger: pretooluse_pipeline_guard
+description: Enforces phase-specific tool restrictions by reading pipeline-state.json. Blocks Write/Edit in read-only phases and git mutations outside execute phase.
+input_contract:
+  required:
+    - tool
+  optional:
+    - input
+allowed_side_effects:
+  - read_pipeline_state
+output_contract:
+  produces:
+    - decision (allow|deny)
+    - reason
+failure_behavior:
+  mode: block
+  exit_code: 1
+host_fallback:
+  claude: native_hook
+  codex: wrapper_command
+  gemini: wrapper_command
+  cursor: native_or_wrapper

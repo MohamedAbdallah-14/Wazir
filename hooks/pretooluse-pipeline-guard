@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# PreToolUse hook: enforces phase-specific tool restrictions.
+# Reads pipeline-state.json for current phase, blocks disallowed tools.
+set -euo pipefail
+
+STATE_ROOT="${WAZIR_STATE_ROOT:-$HOME/.wazir/projects/wazir}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+node "$SCRIPT_DIR/../tooling/src/hooks/pretooluse-pipeline-guard.js" "$STATE_ROOT"

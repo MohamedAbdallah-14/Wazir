@@ -143,10 +143,42 @@ export function evaluatePhasePrerequisiteGuard(payload) {
   const requiredPhaseExits = prerequisites.required_phase_exits ?? [];
 
   const missingArtifacts = [];
+  const failedProofs = [];
   for (const artifact of requiredArtifacts) {
     const artifactPath = path.join(runPaths.runRoot, artifact);
     if (!fs.existsSync(artifactPath)) {
       missingArtifacts.push(artifact);
+      continue;
+    }
+
+    const basename = path.basename(artifact);
+
+    // Content validation for proof JSON files (e.g. proof-task-001.json, verification-proof.json)
+    if (basename.includes('proof') && basename.endsWith('.json')) {
+      try {
+        const content = fs.readFileSync(artifactPath, 'utf8');
+        const parsed = JSON.parse(content);
+        if (parsed.all_passed !== true) {
+          failedProofs.push(`${artifact}: all_passed is not true (got ${JSON.stringify(parsed.all_passed)})`);
+        }
+      } catch {
+        // Fail closed: malformed JSON blocks the phase
+        failedProofs.push(`${artifact}: malformed or unreadable JSON`);
+      }
+      continue;
+    }
+
+    // Content validation for verification-proof.md
+    if (basename === 'verification-proof.md') {
+      try {
+        const content = fs.readFileSync(artifactPath, 'utf8');
+        const lower = content.toLowerCase();
+        if (!lower.includes('status: pass') && !content.includes('PASS')) {
+          failedProofs.push(`${artifact}: does not contain "status: pass" or "PASS"`);
+        }
+      } catch {
+        failedProofs.push(`${artifact}: unreadable`);
+      }
     }
   }
 
@@ -158,10 +190,10 @@ export function evaluatePhasePrerequisiteGuard(payload) {
     }
   }
 
-  // OR-logic for resumed runs: if all artifacts exist, pass even without phase_exit events.
+  // OR-logic for resumed runs: if all artifacts exist and proofs pass, allow even without phase_exit events.
   // Artifacts are the hard evidence; phase_exits are supplementary.
-  // But if artifacts are missing, phase_exits alone are not sufficient.
-  if (missingArtifacts.length === 0) {
+  // But if artifacts are missing or proofs fail, phase_exits alone are not sufficient.
+  if (missingArtifacts.length === 0 && failedProofs.length === 0) {
     return {
       allowed: true,
       reason: `All prerequisite artifacts present for phase ${phase}.`,
@@ -172,6 +204,9 @@ export function evaluatePhasePrerequisiteGuard(payload) {
   if (missingArtifacts.length > 0) {
     reasons.push(`Missing artifacts: ${missingArtifacts.join(', ')}`);
   }
+  if (failedProofs.length > 0) {
+    reasons.push(`Failed proof validation: ${failedProofs.join('; ')}`);
+  }
   if (missingPhaseExits.length > 0) {
     reasons.push(`Missing phase exits: ${missingPhaseExits.join(', ')}`);
   }
@@ -180,6 +215,7 @@ export function evaluatePhasePrerequisiteGuard(payload) {
     allowed: false,
     reason: reasons.join('. '),
     missing_artifacts: missingArtifacts.length > 0 ? missingArtifacts : undefined,
+    failed_proofs: failedProofs.length > 0 ? failedProofs : undefined,
     missing_phase_exits: missingPhaseExits.length > 0 ? missingPhaseExits : undefined,
   };
 }

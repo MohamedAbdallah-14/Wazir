@@ -1,0 +1,26 @@
+id: pretooluse_dispatcher
+trigger: pretooluse_dispatcher
+description: Consolidated PreToolUse dispatcher. Evaluates protected paths, phase restrictions, and context-mode routing in a single hook. Replaces protected_path_write_guard, pretooluse_pipeline_guard, and context_mode_router.
+input_contract:
+  required:
+    - tool
+  optional:
+    - input
+allowed_side_effects:
+  - read_pipeline_state
+  - read_manifest
+  - read_routing_matrix
+  - append_routing_log
+output_contract:
+  produces:
+    - decision (allow|deny)
+    - reason
+    - routing_decision
+failure_behavior:
+  mode: block
+  exit_code: 1
+host_fallback:
+  claude: native_hook
+  codex: wrapper_command
+  gemini: wrapper_command
+  cursor: native_or_wrapper

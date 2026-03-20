@@ -19,6 +19,7 @@ import {
 } from './store.js';
 import { readRunConfig, getPhaseLoopCap } from './run-config.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
+import { appendDecision } from './decision.js';
 import { evaluateLoopCapGuard } from '../guards/loop-cap-guard.js';
 import { evaluatePhasePrerequisiteGuard } from '../guards/phase-prerequisite-guard.js';
 
@@ -73,6 +74,8 @@ function resolveCaptureContext(parsed, context = {}) {
       'command',
       'exit-code',
       'task-id',
+      'decision',
+      'reason',
     ],
   });
   const stateRoot = resolveStateRoot(projectRoot, manifest, {
@@ -388,6 +391,29 @@ function handleUsage(parsed, context = {}) {
   };
 }
 
+function handleDecision(parsed, context = {}) {
+  const { stateRoot, options } = resolveCaptureContext(parsed, context);
+
+  requireOption(options, 'run', 'Usage: wazir capture decision --run <id> --phase <phase> --decision "<text>" --reason "<text>" [--task-id <id>] [--state-root <path>] [--json]');
+  requireOption(options, 'phase', 'Usage: wazir capture decision --run <id> --phase <phase> --decision "<text>" --reason "<text>" [--task-id <id>] [--state-root <path>] [--json]');
+  requireOption(options, 'decision', 'Usage: wazir capture decision --run <id> --phase <phase> --decision "<text>" --reason "<text>" [--task-id <id>] [--state-root <path>] [--json]');
+  requireOption(options, 'reason', 'Usage: wazir capture decision --run <id> --phase <phase> --decision "<text>" --reason "<text>" [--task-id <id>] [--state-root <path>] [--json]');
+
+  const runPaths = getRunPaths(stateRoot, options.run);
+  appendDecision(runPaths, {
+    phase: options.phase,
+    decision: options.decision,
+    reason: options.reason,
+    task_id: options.taskId,
+  });
+
+  return formatResult({
+    run_id: options.run,
+    event: 'decision',
+    decisions_path: runPaths.decisionsPath,
+  }, { json: options.json });
+}
+
 function handleLoopCheck(parsed, context = {}) {
   const { stateRoot, options } = resolveCaptureContext(parsed, context);
 
@@ -486,10 +512,12 @@ export function runCaptureCommand(parsed, context = {}) {
         return handleUsage(parsed, context);
       case 'loop-check':
         return handleLoopCheck(parsed, context);
+      case 'decision':
+        return handleDecision(parsed, context);
       default:
         return {
           exitCode: 1,
-          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check> ...\n',
+          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check|decision> ...\n',
         };
     }
   } catch (error) {

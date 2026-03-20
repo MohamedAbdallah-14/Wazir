@@ -1,7 +1,7 @@
 {
   "host": "gemini",
   "source_hashes": {
-    "wazir.manifest.yaml": "f00776eb08ed3332b8f855001a2fd0b866cd0b81d009c6fbb316149c398c51ca",
+    "wazir.manifest.yaml": "48a188248faf429807b241eb57fbb99afae3c6ddfdf71b24c5c532ca0bc2d33f",
     "roles/clarifier.md": "1e1b8a2c05f1070fdcef485963cfcbffff62c4b2703a8d73fe51ac52d056e573",
     "roles/content-author.md": "cc20b80bd70ab68b3239a9cf56bf1ffc2c06843d38afc6b190844b35a1d73c3e",
     "roles/designer.md": "76cff5bda82975cfb4074de71681e7c8ba284e2e49d0cc98f90208642fef74fc",
@@ -18,7 +18,7 @@
     "workflows/design.md": "7f69758b22f88c12d16846ac1dd444f4e178ab116559ef9f2f26f6daa1a10d62",
     "workflows/discover.md": "0696add486f739a46ed4c2b71b67bdda3ab9fea2d1395e662191282529ed21d2",
     "workflows/execute.md": "33428704476877b2c8cf34c6eda3a56d1fd71e8bbea0f05c122bb3da2c6475a6",
-    "workflows/learn.md": "9b1955a00eb0ea47af08a3639c3cbc2f15b8eab6cc02127e829bc8c83b0a52b5",
+    "workflows/learn.md": "450bbfbfaa9143365284e13c608f800e94caea47210c57d252d1c9a720160035",
     "workflows/plan-review.md": "1dfe76dfe4fd9c32409d508e47654ad3b985b5429bd4616adde719b19fd606ac",
     "workflows/plan.md": "fd52737159ab13688af8cbcb1c3fa224b1a9dda441b9ab337ab98cbfb5c68fa5",
     "workflows/prepare-next.md": "8769b692be6d9fddf3b3f36fee6888159fb9fb2a5c31360cdbc9402e0f43fc27",
@@ -32,9 +32,12 @@
     "hooks/definitions/post_tool_capture.yaml": "a773cd6e18972dee8eef3b7cb06fd1d319a71de4588897cebfbe643f6781a3b2",
     "hooks/definitions/pre_compact_summary.yaml": "daa0175d79f3e0127c5ce86a7a2f8df0be3f58b5c94fe749da715a17c7b2d04e",
     "hooks/definitions/pre_tool_capture_route.yaml": "3c2663380ff3cd09f09de5b96bcf6123266fa74d8a03dfb2d6fbe40a43fb13cf",
+    "hooks/definitions/pretooluse_dispatcher.yaml": "5b0646ab17704e6f4665bb4c08ead5bcfe2aa6e71395fa5694cb0debcbce69da",
+    "hooks/definitions/pretooluse_pipeline_guard.yaml": "ac89617b91093ff0a39da0e8c48affbcaa71054666fa316a42c32f73f656ae69",
     "hooks/definitions/protected_path_write_guard.yaml": "6683d41778b823e2a4e606065597569aa04363f091e135e165de9732f1fc2171",
     "hooks/definitions/session_start.yaml": "9383fcf1f8304c87e57726478a461706c0fc73dc62bcc4d8661f2eeffa43a82d",
     "hooks/definitions/stop_handoff_harvest.yaml": "67a3c0a8bb7cb66b88e77dc79e748082e964d278c47935662c453922a846482b",
-    "hooks/hooks.json": "f255345793951b5cf6f6d8c9a8b6a6ad2d3140023453410127a6f70d8e110c26"
+    "hooks/definitions/stop_pipeline_gate.yaml": "f27dde7605809aae56ac566b93b8692f5d40db1e11b569010e32d2878b677fcf",
+    "hooks/hooks.json": "65e022a151aa9546a6988581ee62ec853f0df5580aeed4b164e3ccc3dc2e72de"
   }
 }
