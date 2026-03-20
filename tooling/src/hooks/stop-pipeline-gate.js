@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { readPipelineState, setStopHookActive } from '../state/pipeline-state.js';
 
 const SAFETY_VALVE_REASONS = new Set(['context-limit', 'user-abort']);
@@ -81,7 +82,7 @@ if (isDirectRun) {
   // Read context from stdin if available
   let context = {};
   try {
-    const input = require('node:fs').readFileSync(0, 'utf8').trim();
+    const input = fs.readFileSync(0, 'utf8').trim();
     if (input) context = JSON.parse(input);
   } catch { /* no stdin or invalid JSON */ }
 

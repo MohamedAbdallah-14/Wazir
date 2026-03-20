@@ -130,6 +130,14 @@ function renderCursorHooks() {
         name: 'session-start',
         command: './hooks/session-start',
       },
+      {
+        name: 'stop-pipeline-gate',
+        command: './hooks/stop-pipeline-gate',
+      },
+      {
+        name: 'pretooluse-pipeline-guard',
+        command: './hooks/pretooluse-pipeline-guard',
+      },
     ],
   }, null, 2);
 }

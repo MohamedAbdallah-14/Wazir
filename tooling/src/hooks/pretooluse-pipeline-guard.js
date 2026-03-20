@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { readPipelineState } from '../state/pipeline-state.js';
 
 // ---------------------------------------------------------------------------
@@ -130,7 +131,7 @@ if (isDirectRun) {
 
   let hookInput = {};
   try {
-    const input = require('node:fs').readFileSync(0, 'utf8').trim();
+    const input = fs.readFileSync(0, 'utf8').trim();
     if (input) hookInput = JSON.parse(input);
   } catch { /* no stdin */ }
 
