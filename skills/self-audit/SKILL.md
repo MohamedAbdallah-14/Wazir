@@ -185,6 +185,26 @@ Beyond CLI checks, inspect for:
     - Run `wazir export --check`
     - Any drift detected is a finding
 
+11. **Input Coverage** (run-scoped — only when a run directory exists)
+    - Read the original input file(s) from `.wazir/input/` or `.wazir/runs/<id>/sources/`
+    - Read the execution plan from `.wazir/runs/<id>/clarified/execution-plan.md`
+    - Read the actual commits on the branch: `git log --oneline main..HEAD`
+    - Build a coverage matrix: every distinct item in the input should map to:
+      - At least one task in the execution plan
+      - At least one commit in the git log
+    - **Missing items** (in input but not in plan AND not in commits) → **HIGH** severity finding
+    - **Partial items** (in plan but no corresponding commit) → **MEDIUM** severity finding
+    - **Fully covered items** (input → plan → commit) → pass
+    - Output the coverage matrix in the audit report:
+      ```
+      | Input Item | Plan Task | Commit | Status |
+      |------------|-----------|--------|--------|
+      | Item 1     | Task 3    | abc123 | PASS   |
+      | Item 2     | Task 5    | —      | PARTIAL|
+      | Item 3     | —         | —      | MISSING|
+      ```
+    - This dimension catches scope reduction AFTER the fact — a safety net for when the clarifier or planner fails
+
 ## Protected-Path Safety Rails
 
 Before applying ANY fix in Phase 3, check if the target file is in a protected path. The self-audit loop MUST NOT modify files in:
