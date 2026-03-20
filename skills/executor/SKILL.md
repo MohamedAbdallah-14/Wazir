@@ -64,6 +64,14 @@ If either fails, surface the failure and do NOT proceed until resolved.
 > **Output to the user** before execution begins:
 > Each task is implemented with TDD (test first, then code) and reviewed before commit. This catches correctness bugs, missing tests, wiring errors, and spec drift at the task level — before they compound across tasks and become expensive to fix.
 
+## Security Awareness
+
+Before implementing each task, check if the task touches security-sensitive areas. Run `detectSecurityPatterns` (from `tooling/src/checks/security-sensitivity.js`) mentally against the planned changes. If security patterns are detected (auth, token, password, session, SQL, fetch, upload, secret, env, API key, cookie, CORS, CSRF, JWT, OAuth, encrypt, decrypt, hash, salt):
+
+- Load security expertise from the composition map for the relevant concern
+- Apply defense-in-depth: validate inputs, parameterize queries, escape outputs, use secure defaults
+- The per-task reviewer will automatically add security dimensions when patterns are detected — expect and address security findings
+
 ## Execute (execute workflow)
 
 Implement tasks in the order defined by the execution plan.
@@ -91,6 +99,7 @@ For each task:
    - See `docs/reference/review-loop-pattern.md` for full protocol
    - NOTE: this is the per-task review (5 dims), not the final scored review (7 dims) which runs in Phase 4
 5. **Commit** — only after review passes, commit with conventional commit format: `<type>(<scope>): <description>`
+   - **HARD RULE: One task = one commit.** Commit after EACH task completes its review. Never batch multiple tasks into a single commit. If the reviewer detects multi-task batching, the commit is REJECTED.
 6. **CHANGELOG** — if user-facing change, update `CHANGELOG.md` under `[Unreleased]` using keepachangelog types: Added, Changed, Fixed, Removed, Deprecated, Security.
 7. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
 

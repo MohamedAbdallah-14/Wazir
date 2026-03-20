@@ -88,6 +88,8 @@ If any file is missing:
 ### `task-review` mode
 1. Uncommitted changes exist for the current task, or a `--base` SHA is provided for committed changes.
 2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+3. **Commit discipline check:** If uncommitted changes span work from multiple tasks (e.g., files from task N and task N+1 are both modified), REJECT immediately: "REJECTED: Multiple tasks in single commit. Split into per-task commits before review." This is a blocking finding — no other dimensions are evaluated until resolved.
+4. **Security sensitivity check:** Run `detectSecurityPatterns` from `tooling/src/checks/security-sensitivity.js` against the diff. If `triggered === true`, add the 6 security review dimensions (injection, auth bypass, data exposure, CSRF/SSRF, XSS, secrets leakage) to the standard 5 task-execution dimensions for this review pass. Security findings use severity levels: critical (exploitable), high (likely exploitable), medium (defense-in-depth gap), low (best-practice deviation).
 
 ### `spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
