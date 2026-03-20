@@ -15,6 +15,7 @@ These hook definitions are product contracts first. Host-specific native hooks o
 | `stop_handoff_harvest` | Persist final handoff and stop-time observability data | capture |
 | `protected_path_write_guard` | Block writes to protected canonical paths outside approved flows | block |
 | `loop_cap_guard` | Block extra iterations after the configured loop cap | block |
+| `context_mode_router` | Route large command output through context-mode tools to avoid flooding model context | warn |
 
 ## Source of truth
 
