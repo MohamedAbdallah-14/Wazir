@@ -348,9 +348,9 @@ The pipeline has 4 top-level **phases**, each containing multiple **workflows** 
 
 ```
 Phase 1: Init
-  └── (inline — no sub-workflows)
+  └── (inline — controller handles directly)
 
-Phase 2: Clarifier
+Phase 2: Clarifier        → dispatched as SUBAGENT
   ├── discover (research) ← research-review loop
   ├── clarify ← clarification-review loop
   ├── specify ← spec-challenge loop
@@ -358,11 +358,11 @@ Phase 2: Clarifier
   ├── design ← design-review loop
   └── plan ← plan-review loop
 
-Phase 3: Executor
+Phase 3: Executor          → dispatched as SUBAGENT
   ├── execute (per-task) ← task-review loop per task
   └── verify
 
-Phase 4: Final Review
+Phase 4: Final Review      → dispatched as SUBAGENT
   ├── review (final) ← scored review
   ├── learn
   └── prepare_next
@@ -380,210 +380,332 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 
 ---
 
-# Phase 2: Clarifier
+# Subagent Controller Architecture
 
-**Before starting this phase, output to the user:**
+**This is the core enforcement mechanism.** The controller (this skill, wz:wazir) dispatches ONE fresh Agent per phase. Each subagent gets a clean 200K context with only its skill instructions and artifact paths — never the full pipeline context.
 
-> **Clarifier Phase** — About to research your codebase, clarify requirements, harden the spec, brainstorm designs, and produce an execution plan.
+## Why Subagents
+
+A single-context pipeline allows the agent to rationalize skipping phases ("the input is clear enough"). Subagent isolation prevents this:
+- Each subagent ONLY sees its own phase instructions
+- No subagent can see or skip another phase
+- The controller validates artifacts BETWEEN phases
+- Hooks provide a second enforcement layer independent of prompt compliance
+
+## Controller Loop
+
+```
+initialize pipeline-state.json via createPipelineState(runId, stateRoot)
+transitionPhase(stateRoot, 'clarify')
+
+for each phase in [clarify, execute, review]:
+  1. Update pipeline-state.json: current_phase = phase
+  2. Run pre-phase guardrail (validate previous phase artifacts)
+  3. Build subagent prompt (see Subagent Prompt Template below)
+  4. Dispatch: Agent(prompt=..., description="wazir: <phase>", mode="bypassPermissions")
+  5. On completion: validate output artifacts via runGuardrail(phase, state, runDir)
+  6. If guardrail passes:
+     a. completePhase(stateRoot, phase, artifacts)
+     b. Continue to next phase
+  7. If guardrail fails: execute Retry Ladder
+  8. Capture events:
+     wazir capture event --run <id> --event phase_exit --phase <phase> --status completed
+
+transitionPhase(stateRoot, 'complete')
+```
+
+**CRITICAL: No phase runs inline in the controller.** The controller ONLY:
+- Manages state transitions
+- Dispatches subagents
+- Validates guardrails
+- Handles retry/escalation
+- Presents results to the user
+
+## Subagent Prompt Template
+
+Each subagent receives this prompt structure:
+
+```
+You are running the {PHASE} phase of the Wazir pipeline.
+
+Run ID: {run_id}
+Run directory: {run_dir}
+State root: {state_root}
+Depth: {depth}
+Interaction mode: {interaction_mode}
+
+## Your Instructions
+{Read and paste the full content of skills/{phase_skill}/SKILL.md here}
+
+## Input Artifacts (read from disk)
+{List of file paths the subagent should read as input}
+
+## Output Artifacts (write to disk)
+{List of file paths the subagent must produce}
+
+## Rules
+- Read your input artifacts from the paths above
+- Write your output artifacts to the paths above
+- Do NOT skip any step in your instructions
+- Use wazir index for codebase exploration
+- Use context-mode for large command outputs
+- When done, state which artifacts you produced
+```
+
+The controller reads the phase skill from disk and includes it in the prompt. This ensures each subagent has the latest skill version.
+
+## Subagent Dispatch Rules
+
+1. **No nesting** — all subagents dispatched at depth=1 from the controller
+2. **No context sharing** — subagents communicate only via artifacts on disk
+3. **No pipeline state awareness** — subagents don't read pipeline-state.json
+4. **Controller reads skills** — Read `skills/{name}/SKILL.md` before dispatch, paste into prompt
+5. **Verify phase handled by executor** — the executor subagent handles both execute + verify workflows
+
+## Retry Ladder
+
+If a guardrail fails after a phase subagent completes:
+
+```
+retry_count = 0
+while guardrail fails:
+  retry_count++
+  if retry_count <= 2:
+    # Re-dispatch same phase with failure feedback
+    prompt += "\n\nPREVIOUS ATTEMPT FAILED GUARDRAIL:\n{guardrail.reason}\nMissing: {guardrail.missing}\nFix these issues."
+    Dispatch Agent again
+  elif retry_count == 3:
+    # Escalate model (use Opus if not already)
+    prompt += "\n\nESCALATED: Previous attempts failed. Produce ALL required artifacts."
+    Dispatch Agent with model="opus"
+  else:
+    # Escalate to human
+    Ask user: "Phase {phase} failed guardrail after {retry_count} attempts: {reason}"
+    Options: 1. Retry manually  2. Skip phase  3. Abort run
+    break
+```
+
+## Pipeline State Management
+
+The controller manages `pipeline-state.json` at `$STATE_ROOT/pipeline-state.json`:
+
+```javascript
+// Before first phase
+createPipelineState(runId, stateRoot)
+transitionPhase(stateRoot, 'clarify')
+
+// Between phases
+transitionPhase(stateRoot, 'execute')
+
+// After each phase
+completePhase(stateRoot, phase, { artifactName: { path: '...' } })
+
+// When done
+transitionPhase(stateRoot, 'complete')
+```
+
+The Stop hook reads this file to block premature completion.
+The PreToolUse hook reads this file to enforce phase-specific tool restrictions.
+
+---
+
+# Phase 2: Clarifier (Subagent)
+
+**Before dispatching, output to the user:**
+
+> **Clarifier Phase** — Dispatching clarifier subagent to research your codebase, clarify requirements, harden the spec, brainstorm designs, and produce an execution plan.
 >
 > **Why this matters:** Without this, I'd guess your tech stack, misunderstand constraints, miss edge cases in the spec, and build the wrong architecture. Every ambiguity left unresolved here becomes a bug or rework cycle later.
->
-> **Looking for:** Unstated assumptions, scope boundaries, conflicting requirements, missing acceptance criteria
+
+## Pre-Dispatch
 
 ```bash
 wazir capture event --run <run-id> --event phase_enter --phase clarifier --status in_progress
 ```
 
-Invoke the `wz:clarifier` skill. It handles all sub-workflows internally:
+Update pipeline state:
+```
+transitionPhase(stateRoot, 'clarify')
+```
 
-1. **Source Capture** — fetch URLs from input
-2. **Research** (discover workflow) — codebase + external research
-3. **Clarify** (clarify workflow) — scope, constraints, assumptions
-4. **Spec Harden** (specify + spec-challenge workflows) — measurable spec
-5. **Brainstorm** (design + design-review workflows) — design approaches
-6. **Plan** (plan + plan-review workflows) — execution plan
+## Dispatch
 
-Each sub-workflow has its own review loop. User checkpoints between major steps.
+Read `skills/clarifier/SKILL.md` from disk. Build the subagent prompt using the Subagent Prompt Template above.
+
+**Input artifacts for clarifier subagent:**
+- `.wazir/input/briefing.md`
+- `.wazir/runs/<id>/sources/` (all captured sources)
+- `.wazir/runs/<id>/run-config.yaml`
+- `input/` directory (project-level input files)
+
+**Required output artifacts:**
+- `.wazir/runs/<id>/clarified/clarification.md`
+- `.wazir/runs/<id>/clarified/spec-hardened.md`
+- `.wazir/runs/<id>/clarified/design.md`
+- `.wazir/runs/<id>/clarified/execution-plan.md`
+
+Dispatch: `Agent(prompt=..., description="wazir: clarifier")`
+
+## Post-Dispatch
+
+Run guardrail: `validateClarifyComplete(state, runDir)`
+
+If guardrail passes:
+```bash
+completePhase(stateRoot, 'clarify', { clarification: {...}, spec: {...}, design: {...}, plan: {...} })
+wazir capture event --run <run-id> --event phase_exit --phase clarifier --status completed
+wazir report phase --run <run-id> --phase clarifier
+```
+
+If guardrail fails: execute Retry Ladder.
 
 ### Scope Invariant
 
-**Hard rule:** `items_in_plan >= items_in_input` unless the user explicitly approves scope reduction. The clarifier MUST NOT autonomously tier, defer, or drop items from the user's input. It can suggest prioritization, but the decision belongs to the user.
+**Hard rule:** `items_in_plan >= items_in_input` unless the user explicitly approves scope reduction. The clarifier MUST NOT autonomously tier, defer, or drop items from the user's input.
 
-Output: approved spec + design + execution plan in `.wazir/runs/latest/clarified/`.
-
-**After completing this phase, output to the user:**
+**After clarifier subagent completes, output to the user:**
 
 > **Clarifier Phase complete.**
 >
 > **Found:** [N] ambiguities resolved, [N] assumptions made explicit, [N] scope boundaries drawn, [N] acceptance criteria hardened
 >
 > **Without this phase:** Requirements would be interpreted differently across tasks, acceptance criteria would be vague and untestable, the design would be ad-hoc, and the plan would miss dependency ordering
->
-> **Changed because of this work:** [List spec tightening changes, resolved questions, design decisions, scope adjustments]
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase clarifier --status completed
-```
-
-Run the phase report and display savings to the user:
-```bash
-wazir report phase --run <run-id> --phase clarifier
-wazir stats --run <run-id>
-```
-
-**Show savings in conversation output:**
-> **Context savings this phase:** Used wazir index for [N] queries and context-mode for [M] commands, saving ~[X] tokens ([Y]% reduction). Without these, this phase would have consumed [A] tokens instead of [B].
-
-Output the report content to the user in the conversation.
 
 ---
 
-# Phase 3: Executor
+# Phase 3: Executor (Subagent)
 
-**Before starting this phase, output to the user:**
+**Before dispatching, output to the user:**
 
-> **Executor Phase** — About to implement [N] tasks in dependency order with TDD (test-first), per-task code review, and verification before each commit.
+> **Executor Phase** — Dispatching executor subagent to implement [N] tasks with TDD, per-task review, and verification.
 >
-> **Why this matters:** Without this discipline, tests get skipped, edge cases get missed, integration points break silently, and review catches problems too late when they're expensive to fix.
->
-> **Looking for:** Correct dependency ordering, test coverage for each task, clean per-task review passes, no implementation drift from the approved plan
+> **Why this matters:** Without this discipline, tests get skipped, edge cases get missed, integration points break silently, and review catches problems too late.
 
-## Phase Gate (Hard Gate)
+## Pre-Dispatch Guardrail (Hard Gate)
 
-Before entering the Executor phase, verify ALL clarifier artifacts exist:
-
-- [ ] `.wazir/runs/latest/clarified/clarification.md`
-- [ ] `.wazir/runs/latest/clarified/spec-hardened.md`
-- [ ] `.wazir/runs/latest/clarified/design.md`
-- [ ] `.wazir/runs/latest/clarified/execution-plan.md`
-
-If ANY file is missing, **STOP**:
-
-> **Cannot enter Executor phase: missing prerequisite artifacts from Clarifier.**
->
-> Missing: [list missing files]
->
-> The Clarifier phase must complete before execution can begin. Run `/wazir:clarifier` first.
-
-**Do NOT skip this check. Do NOT rationalize that the input is "clear enough" to bypass clarification. Every pipeline run must produce these artifacts.**
-
-```bash
-wazir capture event --run <run-id> --event phase_enter --phase executor --status in_progress
-```
-
-**Pre-execution gate:**
+Run `validateClarifyComplete(state, runDir)` to verify ALL clarifier artifacts exist. If ANY file is missing, **STOP** — do not dispatch the executor subagent.
 
 ```bash
 wazir validate manifest && wazir validate hooks
 # Hard gate — stop if either fails.
 ```
 
-Invoke the `wz:executor` skill. It handles:
+Update pipeline state:
+```
+transitionPhase(stateRoot, 'execute')
+wazir capture event --run <run-id> --event phase_enter --phase executor --status in_progress
+```
 
-1. **Execute** (execute workflow) — per-task TDD cycle with review before each commit
-2. **Verify** (verify workflow) — deterministic verification of all claims
+## Dispatch
 
-Per-task review: `--mode task-review`, 5 task-execution dimensions.
-Tasks always run sequentially.
+Read `skills/executor/SKILL.md` from disk. Build the subagent prompt.
 
-Output: code changes + verification proof in `.wazir/runs/latest/artifacts/`.
+**Input artifacts for executor subagent:**
+- `.wazir/runs/<id>/clarified/clarification.md`
+- `.wazir/runs/<id>/clarified/spec-hardened.md`
+- `.wazir/runs/<id>/clarified/design.md`
+- `.wazir/runs/<id>/clarified/execution-plan.md`
+- `.wazir/runs/<id>/run-config.yaml`
+- `.wazir/state/config.json`
 
-**After completing this phase, output to the user:**
+**Required output artifacts:**
+- `.wazir/runs/<id>/artifacts/task-NNN/` (at least one)
+- `.wazir/runs/<id>/artifacts/verification-proof.md`
+
+Dispatch: `Agent(prompt=..., description="wazir: executor")`
+
+The executor subagent handles BOTH the execute and verify workflows internally.
+
+## Post-Dispatch
+
+Run guardrail: `validateExecuteComplete(state, runDir)`
+
+If guardrail passes:
+```bash
+completePhase(stateRoot, 'execute', { verification_proof: { path: '...' } })
+transitionPhase(stateRoot, 'verify')
+completePhase(stateRoot, 'verify', { verification_proof: { path: '...' } })
+wazir capture event --run <run-id> --event phase_exit --phase executor --status completed
+wazir report phase --run <run-id> --phase executor
+```
+
+If guardrail fails: execute Retry Ladder.
+
+**After executor subagent completes, output to the user:**
 
 > **Executor Phase complete.**
 >
-> **Found:** [N]/[N] tasks implemented, [N] tests written, [N] per-task review passes completed, [N] findings fixed before commit
+> **Found:** [N]/[N] tasks implemented, [N] tests written, [N] per-task review passes completed
 >
 > **Without this phase:** Code would ship without tests, review findings would accumulate until final review (10x more expensive to fix), and verification claims would be unsubstantiated
->
-> **Changed because of this work:** [List of commits with conventional commit messages, test counts, verification evidence collected]
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase executor --status completed
-```
-
-Run the phase report and display savings to the user:
-```bash
-wazir report phase --run <run-id> --phase executor
-wazir stats --run <run-id>
-```
-
-Output the report content to the user in the conversation.
-
-**Show savings in conversation output:**
-> **Context savings this phase:** Used wazir index for [N] queries and context-mode for [M] commands, saving ~[X] tokens ([Y]% reduction).
 
 ---
 
-# Phase 4: Final Review
+# Phase 4: Final Review (Subagent)
 
-**Before starting this phase, output to the user:**
+**Before dispatching, output to the user:**
 
-> **Final Review Phase** — About to run adversarial 7-dimension review comparing the implementation against your original input, extract durable learnings, and prepare the handoff.
+> **Final Review Phase** — Dispatching reviewer subagent for adversarial 7-dimension review comparing implementation against your original input.
 >
-> **Why this matters:** Without this, implementation drift ships undetected, missing acceptance criteria go unnoticed, untested code paths hide bugs, and the same mistakes repeat in the next run.
->
-> **Looking for:** Spec violations, missing features, dead code paths, unsubstantiated claims, scope creep, security gaps, stale documentation
+> **Why this matters:** Without this, implementation drift ships undetected, missing acceptance criteria go unnoticed, and the same mistakes repeat.
 
-## Phase Gate (Hard Gate)
+## Pre-Dispatch Guardrail (Hard Gate)
 
-Before entering the Final Review phase, verify the Executor produced its proof:
+Run `validateVerifyComplete(state, runDir)` to verify verification proof exists. If missing, **STOP**.
 
-- [ ] `.wazir/runs/latest/artifacts/verification-proof.md`
-
-If missing, **STOP**:
-
-> **Cannot enter Final Review: missing verification proof from Executor.**
->
-> The Executor phase must complete and produce `verification-proof.md` before final review. Run `/wazir:executor` first.
-
-```bash
+Update pipeline state:
+```
+transitionPhase(stateRoot, 'review')
 wazir capture event --run <run-id> --event phase_enter --phase final_review --status in_progress
 ```
 
-This phase validates the implementation against the **ORIGINAL INPUT** (not the task specs — the executor's per-task reviewer already covered that).
+## Dispatch
 
-### 4a: Review (reviewer role in final mode)
+Read `skills/reviewer/SKILL.md` from disk. Build the subagent prompt.
 
-Invoke `wz:reviewer --mode final`.
-7-dimension scored review comparing implementation against the original user input.
-Score 0-70. Verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+**Input artifacts for reviewer subagent:**
+- `.wazir/input/briefing.md` (original input — compare implementation against THIS)
+- `.wazir/runs/<id>/clarified/spec-hardened.md`
+- `.wazir/runs/<id>/artifacts/verification-proof.md`
+- `.wazir/runs/<id>/run-config.yaml`
+- `.wazir/state/config.json`
+- Git diff: `git diff main..HEAD`
 
-### 4b: Learn (learner role)
+**Required output artifacts:**
+- `.wazir/runs/<id>/reviews/final-review.md`
+- `.wazir/runs/<id>/reviews/verdict.json` (must have numeric `score` field)
 
-Extract durable learnings from the completed run:
-- Scan all review findings (internal + Codex)
-- Propose learnings to `memory/learnings/proposed/`
-- Findings that recur across 2+ runs → auto-proposed as learnings
-- Learnings require explicit scope tags (roles, stacks, concerns)
-
-### 4c: Prepare Next (planner role)
-
-Prepare context and handoff for the next run:
-- Write handoff document
-- Compress/archive unneeded files
-- Record what's left to do
-
-**After completing this phase, output to the user:**
-
-> **Final Review Phase complete.**
->
-> **Found:** [N] findings across 7 dimensions, [N] blocking issues, [N] warnings, [N] learnings proposed for future runs
->
-> **Without this phase:** Implementation drift from the original request would ship undetected, untested paths would hide production bugs, and recurring mistakes would never get captured as learnings
->
-> **Changed because of this work:** [List of findings fixed, score achieved, learnings extracted, handoff prepared]
-
-```bash
-wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
+Additional instructions in the subagent prompt:
+```
+Run in --mode final. Produce a 7-dimension scored review.
+Write verdict.json with { "score": N, "verdict": "PASS|NEEDS_MINOR_FIXES|NEEDS_REWORK|FAIL" }
+Compare implementation against the ORIGINAL INPUT (briefing.md), not just the spec.
+Use Codex for external review if configured in config.json.
 ```
 
-Run the phase report and display it to the user:
+Dispatch: `Agent(prompt=..., description="wazir: reviewer")`
+
+## Post-Dispatch
+
+Run guardrail: `validateReviewComplete(state, runDir)`
+
+If guardrail passes:
 ```bash
+completePhase(stateRoot, 'review', { review_verdict: { path: '...' } })
+wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
+transitionPhase(stateRoot, 'complete')
 wazir report phase --run <run-id> --phase final_review
 ```
 
-Output the report content to the user in the conversation.
+If guardrail fails: execute Retry Ladder.
+
+**After reviewer subagent completes, output to the user:**
+
+> **Final Review Phase complete.**
+>
+> **Found:** [N] findings across 7 dimensions, [N] blocking issues, [N] warnings
+>
+> **Without this phase:** Implementation drift from the original request would ship undetected, untested paths would hide production bugs
 
 ---
 
