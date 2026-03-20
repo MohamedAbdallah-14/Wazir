@@ -122,16 +122,46 @@ Wait for the user's selection before continuing.
    - Every API endpoint, color hex code, and UI dimension from input must appear in the relevant item section.
 2. If `.wazir/input/tasks/` is empty or missing, synthesize from `briefing.md` alone.
 
+### Informed Question Batching (after research, before producing clarification)
+
+Research has completed. You now have codebase context and external findings. Before producing the clarification, ask the user INFORMED questions — informed by the research, not guesses.
+
+**Rules:**
+1. **Research runs FIRST, questions come AFTER.** Never ask questions before research completes.
+2. **Batch questions:** 1-3 batches of 3-7 questions each. Never one-at-a-time.
+3. **Every scope exclusion must be explicitly confirmed by the user.** You MUST NOT decide that something is "out of scope" without asking. If the input doesn't mention docs, ask: "The input doesn't mention documentation — should we include API docs, or is that explicitly out of scope?" Do NOT assume.
+4. **If the input is clear and complete:** Zero questions is fine. State: "Input is clear and specific. No ambiguities detected. Proceeding with clarification."
+5. **In auto mode (`interaction_mode: auto`):** Questions go to the gating agent, not the user.
+6. **In interactive mode (`interaction_mode: interactive`):** More detailed questions, present research findings that informed each question.
+
+**Question format:**
+```
+Based on research, I have [N] questions before proceeding:
+
+**Scope & Intent**
+1. [Question informed by research finding]
+2. [Question about ambiguous requirement]
+
+**Technical Decisions**
+3. [Question about architecture choice discovered during research]
+4. [Question about dependency/framework preference]
+
+**Boundaries**
+5. [Explicit scope boundary question — "Should X be included or excluded?"]
+```
+
+Ask via AskUserQuestion with the full batch. Wait for answers. If answers introduce new ambiguity, ask a follow-up batch (max 3 batches total).
+
 ### Clarification Production
 
-Read the briefing, research brief, and codebase context. Produce:
+Read the briefing, research brief, user answers to questions, and codebase context. Produce:
 
 - **What** we're building — concrete deliverables
 - **Why** — the motivation and business value
 - **Constraints** — technical, timeline, dependencies
-- **Assumptions** — what we're taking as given
-- **Scope boundaries** — what's IN and what's explicitly OUT
-- **Unresolved questions** — anything ambiguous
+- **Assumptions** — what we're taking as given (each explicitly confirmed by user or clearly stated in input)
+- **Scope boundaries** — what's IN and what's explicitly OUT (every exclusion must reference the user's confirmation: "Out of scope per user confirmation in question batch 1, Q5")
+- **Unresolved questions** — anything still ambiguous after question batches
 
 Save to `.wazir/runs/latest/clarified/clarification.md`.
 
