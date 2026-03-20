@@ -99,13 +99,13 @@ If any file is missing:
 
 Perform adversarial review across 7 dimensions:
 
-1. **Correctness** — Does the code do what the original input asked for?
-2. **Completeness** — Are all requirements from the original input met?
-3. **Wiring** — Are all paths connected end-to-end?
-4. **Verification** — Is there evidence (tests, type checks) for each claim?
-5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT)
-6. **Quality** — Code style, naming, error handling, security
-7. **Documentation** — Changelog entries, commit messages, comments
+1. **Correctness** — Does the code do what the original input asked for? catches: logic errors, wrong return values, inverted conditions, off-by-one errors
+2. **Completeness** — Are all requirements from the original input met? catches: missing features, partial implementations, unhandled input variants
+3. **Wiring** — Are all paths connected end-to-end? catches: dead imports, unregistered routes, orphaned components, broken dependency chains
+4. **Verification** — Is there evidence (tests, type checks) for each claim? catches: untested code paths, missing assertions, stale snapshots, type holes
+5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT) catches: scope creep, silent re-scoping, requirements reinterpreted without user approval
+6. **Quality** — Code style, naming, error handling, security catches: unhandled promise rejections, SQL injection, hardcoded secrets, inconsistent naming
+7. **Documentation** — Changelog entries, commit messages, comments catches: missing changelog entries for user-facing changes, misleading commit messages, stale inline comments
 
 ## Context Retrieval
 

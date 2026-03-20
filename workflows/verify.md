@@ -21,7 +21,11 @@ On entering this phase, run:
 
 ## Outputs
 
-- verification proof artifact
+- verification proof artifact (produced by `collectProof` from `tooling/src/verify/proof-collector.js`)
+
+## Proof Collection
+
+Use `detectRunnableType` to classify the project, then `collectProof` to gather evidence. The proof-collector runs type-appropriate commands (build, test, lint, type-check) using `execFileSync` and returns structured `{ type, evidence }`.
 
 ## Approval Gate
 

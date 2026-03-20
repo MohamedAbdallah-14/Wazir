@@ -50,6 +50,9 @@ Read `context_mode` from `.wazir/state/config.json`:
 
 ---
 
+> **Output to the user** before starting research:
+> Research prevents building on false assumptions. Without it, you risk choosing a library that's deprecated, following a pattern that conflicts with the existing codebase, or misunderstanding an external API's constraints.
+
 ## Sub-Workflow 1: Research (discover workflow)
 
 Delegate to the discover workflow (`workflows/discover.md`):
@@ -67,6 +70,9 @@ Delegate to the discover workflow (`workflows/discover.md`):
 6. Loop runs for `pass_counts[depth]` passes.
 
 Save result to `.wazir/runs/latest/clarified/research-brief.md`.
+
+> **Output to the user** after research completes:
+> The research brief summarizes what was found about the codebase architecture, relevant external APIs, and technology constraints. This is your chance to correct wrong assumptions before they propagate into the spec.
 
 ### Checkpoint: Research Review
 
@@ -108,6 +114,9 @@ Save to `.wazir/runs/latest/clarified/clarification.md`.
 
 Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presenting to user.
 
+> **Output to the user** after clarification:
+> The clarified scope makes implicit assumptions explicit. It surfaces constraints you may not have stated, identifies what's in vs. out, and lists unresolved questions — preventing scope creep and misaligned expectations during execution.
+
 ### Checkpoint: Clarification Review
 
 > **Here's the clarified scope:**
@@ -146,6 +155,9 @@ After spec hardening, scan the spec for content needs. Auto-enable the `author` 
 If detected, set `workflow_policy.author.enabled = true` in the run config and note:
 > **Content needs detected.** The content-author workflow will run after design approval to produce: [list detected content types].
 
+> **Output to the user** after spec hardening:
+> The hardened spec converts vague requirements into measurable acceptance criteria. Each gap found and tightened is listed — you can see exactly what was ambiguous and how it was resolved, preventing "it works but not what I meant" outcomes.
+
 ### Checkpoint: Hardened Spec Review
 
 > **Spec hardened. Changes made:**
@@ -167,6 +179,9 @@ Invoke the `brainstorming` skill (`wz:brainstorming`):
 1. Propose 2-3 viable approaches with explicit trade-offs
 2. For each approach: effort estimate, risk assessment, what it enables/prevents
 3. Recommend one approach with rationale
+
+> **Output to the user** after brainstorming:
+> Each approach includes explicit trade-offs: effort, risk, and what it enables or prevents. This lets you make an informed architecture choice instead of discovering the trade-offs mid-implementation when changing course is expensive.
 
 ### Checkpoint: Design Approval
 
@@ -193,6 +208,9 @@ Delegate to `wz:writing-plans`:
 2. **Gap analysis exit gate:** Compare original input against plan. Invoke `wz:reviewer --mode plan-review`.
 3. Loop until clean or cap reached.
 
+> **Output to the user** after planning:
+> The execution plan maps every input requirement to a concrete task with dependencies and complexity estimates. The gap analysis ensures nothing was dropped — you can verify coverage before any code is written.
+
 ### Checkpoint: Plan Review
 
 > **Implementation plan: [N] tasks**
@@ -208,6 +226,9 @@ Delegate to `wz:writing-plans`:
 **Wait for user response.**
 
 ---
+
+> **Output to the user** if scope reduction is detected:
+> The scope coverage gate compares input items against plan tasks. If anything was silently dropped, deferred, or re-scoped, you see it here with a list of what's missing — preventing the common failure where "phase 2" items quietly disappear.
 
 ### Scope Coverage Gate (Hard Gate)
 
@@ -229,6 +250,9 @@ Before presenting the plan to the user, verify ALL input items are covered:
 Invariant: `items_in_plan >= items_in_input` unless user explicitly approves reduction.
 
 ---
+
+> **Output to the user** when clarifier phase completes:
+> The clarifier produced three artifacts: a measurable spec, an approved design, and a gap-checked plan. These form the contract for execution — every decision point is recorded so you can trace any implementation back to the requirement it fulfills.
 
 ## Done
 

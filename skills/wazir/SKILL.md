@@ -259,6 +259,9 @@ wazir capture event --run <run-id> --event phase_exit --phase init --status comp
 
 # Phase 2: Clarifier
 
+> **Output to the user** before invoking the clarifier:
+> The clarifier prevents building the wrong thing. Without it, ambiguous requirements lead to wrong architecture choices, wrong tech-stack assumptions, and scope that silently diverges from what you actually need. It catches these before any code is written.
+
 ```bash
 wazir capture event --run <run-id> --event phase_enter --phase clarifier --status in_progress
 ```
@@ -287,6 +290,9 @@ wazir capture event --run <run-id> --event phase_exit --phase clarifier --status
 ---
 
 # Phase 3: Executor
+
+> **Output to the user** before invoking the executor:
+> The executor runs with TDD and per-task review gates. Without these gates, implementations skip tests, miss edge cases, introduce regressions, and accumulate drift from the spec that only surfaces much later.
 
 ## Phase Gate (Hard Gate)
 
@@ -336,6 +342,9 @@ wazir capture event --run <run-id> --event phase_exit --phase executor --status 
 
 # Phase 4: Final Review
 
+> **Output to the user** before invoking final review:
+> The final review compares what was built against what you originally asked for — not the task specs, but your actual input. This catches implementation drift, missing acceptance criteria, and requirements that were subtly reinterpreted during planning but never validated back against the source.
+
 ## Phase Gate (Hard Gate)
 
 Before entering the Final Review phase, verify the Executor produced its proof:
@@ -359,6 +368,9 @@ This phase validates the implementation against the **ORIGINAL INPUT** (not the 
 Invoke `wz:reviewer --mode final`.
 7-dimension scored review comparing implementation against the original user input.
 Score 0-70. Verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+
+> **Output to the user** after the review verdict:
+> The review score and findings tell you exactly where the implementation is strong and where it falls short — with evidence, not opinion. Each finding is attributed to its source (internal review, Codex, or both) so you can calibrate trust.
 
 ### 4b: Learn (learner role)
 
@@ -392,7 +404,13 @@ wazir validate commits --base main
 
 Both must pass before PR. These are not warnings.
 
+> **Output to the user** for the learning summary:
+> Learnings extracted from this run prevent the same mistakes in future runs. Each proposed learning includes scope tags, confidence level, and evidence — so you can decide which insights to promote to permanent project memory.
+
 ## Step 6: Present Results
+
+> **Output to the user** with the final results:
+> The run summary gives you a single-screen view of what happened: tasks completed, review score, open issues, and next steps. This is your decision point for PR creation, fixes, or rework.
 
 After the reviewer completes, present verdict with numbered options:
 
