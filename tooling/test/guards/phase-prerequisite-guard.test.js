@@ -253,10 +253,10 @@ describe('evaluatePhasePrerequisiteGuard', () => {
 
   test('allows final_review when all artifacts exist', () => {
     const { stateRoot, runId, runRoot } = createFixture();
-    writeArtifacts(runRoot, [
-      ...EXECUTOR_ARTIFACTS,
-      'artifacts/verification-proof.md',
-    ]);
+    writeArtifacts(runRoot, EXECUTOR_ARTIFACTS);
+    // verification-proof.md must contain "status: pass" or "PASS" to pass content validation
+    const proofPath = path.join(runRoot, 'artifacts', 'verification-proof.md');
+    fs.writeFileSync(proofPath, '# Verification Proof\n\nstatus: pass\n');
     writePhaseExitEvent(runRoot, 'clarifier');
     writePhaseExitEvent(runRoot, 'executor');
     const result = evaluatePhasePrerequisiteGuard({
@@ -299,5 +299,155 @@ describe('evaluatePhasePrerequisiteGuard', () => {
       () => evaluatePhasePrerequisiteGuard({ run_id: 'r1', phase: 'executor', state_root: '/tmp' }),
       /project_root is required/,
     );
+  });
+
+  test('blocks when proof JSON has all_passed: false', () => {
+    const { stateRoot, runId, runRoot } = createFixture();
+    writeArtifacts(runRoot, EXECUTOR_ARTIFACTS);
+    const proofMdPath = path.join(runRoot, 'artifacts', 'verification-proof.md');
+    fs.writeFileSync(proofMdPath, '# Verification\n\nstatus: pass\n');
+    const proofJsonPath = path.join(runRoot, 'artifacts', 'proof-task-001.json');
+    fs.writeFileSync(proofJsonPath, JSON.stringify({ task_id: 'task-001', all_passed: false }));
+    // Add proof-task-001.json to required_artifacts via a custom manifest
+    // Instead, test with final_review phase which requires verification-proof.md
+    // We need a phase that requires a proof JSON. Let's use a custom fixture approach:
+    // We'll create a temp manifest that has a proof JSON in required_artifacts.
+    // Actually, the simplest approach: create a temp project root with a custom manifest.
+    const tempProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-proof-test-'));
+    fs.writeFileSync(path.join(tempProjectRoot, 'wazir.manifest.yaml'), [
+      'name: test-project',
+      'workflows: []',
+      'phase_prerequisites:',
+      '  verify:',
+      '    required_artifacts:',
+      '      - artifacts/proof-task-001.json',
+      '    required_phase_exits: []',
+    ].join('\n'));
+    fs.writeFileSync(
+      path.join(runRoot, 'status.json'),
+      JSON.stringify({ run_id: runId, phase: 'verify', status: 'starting' }),
+    );
+    const result = evaluatePhasePrerequisiteGuard({
+      run_id: runId,
+      phase: 'verify',
+      state_root: stateRoot,
+      project_root: tempProjectRoot,
+    });
+    assert.strictEqual(result.allowed, false);
+    assert.ok(result.failed_proofs);
+    assert.ok(result.failed_proofs[0].includes('all_passed is not true'));
+    assert.match(result.reason, /Failed proof validation/);
+  });
+
+  test('blocks when proof JSON is empty/malformed', () => {
+    const { stateRoot, runId, runRoot } = createFixture();
+    const tempProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-proof-test-'));
+    fs.writeFileSync(path.join(tempProjectRoot, 'wazir.manifest.yaml'), [
+      'name: test-project',
+      'workflows: []',
+      'phase_prerequisites:',
+      '  verify:',
+      '    required_artifacts:',
+      '      - artifacts/proof-task-001.json',
+      '    required_phase_exits: []',
+    ].join('\n'));
+    // Write malformed JSON
+    const proofJsonPath = path.join(runRoot, 'artifacts', 'proof-task-001.json');
+    fs.writeFileSync(proofJsonPath, '{ not valid json !!!');
+    const result = evaluatePhasePrerequisiteGuard({
+      run_id: runId,
+      phase: 'verify',
+      state_root: stateRoot,
+      project_root: tempProjectRoot,
+    });
+    assert.strictEqual(result.allowed, false);
+    assert.ok(result.failed_proofs);
+    assert.ok(result.failed_proofs[0].includes('malformed'));
+    assert.match(result.reason, /Failed proof validation/);
+  });
+
+  test('blocks when proof JSON is empty file', () => {
+    const { stateRoot, runId, runRoot } = createFixture();
+    const tempProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-proof-test-'));
+    fs.writeFileSync(path.join(tempProjectRoot, 'wazir.manifest.yaml'), [
+      'name: test-project',
+      'workflows: []',
+      'phase_prerequisites:',
+      '  verify:',
+      '    required_artifacts:',
+      '      - artifacts/proof-task-001.json',
+      '    required_phase_exits: []',
+    ].join('\n'));
+    const proofJsonPath = path.join(runRoot, 'artifacts', 'proof-task-001.json');
+    fs.writeFileSync(proofJsonPath, '');
+    const result = evaluatePhasePrerequisiteGuard({
+      run_id: runId,
+      phase: 'verify',
+      state_root: stateRoot,
+      project_root: tempProjectRoot,
+    });
+    assert.strictEqual(result.allowed, false);
+    assert.ok(result.failed_proofs);
+    assert.ok(result.failed_proofs[0].includes('malformed'));
+  });
+
+  test('passes when proof JSON has all_passed: true', () => {
+    const { stateRoot, runId, runRoot } = createFixture();
+    const tempProjectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-proof-test-'));
+    fs.writeFileSync(path.join(tempProjectRoot, 'wazir.manifest.yaml'), [
+      'name: test-project',
+      'workflows: []',
+      'phase_prerequisites:',
+      '  verify:',
+      '    required_artifacts:',
+      '      - artifacts/proof-task-001.json',
+      '    required_phase_exits: []',
+    ].join('\n'));
+    const proofJsonPath = path.join(runRoot, 'artifacts', 'proof-task-001.json');
+    fs.writeFileSync(proofJsonPath, JSON.stringify({ task_id: 'task-001', all_passed: true }));
+    const result = evaluatePhasePrerequisiteGuard({
+      run_id: runId,
+      phase: 'verify',
+      state_root: stateRoot,
+      project_root: tempProjectRoot,
+    });
+    assert.strictEqual(result.allowed, true);
+    assert.match(result.reason, /All prerequisite artifacts present/);
+  });
+
+  test('blocks when verification-proof.md lacks status: pass', () => {
+    const { stateRoot, runId, runRoot } = createFixture();
+    writeArtifacts(runRoot, EXECUTOR_ARTIFACTS);
+    // Write verification-proof.md without passing status
+    const proofPath = path.join(runRoot, 'artifacts', 'verification-proof.md');
+    fs.writeFileSync(proofPath, '# Verification\n\nstatus: fail\nSome tests did not pass.\n');
+    writePhaseExitEvent(runRoot, 'clarifier');
+    writePhaseExitEvent(runRoot, 'executor');
+    const result = evaluatePhasePrerequisiteGuard({
+      run_id: runId,
+      phase: 'final_review',
+      state_root: stateRoot,
+      project_root: ROOT,
+    });
+    assert.strictEqual(result.allowed, false);
+    assert.ok(result.failed_proofs);
+    assert.ok(result.failed_proofs[0].includes('does not contain'));
+    assert.match(result.reason, /Failed proof validation/);
+  });
+
+  test('allows verification-proof.md with PASS keyword', () => {
+    const { stateRoot, runId, runRoot } = createFixture();
+    writeArtifacts(runRoot, EXECUTOR_ARTIFACTS);
+    const proofPath = path.join(runRoot, 'artifacts', 'verification-proof.md');
+    fs.writeFileSync(proofPath, '# Verification\n\nResult: PASS\n');
+    writePhaseExitEvent(runRoot, 'clarifier');
+    writePhaseExitEvent(runRoot, 'executor');
+    const result = evaluatePhasePrerequisiteGuard({
+      run_id: runId,
+      phase: 'final_review',
+      state_root: stateRoot,
+      project_root: ROOT,
+    });
+    assert.strictEqual(result.allowed, true);
   });
 });

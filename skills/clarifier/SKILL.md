@@ -65,7 +65,12 @@ Before executing, announce your plan:
 2. Check `.wazir/input/briefing.md` exists. If not, ask the user what they want to build and save it there.
 3. Scan `input/` (project-level) and `.wazir/input/` (state-level) for additional input files. Present what's found.
 4. Read config for `default_depth` and `multi_tool` settings.
-5. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
+5. **Load accepted learnings:**
+   1. Glob `memory/learnings/accepted/*.md`
+   2. For each file: read YAML frontmatter, extract `scope` tags (e.g., `scope: [auth, react, security]`)
+   3. Match scope tags against current run's intent (from run config `parsed_intent`) and detected stack (from research findings or `config.json` stack settings)
+   4. Inject matching learnings into context, sorted by confidence (highest first), most recent first, limit 10
+   5. If no accepted learnings exist or no matches found: skip silently — this is expected until the pipeline matures
 6. Create a run directory if one doesn't exist:
    ```bash
    mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}

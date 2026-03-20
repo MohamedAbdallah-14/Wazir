@@ -715,12 +715,42 @@ Read `skills/reviewer/SKILL.md` from disk. Build the subagent prompt.
 - `.wazir/runs/<id>/reviews/final-review.md`
 - `.wazir/runs/<id>/reviews/verdict.json` (must have numeric `score` field)
 
+<<<<<<< HEAD
 Additional instructions in the subagent prompt:
 ```
 Run in --mode final. Produce a 7-dimension scored review.
 Write verdict.json with { "score": N, "verdict": "PASS|NEEDS_MINOR_FIXES|NEEDS_REWORK|FAIL" }
 Compare implementation against the ORIGINAL INPUT (briefing.md), not just the spec.
 Use Codex for external review if configured in config.json.
+=======
+Extract durable learnings from the completed run:
+- Scan all review findings (internal + Codex)
+- Propose learnings to `memory/learnings/proposed/`
+- Findings that recur across 2+ runs → auto-proposed as learnings
+- Learnings require explicit scope tags (roles, stacks, concerns)
+
+**Learn workflow completion guard:** If `workflow_policy.learn.enabled: true` in run config AND no files exist in `memory/learnings/proposed/` matching the current run ID pattern (`run-<current-id>-*.md`): log a warning finding: 'Learn workflow enabled but no proposed learnings written for this run'. This ensures the learn workflow always produces output when enabled.
+
+### 4c: Prepare Next (planner role)
+
+Prepare context and handoff for the next run:
+- Write handoff document
+- Compress/archive unneeded files
+- Record what's left to do
+
+**After completing this phase, output to the user:**
+
+> **Final Review Phase complete.**
+>
+> **Found:** [N] findings across 7 dimensions, [N] blocking issues, [N] warnings, [N] learnings proposed for future runs
+>
+> **Without this phase:** Implementation drift from the original request would ship undetected, untested paths would hide production bugs, and recurring mistakes would never get captured as learnings
+>
+> **Changed because of this work:** [List of findings fixed, score achieved, learnings extracted, handoff prepared]
+
+```bash
+wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
+>>>>>>> d54b700 (feat(learnings): activate learning pipeline feedback loop)
 ```
 
 Dispatch: `Agent(prompt=..., description="wazir: reviewer")`

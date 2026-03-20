@@ -19,6 +19,7 @@ export function getRunPaths(stateRoot, runId) {
     capturesDir,
     statusPath: path.join(runRoot, 'status.json'),
     eventsPath: path.join(runRoot, 'events.ndjson'),
+    decisionsPath: path.join(runRoot, 'decisions.ndjson'),
     summaryPath: path.join(runRoot, 'summary.md'),
     usagePath: path.join(runRoot, 'usage.json'),
   };
