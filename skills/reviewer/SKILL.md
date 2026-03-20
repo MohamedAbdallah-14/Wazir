@@ -150,6 +150,7 @@ The review process has two tiers. Internal review catches ~80% of issues quickly
 ### Tier 1: Internal Review (Fast, Cheap, Expertise-Loaded)
 
 1. **Compose expertise:** Load relevant expertise modules from `expertise/composition-map.yaml` into context based on the review mode and detected stack. This gives the internal reviewer domain-specific knowledge.
+   - The reviewer uses **mode-specific composition**: `always.reviewer` modules are loaded for all modes, then `reviewer_modes.<current-mode>` modules are loaded on top. This keeps the reviewer's context compact (~15-25K tokens) and focused on the dimensions being evaluated. See `expertise/composition-map.yaml` for the per-mode module map.
 2. **Run internal review** using the dimension set for the current mode. When multi-model is enabled, use **Sonnet** (not Opus) for internal review passes — it's fast and good enough for pattern matching against expertise.
 3. **Produce findings:** Each finding is tagged `[Internal]` with severity (blocking, warning, note).
 4. **Fix cycle:** If blocking findings exist, the executor fixes them. Re-run internal review. Repeat until clean or cap reached.

@@ -63,6 +63,33 @@ When verification fails:
 - do not mark the work complete
 - report the gap honestly
 
+## Iron Laws of Verification
+
+These are non-negotiable. No context makes them optional.
+
+1. **Every claim requires fresh evidence from THIS change.** Prior test runs, earlier conversations, and memory are not evidence. Run it now.
+2. **Stale evidence is not evidence.** If you modified code after the last test run, the test run is stale. Run it again.
+3. **"It should work" is never acceptable.** The difference between "it should work" and "it works" is a command execution and 10 seconds.
+4. **Verification must be deterministic.** If the evidence depends on timing, external state, or manual inspection, it is not proof.
+
+**Violating the letter of verification is violating the spirit.** Claiming "tests pass" based on a run from before your latest change is the most common verification fraud. The proof must post-date the implementation. Always.
+
+## Red Flags — You Are Rationalizing
+
+If you catch yourself thinking any of these, STOP. You are about to skip verification.
+
+| Thought | Reality |
+|---------|---------|
+| "I already tested this earlier" | Did you test it after your last edit? If not, you have not tested it. |
+| "The code is simple enough to verify by reading" | Code review finds ~60% of bugs. Testing finds ~90%. Run the tests. |
+| "It's the same pattern as what worked before" | Same pattern, different context. Context is where bugs hide. Verify. |
+| "The tests are slow, I'll skip them this once" | This once becomes every time. Run them. |
+| "I just changed a string/comment/config" | Config changes cause production incidents. Verify. |
+| "The type checker will catch any problems" | Type checkers verify types, not logic. Tests verify logic. Do both. |
+| "I'll verify at the end when everything is done" | Compound errors are exponentially harder to diagnose. Verify incrementally. |
+| "The CI will catch it" | CI is a safety net, not a substitute. Verify locally first. |
+| "Nothing could have broken" | Famous last words. Run the tests. |
+
 Ask the user via AskUserQuestion:
 - **Question:** "Verification failed for [specific criteria]. How should we proceed?"
 - **Options:**

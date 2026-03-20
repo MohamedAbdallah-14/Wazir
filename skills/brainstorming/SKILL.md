@@ -51,3 +51,29 @@ Required outputs:
 - open questions or resolved assumptions
 - explicit recommendation and rejected alternatives
 
+## Iron Laws of Design
+
+These are non-negotiable. No context makes them optional.
+
+1. **Never implement before design review.** Code written before design approval is throwaway. Every time.
+2. **Present trade-offs, not just solutions.** A single option without alternatives is a decision made without the user. Always give 2-3 approaches.
+3. **Get explicit approval before proceeding.** Silence is not consent. "Sounds good" is not approval. Wait for a clear selection.
+4. **Name what you are NOT building.** Explicit exclusions prevent scope creep more effectively than detailed inclusions.
+
+**Violating the letter of the design process is violating the spirit.** Writing a design document after the code to justify decisions already made is the most common design fraud. The design must precede the implementation, not rationalize it.
+
+## Red Flags — You Are Rationalizing
+
+If you catch yourself thinking any of these, STOP. You are about to skip design.
+
+| Thought | Reality |
+|---------|---------|
+| "The requirement is clear enough to just build" | Clear requirements still have multiple valid architectures. Explore them. |
+| "I already know the best approach" | Then presenting alternatives costs nothing and proves your conviction. |
+| "Design is overkill for this" | If it takes more than one commit, it needs a design. |
+| "The user just wants it done fast" | Fast without design is fast to rework. Design is the investment that prevents waste. |
+| "I'll design as I go" | That is called hacking. It produces accidental architecture. |
+| "This is just a refactor, no design needed" | Refactors change structure. Changed structure IS design. Document the target state. |
+| "The previous design still applies" | If the context changed, validate that claim. Don't assume. |
+| "Let me prototype first, then formalize" | Prototypes become production code. Design before the prototype, or the prototype becomes the design. |
+

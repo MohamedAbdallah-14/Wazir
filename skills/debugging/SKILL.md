@@ -71,3 +71,30 @@ See `docs/reference/review-loop-pattern.md` for cap guard integration.
 - change one thing at a time
 - keep evidence for each failed hypothesis
 - if three cycles fail, record the blocker in the active execution artifact or handoff instead of inventing certainty
+
+## Iron Laws of Debugging
+
+These are non-negotiable. No context makes them optional.
+
+1. **Observe before hypothesizing.** Gather evidence first. Forming a theory without data is guessing, not debugging.
+2. **Test one variable at a time.** Changing multiple things simultaneously makes it impossible to identify the actual cause.
+3. **Never claim a fix without reproducing the failure first.** If you cannot reproduce it, you cannot confirm it is fixed.
+4. **Keep evidence for every rejected hypothesis.** The evidence trail prevents going in circles and enables escalation.
+
+**Violating the letter of the debugging process is violating the spirit.** Skipping observation to jump to a "fix" is the most common and most expensive debugging failure. A fix without a hypothesis is a guess. A guess without evidence is hope. Hope is not engineering.
+
+## Red Flags — You Are Rationalizing
+
+If you catch yourself thinking any of these, STOP. You are about to skip the process.
+
+| Thought | Reality |
+|---------|---------|
+| "I know what the bug is" | Then observe, confirm, and fix. If you are right, it costs 2 minutes. If you are wrong, you just introduced a second bug. |
+| "Let me just try this quick fix" | "Quick fixes" without diagnosis cause 80% of regression bugs. Observe first. |
+| "The fix is obvious" | Obvious fixes to undiagnosed problems are wrong 60% of the time. Prove it first. |
+| "I don't need to reproduce it" | Then you cannot verify the fix. You are shipping hope. |
+| "It's probably this one thing" | "Probably" means you have not observed. Observe. |
+| "I'll just add some logging and see" | Logging IS observation. Good. But form a hypothesis about what the logs will show BEFORE adding them. |
+| "This is taking too long, let me just rewrite it" | Rewriting without understanding the bug moves the bug. Diagnose first. |
+| "It works on my machine" | Different environment = different inputs. The bug is in the delta. Find it. |
+| "The error message is misleading" | Maybe. But the error message is evidence. Record it before dismissing it. |

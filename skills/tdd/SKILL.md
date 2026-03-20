@@ -41,4 +41,32 @@ Rules:
 - do not rewrite tests to fit broken behavior
 - rerun verification after each meaningful refactor
 
+## Iron Laws of TDD
+
+These are non-negotiable. No context makes them optional.
+
+1. **The test MUST fail before you write the fix.** A test that has never been red proves nothing. Seeing the failure confirms the test actually exercises the behavior you think it does.
+2. **Never rewrite a test to match broken implementation.** The test encodes the contract. If the test and the code disagree, the code is wrong until proven otherwise.
+3. **Never claim GREEN without running the test suite.** "It should pass" is not evidence. The test runner's exit code is the only truth.
+4. **One behavior change per RED-GREEN cycle.** Batching changes makes failures ambiguous — you cannot tell which change broke which test.
+
+**Violating the letter of TDD is violating the spirit.** Writing a test after the code, then claiming "I did TDD" is the most common and most damaging form of process fraud. The failing test is the specification — it must exist before the implementation, not as a post-hoc rationalization.
+
+## Red Flags — You Are Rationalizing
+
+If you catch yourself thinking any of these, STOP. You are about to violate TDD.
+
+| Thought | Reality |
+|---------|---------|
+| "This change is too small for TDD" | Small changes have small tests. Write one. |
+| "I'll write the tests after" | That is not TDD. That is testing. Different process, worse outcomes. |
+| "The test framework doesn't support this" | Then the implementation approach needs to change, not the discipline. |
+| "It's just a config change" | Config changes break production. A test that asserts the config value takes 30 seconds. |
+| "I already know the implementation works" | Then the test will pass immediately. Write it anyway — it protects against regressions. |
+| "Writing the test first would be awkward here" | Awkwardness is a design signal. TDD-hostile code is usually poorly structured. |
+| "I need to explore first, then test" | Spike in a scratch file. When you know the shape, start TDD. Never commit spike code. |
+| "The test would just be a tautology" | Then you are testing the wrong thing. Test the observable behavior, not the implementation. |
+| "Let me just get it working, then add tests" | This is the #1 rationalization that leads to untested production code. No. |
+| "Tests slow me down" | Tests slow you down less than debugging production failures. Front-load the cost. |
+
 For the full review loop pattern, see `docs/reference/review-loop-pattern.md`. TDD uses a single-pass quality check, not the full loop.

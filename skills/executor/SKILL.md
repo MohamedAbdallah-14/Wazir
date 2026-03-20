@@ -184,6 +184,34 @@ Throughout the executor phase, produce reasoning at two layers:
 
 Key executor reasoning moments: architecture choices, library selections, API design decisions, test strategy decisions, and any deviation from the plan.
 
+## Iron Laws of Execution
+
+These are non-negotiable. No context makes them optional.
+
+1. **One task = one commit.** Batching tasks into a single commit defeats per-task review, makes rollback impossible, and hides individual failures.
+2. **Never skip per-task review.** The review exists to catch bugs before they compound. A bug in task 3 that depends on task 2 is exponentially harder to fix.
+3. **Never claim completion without verification evidence.** "I implemented it" is a claim. A passing test suite is evidence. Only evidence counts.
+4. **Follow the plan order.** Tasks are ordered for a reason — dependencies, risk sequencing, or logical progression. Reordering without explicit approval is scope mutation.
+5. **Phase prerequisites are hard gates.** If clarification, spec, design, or plan artifacts are missing, STOP. Do not rationalize that the input is "clear enough" to proceed.
+
+**Violating the letter of the execution process is violating the spirit.** Committing multiple tasks together "because they're related" is the most common execution fraud. Each task has its own review cycle, its own commit, and its own verification. Bundling them defeats every quality gate.
+
+## Red Flags — You Are Rationalizing
+
+If you catch yourself thinking any of these, STOP. You are about to violate the execution discipline.
+
+| Thought | Reality |
+|---------|---------|
+| "These tasks are related, I'll combine them" | Related tasks still get separate commits. The review catches different things per task. |
+| "The review will just slow me down" | The review catches the bugs you will spend 3x longer debugging later. |
+| "I already verified this in my head" | Mental verification has a ~40% miss rate. Run the actual commands. |
+| "The prerequisite artifacts are missing but the input is detailed enough" | Detailed input is not a spec. The pipeline phases exist to catch what "detailed enough" misses. |
+| "I'll commit everything at the end" | End-of-run commits have no per-task review, no incremental verification, and no rollback granularity. |
+| "This task is trivial, skip the review" | Trivial tasks have trivial reviews. Run them — they cost almost nothing and catch real bugs. |
+| "I need to fix something in a previous task while working on this one" | Stop. Commit your current work, go back, fix, re-review, then resume. Never cross-contaminate tasks. |
+| "The plan order doesn't matter for these tasks" | If you believe that, ask the user. Do not reorder silently. |
+| "I can skip TDD for this task" | No. TDD is mandatory for all behavior changes. See wz:tdd. |
+
 ## Done
 
 When all tasks are complete and verified:
