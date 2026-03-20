@@ -18,11 +18,7 @@
     "workflows/design.md": "7f69758b22f88c12d16846ac1dd444f4e178ab116559ef9f2f26f6daa1a10d62",
     "workflows/discover.md": "0696add486f739a46ed4c2b71b67bdda3ab9fea2d1395e662191282529ed21d2",
     "workflows/execute.md": "33428704476877b2c8cf34c6eda3a56d1fd71e8bbea0f05c122bb3da2c6475a6",
-<<<<<<< HEAD
-    "workflows/learn.md": "906f4f6d2216c4aae10e418a23402f7f16eb1ca1de04520d946ff4a036febf97",
-=======
-    "workflows/learn.md": "4762a5b120a5e3dc69c37add7d564edb0ee0bbaf2e95353b598071fd870ad3bf",
->>>>>>> d54b700 (feat(learnings): activate learning pipeline feedback loop)
+    "workflows/learn.md": "f5c5f88ecc237088ef6aef382084307f3971b0199213980cf4768541a0a29e97",
     "workflows/plan-review.md": "1dfe76dfe4fd9c32409d508e47654ad3b985b5429bd4616adde719b19fd606ac",
     "workflows/plan.md": "fd52737159ab13688af8cbcb1c3fa224b1a9dda441b9ab337ab98cbfb5c68fa5",
     "workflows/prepare-next.md": "8769b692be6d9fddf3b3f36fee6888159fb9fb2a5c31360cdbc9402e0f43fc27",
@@ -41,11 +37,7 @@
     "hooks/definitions/protected_path_write_guard.yaml": "6683d41778b823e2a4e606065597569aa04363f091e135e165de9732f1fc2171",
     "hooks/definitions/session_start.yaml": "9383fcf1f8304c87e57726478a461706c0fc73dc62bcc4d8661f2eeffa43a82d",
     "hooks/definitions/stop_handoff_harvest.yaml": "67a3c0a8bb7cb66b88e77dc79e748082e964d278c47935662c453922a846482b",
-<<<<<<< HEAD
     "hooks/definitions/stop_pipeline_gate.yaml": "b939292b8838585c773d4542af75c29c608160367d7e9e41ea7ea1217f18aba9",
     "hooks/hooks.json": "65e022a151aa9546a6988581ee62ec853f0df5580aeed4b164e3ccc3dc2e72de"
-=======
-    "hooks/hooks.json": "bb41288eeb92ce81d583fa687582cfdbfaf5744511993135ea8af6498639b4af"
->>>>>>> d54b700 (feat(learnings): activate learning pipeline feedback loop)
   }
 }
