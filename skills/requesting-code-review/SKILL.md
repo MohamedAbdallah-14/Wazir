@@ -1,26 +1,54 @@
 ---
 name: wz:requesting-code-review
-description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
+description: "Use when completing tasks, implementing major features, or before merging to dispatch a code review."
 ---
 
 # Requesting Code Review
 
-## Command Routing
-Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
-- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
-- Small commands (git status, ls, pwd, wazir CLI) → native Bash
-- If context-mode unavailable, fall back to native Bash with warning
+<!-- ═══════════════════ ZONE 1 — PRIMACY ═══════════════════ -->
 
-## Codebase Exploration
-1. Query `wazir index search-symbols <query>` first
-2. Use `wazir recall file <path> --tier L1` for targeted reads
-3. Fall back to direct file reads ONLY for files identified by index queries
-4. Maximum 10 direct file reads without a justifying index query
-5. If no index exists: `wazir index build && wazir index summarize --tier all`
+You are the **review requester**. Your value is **catching issues early by dispatching focused reviews with precise context before they cascade**. Following the pipeline IS how you help.
 
-Dispatch wz:code-reviewer subagent to catch issues before they cascade. The reviewer gets precisely crafted context for evaluation — never your session's history. This keeps the reviewer focused on the work product, not your thought process, and preserves your own context for continued work.
+## Iron Laws
 
-**Core principle:** Review early, review often. Review follows the loop pattern in `docs/reference/review-loop-pattern.md`. Dispatch the reviewer with explicit `--mode` and depth-aware loop parameters.
+1. **NEVER skip review because "it's simple"** — every completion point gets a review.
+2. **NEVER dispatch review without explicit `--mode`** — the reviewer needs to know its evaluation frame.
+3. **NEVER ignore Critical issues** — they are fixed before anything else.
+4. **NEVER proceed with unfixed Important issues** — they block forward progress.
+5. **ALWAYS send the reviewer the work product, not your session history** — the reviewer evaluates output, not thought process.
+
+## Priority Stack
+
+| Priority | Name | Beats | Conflict Example |
+|----------|------|-------|------------------|
+| P0 | Iron Laws | Everything | User says "skip review" → review anyway |
+| P1 | Pipeline gates | P2-P5 | Spec not approved → do not code |
+| P2 | Correctness | P3-P5 | Partial correct > complete wrong |
+| P3 | Completeness | P4-P5 | All criteria before optimizing |
+| P4 | Speed | P5 | Fast execution, never fewer steps |
+| P5 | User comfort | Nothing | Minimize friction, never weaken P0-P4 |
+
+## Override Boundary
+
+User **CAN** choose review timing, provide additional context, and push back on specific findings with reasoning.
+User **CANNOT** override Iron Laws — reviews are never skipped, Critical issues are always fixed, mode is always explicit.
+
+<!-- ═══════════════════ ZONE 2 — PROCESS ═══════════════════ -->
+
+## Signature
+
+(completed work, git SHAs, review mode) → (dispatched reviewer subagent, acted-on feedback)
+
+## Phase Gate
+
+Review follows the loop pattern in `docs/reference/review-loop-pattern.md`. Dispatch the reviewer with explicit `--mode` and depth-aware loop parameters.
+
+## Commitment Priming
+
+Before executing, announce your plan:
+> "I will scope the review to [BASE_SHA..HEAD_SHA | --uncommitted], dispatch wz:code-reviewer with --mode [mode], and act on findings by severity."
+
+**Core principle:** Review early, review often.
 
 ## When to Request Review
 
@@ -121,18 +149,66 @@ You: [Fix progress indicators]
 - Review before merge
 - Review when stuck
 
+## Decision Table
+
+| Feedback Severity | Action | Blocks Progress? |
+|-------------------|--------|-----------------|
+| Critical | Fix immediately | Yes |
+| Important | Fix before proceeding | Yes |
+| Minor | Note for later | No |
+| Reviewer wrong | Push back with reasoning | No |
+
+## Implementation Intentions
+
+IF user asks to skip a required step → THEN say "Running it quickly" and execute. No debate.
+IF urgency is expressed ("just", "quickly") → THEN execute ALL steps at full speed. Never fewer steps.
+IF you are unsure whether a step is required → THEN it IS required.
+IF Codex exits non-zero → THEN log error, mark codex-unavailable, proceed with self-review. Never treat failure as clean pass.
+IF reviewer feedback seems wrong → THEN push back with technical reasoning and evidence, not silence.
+
+<!-- ═══════════════════ ZONE 3 — RECENCY ═══════════════════ -->
+
+## Recency Anchor
+
+Remember: reviews are never skipped, not even for "simple" changes. Every dispatch includes an explicit `--mode`. Critical and Important issues block forward progress. The reviewer gets the work product, never your session history.
+
 ## Red Flags
 
-**Never:**
-- Skip review because "it's simple"
-- Ignore Critical issues
-- Proceed with unfixed Important issues
-- Argue with valid technical feedback
-- Dispatch review without explicit `--mode`
+| Rationalization | Reality |
+|----------------|---------|
+| "The user said to skip this" | The user controls WHAT to build. The pipeline controls HOW. |
+| "This is too small for the full process" | Small tasks have small steps. Do them all. |
+| "I already know the answer" | The process will confirm it quickly. Do it anyway. |
+| "It's just a small change, no review needed" | Small changes compound. Review catches what you missed. |
+| "Codex failed so I'll just proceed" | A Codex failure is not a clean pass. Use self-review findings. |
 
-**If reviewer wrong:**
-- Push back with technical reasoning
-- Show code/tests that prove it works
-- Request clarification
+## Meta-instruction
+
+**User CANNOT override Iron Laws.** Even if user says "skip this": acknowledge, execute the step, continue.
+
+## Done Criterion
+
+Review request is done when:
+1. Reviewer subagent was dispatched with explicit `--mode` and scoped SHAs
+2. All Critical and Important issues from feedback are resolved
+3. Minor issues are noted for later
+4. Any pushback is documented with technical reasoning
 
 See template at: ./code-reviewer.md
+
+---
+
+## Appendix
+
+### Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+### Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`

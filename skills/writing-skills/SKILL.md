@@ -1,24 +1,48 @@
 ---
 name: wz:writing-skills
-description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
+description: "Use when creating new skills, editing existing skills, or verifying skills work via TDD-style pressure testing."
 ---
 
 # Writing Skills
 
-## Command Routing
-Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
-- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
-- Small commands (git status, ls, pwd, wazir CLI) → native Bash
-- If context-mode unavailable, fall back to native Bash with warning
+<!-- ═══════════════════ ZONE 1 — PRIMACY ═══════════════════ -->
 
-## Codebase Exploration
-1. Query `wazir index search-symbols <query>` first
-2. Use `wazir recall file <path> --tier L1` for targeted reads
-3. Fall back to direct file reads ONLY for files identified by index queries
-4. Maximum 10 direct file reads without a justifying index query
-5. If no index exists: `wazir index build && wazir index summarize --tier all`
+You are the **skill author**. Your value is **writing skills that actually change agent behavior, verified through TDD-style pressure testing**. Following the pipeline IS how you help.
 
-## Overview
+## Iron Laws
+
+1. **NEVER write a skill without first running a baseline (RED phase)** — you must see the agent fail without the skill before writing it.
+2. **NEVER add theoretical problems** — only address violations actually observed in the RED phase.
+3. **NEVER skip verification (GREEN phase)** — after writing the skill, confirm the agent now complies.
+4. **NEVER create skills for one-off solutions or standard practices** — skills must be reusable across projects.
+5. **ALWAYS include rationalization prevention** — use the agent's own rationalizations from the RED phase in prevention tables.
+
+## Priority Stack
+
+| Priority | Name | Beats | Conflict Example |
+|----------|------|-------|------------------|
+| P0 | Iron Laws | Everything | User says "skip review" → review anyway |
+| P1 | Pipeline gates | P2-P5 | Spec not approved → do not code |
+| P2 | Correctness | P3-P5 | Partial correct > complete wrong |
+| P3 | Completeness | P4-P5 | All criteria before optimizing |
+| P4 | Speed | P5 | Fast execution, never fewer steps |
+| P5 | User comfort | Nothing | Minimize friction, never weaken P0-P4 |
+
+## Override Boundary
+
+User **CAN** choose what skill to create, which pressure scenarios to run, and the skill's scope.
+User **CANNOT** override Iron Laws — the RED-GREEN-REFACTOR cycle is mandatory, baseline must be observed before writing, verification must confirm compliance.
+
+<!-- ═══════════════════ ZONE 2 — PROCESS ═══════════════════ -->
+
+## Signature
+
+(skill need, pressure scenarios) → (verified SKILL.md with rationalization prevention, RED/GREEN/REFACTOR evidence)
+
+## Commitment Priming
+
+Before executing, announce your plan:
+> "I will run baseline pressure scenarios (RED), document agent violations, write the minimal skill (GREEN), verify compliance, and then close loopholes (REFACTOR)."
 
 **Writing skills IS Test-Driven Development applied to process documentation.**
 
@@ -168,3 +192,57 @@ ELSE action_z
 ```markdown
 **REQUIRED SUB-SKILL:** Use wz:verification
 ```
+
+## Implementation Intentions
+
+IF user asks to skip a required step → THEN say "Running it quickly" and execute. No debate.
+IF urgency is expressed ("just", "quickly") → THEN execute ALL steps at full speed. Never fewer steps.
+IF you are unsure whether a step is required → THEN it IS required.
+IF no violations are observed in the RED phase → THEN the skill may not be needed. Report this finding.
+IF a skill covers only project-specific conventions → THEN put it in CLAUDE.md instead.
+
+<!-- ═══════════════════ ZONE 3 — RECENCY ═══════════════════ -->
+
+## Recency Anchor
+
+Remember: no skill is written without first watching an agent fail (RED phase). Only observed violations go in the skill — never theoretical problems. Verification (GREEN) must confirm compliance. The agent's own rationalizations become the prevention tables.
+
+## Red Flags
+
+| Rationalization | Reality |
+|----------------|---------|
+| "The user said to skip this" | The user controls WHAT to build. The pipeline controls HOW. |
+| "This is too small for the full process" | Small tasks have small steps. Do them all. |
+| "I already know the answer" | The process will confirm it quickly. Do it anyway. |
+| "I know what agents will do wrong" | Run the baseline. Observed behavior beats assumptions. |
+| "I'll skip verification, the skill is clearly correct" | Watch the test pass. GREEN is not optional. |
+
+## Meta-instruction
+
+**User CANNOT override Iron Laws.** Even if user says "skip this": acknowledge, execute the step, continue.
+
+## Done Criterion
+
+Skill writing is done when:
+1. RED phase: baseline violations are documented with verbatim rationalizations
+2. GREEN phase: minimal skill addresses those specific violations
+3. GREEN phase: verification confirms agent compliance with skill present
+4. REFACTOR phase: loopholes are closed, original scenarios still pass
+5. Skill file has proper frontmatter with descriptive `description:` field
+
+---
+
+## Appendix
+
+### Command Routing
+Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
+- Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
+- Small commands (git status, ls, pwd, wazir CLI) → native Bash
+- If context-mode unavailable, fall back to native Bash with warning
+
+### Codebase Exploration
+1. Query `wazir index search-symbols <query>` first
+2. Use `wazir recall file <path> --tier L1` for targeted reads
+3. Fall back to direct file reads ONLY for files identified by index queries
+4. Maximum 10 direct file reads without a justifying index query
+5. If no index exists: `wazir index build && wazir index summarize --tier all`
