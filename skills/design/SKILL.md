@@ -53,6 +53,16 @@ User CANNOT skip design variables, remove auto-layout, or bypass diff snapshots.
 - Design tokens JSON
 - Screenshot PNGs of each top-level frame
 
+## Prerequisites
+
+1. Approved spec artifact (`spec-hardened.md`) must exist
+2. Open-pencil MCP tools must be available (or fallback mode)
+3. Design variables defined via `get_variables` or created fresh
+
+## Workflow
+
+Design follows this sequence: get editor state → open document → load guidelines → get style guide → create frames → apply styles → export screenshots → verify against spec.
+
 ## Phase Gate
 
 This skill requires:
@@ -115,6 +125,21 @@ If the open-pencil MCP server is not running or Bun is not installed, the design
 - Skip this phase and proceed to planning with text-only design specifications.
 - Document the design intent in prose within the spec artifact instead.
 - The design-review workflow should also be skipped.
+
+## Required Outputs
+
+- Design artifact (`.pen` file or exported frames)
+- Screenshot proof at desktop and mobile viewports
+- Design variables JSON (colors, spacing, typography)
+- Spec coverage mapping (which spec requirement → which design frame)
+
+## Rules
+
+- All colors and spacing use design variables, never hardcoded hex
+- Auto-layout on every frame, no absolute positioning except icons
+- Diff snapshot before modifications for rollback
+- Export screenshots after every major change
+- Never start without approved spec
 
 ## Implementation Intentions
 
