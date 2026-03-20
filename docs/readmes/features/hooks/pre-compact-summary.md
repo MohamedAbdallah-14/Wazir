@@ -64,7 +64,7 @@ This hook does not block. On failure:
 
 ## Key Findings
 - All 127 tests passing after rate-limit middleware implementation
-- Hook validation: all 7 hooks validated
+- Hook validation: all 8 hooks validated
 
 ## Captures
 - captures/npm-test-001.txt — full test run output (47KB)
