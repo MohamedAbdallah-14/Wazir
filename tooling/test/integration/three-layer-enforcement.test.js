@@ -56,7 +56,7 @@ describe('three-layer-enforcement integration', () => {
     transitionPhase(stateRoot, 'complete');
 
     const result = evaluateStopGate(stateRoot, {});
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
   });
 
   it('Stop hook allows on context-limit', () => {
@@ -64,7 +64,7 @@ describe('three-layer-enforcement integration', () => {
     transitionPhase(stateRoot, 'clarify');
 
     const result = evaluateStopGate(stateRoot, { stop_reason: 'context-limit' });
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
   });
 
   // -----------------------------------------------------------------------
@@ -197,7 +197,7 @@ describe('three-layer-enforcement integration', () => {
 
     // 9. Complete pipeline
     transitionPhase(stateRoot, 'complete');
-    assert.equal(evaluateStopGate(stateRoot, {}).decision, 'allow');
+    assert.equal(evaluateStopGate(stateRoot, {}).decision, 'approve');
 
     // 10. Verify full phase history
     const finalState = readPipelineState(stateRoot);

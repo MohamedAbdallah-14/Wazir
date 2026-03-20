@@ -8,7 +8,7 @@ const SAFETY_VALVE_REASONS = new Set(['context-limit', 'user-abort']);
  *
  * @param {string} stateRoot  — path to the pipeline state directory
  * @param {object} context    — stop context (may include stop_reason)
- * @returns {{ decision: 'allow'|'block', reason: string }}
+ * @returns {{ decision: 'approve'|'block', reason: string }}
  */
 export function evaluateStopGate(stateRoot, context = {}) {
   // 1. No state file → not a pipeline session → allow
@@ -16,37 +16,37 @@ export function evaluateStopGate(stateRoot, context = {}) {
   try {
     state = readPipelineState(stateRoot);
   } catch {
-    return { decision: 'allow', reason: 'State read error — allowing stop.' };
+    return { decision: 'approve', reason: 'State read error — allowing stop.' };
   }
 
   if (!state) {
-    return { decision: 'allow', reason: 'No pipeline state — no pipeline active, allowing stop.' };
+    return { decision: 'approve', reason: 'No pipeline state — no pipeline active, allowing stop.' };
   }
 
   // 2. Malformed state (no current_phase)
   if (!state.current_phase) {
-    return { decision: 'allow', reason: 'Pipeline state malformed — allowing stop.' };
+    return { decision: 'approve', reason: 'Pipeline state malformed — allowing stop.' };
   }
 
   // 3. Safety valve: stop_hook_active flag (infinite loop guard)
   if (state.stop_hook_active) {
     try { setStopHookActive(stateRoot, false); } catch { /* best effort */ }
-    return { decision: 'allow', reason: 'Stop hook loop guard active — allowing stop to break loop.' };
+    return { decision: 'approve', reason: 'Stop hook loop guard active — allowing stop to break loop.' };
   }
 
   // 4. Safety valve: context-limit or user-abort
   if (context.stop_reason && SAFETY_VALVE_REASONS.has(context.stop_reason)) {
-    return { decision: 'allow', reason: `Safety valve: ${context.stop_reason} — allowing stop.` };
+    return { decision: 'approve', reason: `Safety valve: ${context.stop_reason} — allowing stop.` };
   }
 
   // 5. Init phase — pipeline hasn't started real work yet
   if (state.current_phase === 'init') {
-    return { decision: 'allow', reason: 'Pipeline at init — no work in progress, allowing stop.' };
+    return { decision: 'approve', reason: 'Pipeline at init — no work in progress, allowing stop.' };
   }
 
   // 6. Complete phase — all done
   if (state.current_phase === 'complete') {
-    return { decision: 'allow', reason: 'Pipeline complete — all phases done.' };
+    return { decision: 'approve', reason: 'Pipeline complete — all phases done.' };
   }
 
   // 7. Pipeline is in progress — block
@@ -75,7 +75,7 @@ const isDirectRun = process.argv[1] && import.meta.url.endsWith(process.argv[1].
 if (isDirectRun) {
   const stateRoot = process.argv[2] || process.env.WAZIR_STATE_ROOT;
   if (!stateRoot) {
-    console.log(JSON.stringify({ decision: 'allow', reason: 'No state root provided.' }));
+    console.log(JSON.stringify({ decision: 'approve', reason: 'No state root provided.' }));
     process.exit(0);
   }
 

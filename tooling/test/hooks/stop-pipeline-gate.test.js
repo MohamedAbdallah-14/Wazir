@@ -20,7 +20,7 @@ describe('stop-pipeline-gate', () => {
 
   it('allows when no state file exists (non-pipeline session)', () => {
     const result = evaluateStopGate(stateRoot, {});
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
     assert.ok(result.reason.includes('no pipeline'));
   });
 
@@ -40,14 +40,14 @@ describe('stop-pipeline-gate', () => {
     transitionPhase(stateRoot, 'review');
     transitionPhase(stateRoot, 'complete');
     const result = evaluateStopGate(stateRoot, {});
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
   });
 
   it('allows on context-limit stop reason', () => {
     createPipelineState('run-003', stateRoot);
     transitionPhase(stateRoot, 'clarify');
     const result = evaluateStopGate(stateRoot, { stop_reason: 'context-limit' });
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
     assert.ok(result.reason.includes('context-limit'));
   });
 
@@ -55,7 +55,7 @@ describe('stop-pipeline-gate', () => {
     createPipelineState('run-004', stateRoot);
     transitionPhase(stateRoot, 'clarify');
     const result = evaluateStopGate(stateRoot, { stop_reason: 'user-abort' });
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
   });
 
   it('allows when stop_hook_active is true (infinite loop guard)', () => {
@@ -63,7 +63,7 @@ describe('stop-pipeline-gate', () => {
     transitionPhase(stateRoot, 'clarify');
     setStopHookActive(stateRoot, true);
     const result = evaluateStopGate(stateRoot, {});
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
     assert.ok(result.reason.includes('loop'));
   });
 
@@ -91,7 +91,7 @@ describe('stop-pipeline-gate', () => {
   it('allows on malformed state file', () => {
     fs.writeFileSync(path.join(stateRoot, 'pipeline-state.json'), 'NOT JSON');
     const result = evaluateStopGate(stateRoot, {});
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
     // readPipelineState returns null for malformed JSON → treated as no pipeline
     assert.ok(result.reason.includes('no pipeline') || result.reason.includes('No pipeline'));
   });
@@ -100,6 +100,6 @@ describe('stop-pipeline-gate', () => {
     createPipelineState('run-008', stateRoot);
     // Still on init — allow, don't trap
     const result = evaluateStopGate(stateRoot, {});
-    assert.equal(result.decision, 'allow');
+    assert.equal(result.decision, 'approve');
   });
 });
