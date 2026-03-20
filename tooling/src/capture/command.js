@@ -58,7 +58,7 @@ function resolveCaptureContext(parsed, context = {}) {
   const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
   const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
   const { options } = parseCommandOptions(parsed.args, {
-    boolean: ['json'],
+    boolean: ['json', 'complete'],
     string: [
       'run',
       'phase',

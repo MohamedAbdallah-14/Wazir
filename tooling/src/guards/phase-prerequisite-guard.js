@@ -5,8 +5,11 @@ import { readYamlFile } from '../loaders.js';
 import { getRunPaths, readPhaseExitEvents } from '../capture/store.js';
 
 /**
- * Validates that every enabled workflow in the manifest has a phase_exit event
+ * Validates that every enabled workflow has a phase_exit event
  * in the run's events.ndjson before the run can be marked complete.
+ *
+ * If a run-config with workflow_policy exists, only workflows with
+ * enabled: true are checked. Otherwise falls back to the manifest list.
  */
 export function validateRunCompletion(runDir, manifestPath) {
   const manifest = readYamlFile(manifestPath);
@@ -14,6 +17,25 @@ export function validateRunCompletion(runDir, manifestPath) {
 
   if (declaredWorkflows.length === 0) {
     return { complete: true, missing: [] };
+  }
+
+  // Filter to enabled workflows if run-config exists
+  const runConfigPath = path.join(runDir, 'run-config.yaml');
+  let enabledWorkflows = declaredWorkflows;
+  if (fs.existsSync(runConfigPath)) {
+    try {
+      const runConfig = readYamlFile(runConfigPath);
+      const policy = runConfig.workflow_policy;
+      if (policy && typeof policy === 'object') {
+        enabledWorkflows = declaredWorkflows.filter(w => {
+          const wPolicy = policy[w] ?? policy[w.replace(/_/g, '-')];
+          // If no policy entry, assume enabled; if entry exists, check enabled field
+          return wPolicy ? (wPolicy.enabled !== false) : true;
+        });
+      }
+    } catch {
+      // If run-config can't be read, fall back to full manifest list
+    }
   }
 
   const eventsPath = path.join(runDir, 'events.ndjson');
@@ -35,7 +57,7 @@ export function validateRunCompletion(runDir, manifestPath) {
     }
   }
 
-  const missing = declaredWorkflows.filter(w => !completedWorkflows.has(w));
+  const missing = enabledWorkflows.filter(w => !completedWorkflows.has(w));
 
   return { complete: missing.length === 0, missing };
 }

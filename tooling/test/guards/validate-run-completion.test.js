@@ -106,4 +106,47 @@ describe('validateRunCompletion', () => {
 
     fs.rmSync(tmpDir, { recursive: true });
   });
+
+  it('respects workflow_policy — skips disabled workflows', () => {
+    const tmpDir = createTempDir();
+    const runDir = path.join(tmpDir, 'run');
+    fs.mkdirSync(runDir, { recursive: true });
+
+    const manifestPath = writeManifest(tmpDir, ['clarify', 'author', 'execute', 'run_audit']);
+    // run-config disables author and run_audit
+    const runConfig = `run_id: test\nworkflow_policy:\n  clarify: { enabled: true }\n  author: { enabled: false }\n  execute: { enabled: true }\n  run_audit: { enabled: false }\n`;
+    fs.writeFileSync(path.join(runDir, 'run-config.yaml'), runConfig);
+
+    writeEvents(runDir, [
+      { event: 'phase_exit', phase: 'clarify', status: 'completed' },
+      { event: 'phase_exit', phase: 'execute', status: 'completed' },
+    ]);
+
+    const result = validateRunCompletion(runDir, manifestPath);
+    assert.equal(result.complete, true);
+    assert.deepEqual(result.missing, []);
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  it('reports missing enabled workflows even when disabled ones are absent', () => {
+    const tmpDir = createTempDir();
+    const runDir = path.join(tmpDir, 'run');
+    fs.mkdirSync(runDir, { recursive: true });
+
+    const manifestPath = writeManifest(tmpDir, ['clarify', 'author', 'execute']);
+    const runConfig = `run_id: test\nworkflow_policy:\n  clarify: { enabled: true }\n  author: { enabled: false }\n  execute: { enabled: true }\n`;
+    fs.writeFileSync(path.join(runDir, 'run-config.yaml'), runConfig);
+
+    writeEvents(runDir, [
+      { event: 'phase_exit', phase: 'clarify', status: 'completed' },
+      // execute is enabled but missing
+    ]);
+
+    const result = validateRunCompletion(runDir, manifestPath);
+    assert.equal(result.complete, false);
+    assert.deepEqual(result.missing, ['execute']);
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
 });
