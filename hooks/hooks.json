@@ -38,6 +38,16 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/stop-handoff-harvest"
+          }
+        ]
+      }
     ]
   }
 }
