@@ -9,6 +9,16 @@ The user typed `/wazir <their request>`. Run the entire pipeline end-to-end, han
 
 All questions use **numbered interactive options** — one question at a time, defaults marked "(Recommended)", wait for user response before proceeding.
 
+## User Input Capture
+
+After every user response (approval, correction, rejection, redirect, instruction), capture it:
+
+```
+captureUserInput(runDir, { phase: '<current-phase>', type: '<instruction|approval|correction|rejection|redirect>', content: '<user message>', context: '<what prompted the question>' })
+```
+
+This uses `tooling/src/capture/user-input.js`. The log at `user-input-log.ndjson` feeds the learning system — user corrections are the strongest signal for improvement. At run end, prune logs older than 10 runs via `pruneOldInputLogs(stateRoot, 10)`.
+
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 - Large commands (test runners, builds, diffs, dependency trees, linting) → context-mode tools
