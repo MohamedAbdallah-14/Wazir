@@ -293,7 +293,7 @@ Matches canonical `workflows/design-review.md`:
 4. **Visual consistency** -- design tokens form a coherent system, dark/light mode alignment
 5. **Exported-code fidelity** -- do exported scaffolds match the designs? Mismatches are failures here, not implementation concerns.
 
-### Plan Dimensions (7)
+### Plan Dimensions (8)
 
 1. **Completeness** -- all design decisions mapped to tasks
 2. **Ordering** -- dependencies correct, parallelizable identified
@@ -302,6 +302,7 @@ Matches canonical `workflows/design-review.md`:
 5. **Edge cases** -- error paths covered
 6. **Security** -- auth, injection, data exposure
 7. **Integration** -- tasks connect end-to-end
+8. **Input Coverage** -- every distinct item in the original input maps to at least one task. If `tasks < input items`, HIGH finding listing missing items
 
 ### Task Execution Dimensions (5)
 
@@ -499,7 +500,7 @@ These are the fixed rubrics — no ad-hoc dimension selection:
 | research-review | Coverage, Source quality, Relevance, Gaps identified, Actionability |
 | clarification-review / spec-challenge | Completeness, Testability, Ambiguity, Assumptions, Scope creep |
 | design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
-| plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy |
+| plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy, Input coverage |
 | task-review | Correctness, Tests, Wiring, Drift, Quality |
 | final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
 
