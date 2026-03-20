@@ -1,0 +1,5 @@
+/System/Volumes/Data/Users/mohamedabdallah/.cursor/extensions/openai.chatgpt-26.313.41514-darwin-arm64/bin/macos-aarch64/codex
+/System/Volumes/Data/Users/mohamedabdallah/.npm/_npx/c8ab89660c602c20/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/codex/codex
+/System/Volumes/Data/Users/mohamedabdallah/.npm/_npx/0cd487d652f3139d/node_modules/codex/bin/codex
+/System/Volumes/Data/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/node_modules/@openai/codex-sdk/vendor/x86_64-apple-darwin/codex/codex
+/System/Volumes/Data/Applications/Pencil.app/Contents/Resources/app.asar.unpacked/node_modules/@openai/codex-sdk/vendor/aarch64-apple-darwin/codex/codex

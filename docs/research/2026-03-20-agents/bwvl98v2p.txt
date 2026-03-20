@@ -1,0 +1,738 @@
+445:            for task in self.tasks:
+446-                if task.agent is None:
+447-                    raise PydanticCustomError(
+448-                        "missing_agent_in_task",
+449-                        "Sequential process error: Agent is missing in the task with the following description: {description}",
+450-                        {"description": task.description},
+451-                    )
+452-
+453-        return self
+454-
+455-    @model_validator(mode="after")
+456-    def validate_end_with_at_most_one_async_task(self) -> Self:
+457-        """Validates that the crew ends with at most one asynchronous task."""
+458-        final_async_task_count = 0
+459-
+460-        # Traverse tasks backward
+461:        for task in reversed(self.tasks):
+462:            if task.async_execution:
+463-                final_async_task_count += 1
+464-            else:
+465-                break  # Stop traversing as soon as a non-async task is encountered
+466-
+467-        if final_async_task_count > 1:
+468-            raise PydanticCustomError(
+469-                "async_task_count",
+470-                "The crew must end with at most one asynchronous task.",
+471-                {},
+472-            )
+473-
+474-        return self
+475-
+476-    @model_validator(mode="after")
+477-    def validate_must_have_non_conditional_task(self) -> Crew:
+478-        """Ensure that a crew has at least one non-conditional task."""
+479-        if not self.tasks:
+480-            return self
+481-        non_conditional_count = sum(
+482:            1 for task in self.tasks if not isinstance(task, ConditionalTask)
+483-        )
+484-        if non_conditional_count == 0:
+485-            raise PydanticCustomError(
+486-                "only_conditional_tasks",
+487-                "Crew must include at least one non-conditional task",
+488-                {},
+489-            )
+490-        return self
+491-
+492-    @model_validator(mode="after")
+493-    def validate_first_task(self) -> Crew:
+494-        """Ensure the first task is not a ConditionalTask."""
+495-        if self.tasks and isinstance(self.tasks[0], ConditionalTask):
+496-            raise PydanticCustomError(
+497-                "invalid_first_task",
+498-                "The first task cannot be a ConditionalTask.",
+499-                {},
+500-            )
+501-        return self
+502-
+503-    @model_validator(mode="after")
+504-    def validate_async_tasks_not_async(self) -> Crew:
+505-        """Ensure that ConditionalTask is not async."""
+506:        for task in self.tasks:
+507:            if task.async_execution and isinstance(task, ConditionalTask):
+508-                raise PydanticCustomError(
+509-                    "invalid_async_conditional_task",
+510-                    (
+511-                        "Conditional Task: {description}, cannot be executed asynchronously."
+512-                    ),
+513-                    {"description": task.description},
+514-                )
+515-        return self
+516-
+517-    @model_validator(mode="after")
+518-    def validate_async_task_cannot_include_sequential_async_tasks_in_context(
+519-        self,
+520-    ) -> Self:
+521-        """
+522-        Validates that if a task is set to be executed asynchronously,
+523-        it cannot include other asynchronous tasks in its context unless
+524-        separated by a synchronous task.
+525-        """
+526-        for i, task in enumerate(self.tasks):
+527:            if task.async_execution and isinstance(task.context, list):
+528-                for context_task in task.context:
+529:                    if context_task.async_execution:
+530-                        for j in range(i - 1, -1, -1):
+531-                            if self.tasks[j] == context_task:
+532-                                raise ValueError(
+533-                                    f"Task '{task.description}' is asynchronous and "
+534-                                    f"cannot include other sequential asynchronous "
+535-                                    f"tasks in its context."
+536-                                )
+537:                            if not self.tasks[j].async_execution:
+538-                                break
+539-        return self
+540-
+541-    @model_validator(mode="after")
+542-    def validate_context_no_future_tasks(self) -> Self:
+543-        """Validates that a task's context does not include future tasks."""
+544-        task_indices = {id(task): i for i, task in enumerate(self.tasks)}
+545-
+546:        for task in self.tasks:
+547-            if isinstance(task.context, list):
+548-                for context_task in task.context:
+549-                    if id(context_task) not in task_indices:
+550-                        continue  # Skip context tasks not in the main tasks list
+551-                    if task_indices[id(context_task)] > task_indices[id(task)]:
+552-                        raise ValueError(
+553-                            f"Task '{task.description}' has a context dependency "
+554-                            f"on a future task '{context_task.description}', "
+555-                            f"which is not allowed."
+556-                        )
+557-        return self
+558-
+559-    @property
+560-    def key(self) -> str:
+561-        source: list[str] = [agent.key for agent in self.agents] + [
+562:            task.key for task in self.tasks
+563-        ]
+564-        return md5("|".join(source).encode(), usedforsecurity=False).hexdigest()
+565-
+566-    @property
+567-    def fingerprint(self) -> Fingerprint:
+568-        """
+569-        Get the crew's fingerprint.
+570-
+571-        Returns:
+572-            Fingerprint: The crew's fingerprint
+573-        """
+574-        return self.security_config.fingerprint
+575-
+576-    def _setup_from_config(self) -> None:
+577-        """Initializes agents and tasks from the provided config."""
+578-        if self.config is None:
+579-            raise ValueError("Config should not be None.")
+580-        if not self.config.get("agents") or not self.config.get("tasks"):
+581-            raise PydanticCustomError(
+582-                "missing_keys_in_config", "Config should have 'agents' and 'tasks'.", {}
+583-            )
+584-
+585-        self.process = self.config.get("process", self.process)
+586-        self.agents = [Agent(**agent) for agent in self.config["agents"]]
+587:        self.tasks = [self._create_task(task) for task in self.config["tasks"]]
+588-
+589-    def _create_task(self, task_config: dict[str, Any]) -> Task:
+590-        """Creates a task instance from its configuration.
+591-
+592-        Args:
+593-            task_config: The configuration of the task.
+594-
+595-        Returns:
+596-            A task instance.
+597-        """
+598-        task_agent = next(
+599-            agt for agt in self.agents if agt.role == task_config["agent"]
+600-        )
+601-        del task_config["agent"]
+602-        return Task(**task_config, agent=task_agent)
+603-
+604-    def _setup_for_training(self, filename: str) -> None:
+605-        """Sets up the crew for training."""
+606-        self._train = True
+607-
+608:        for task in self.tasks:
+609-            task.human_input = True
+610-
+611-        for agent in self.agents:
+612-            agent.allow_delegation = False
+613-
+614-        CrewTrainingHandler(TRAINING_DATA_FILE).initialize_file()
+615-        CrewTrainingHandler(filename).initialize_file()
+616-
+617-    def train(
+618-        self, n_iterations: int, filename: str, inputs: dict[str, Any] | None = None
+619-    ) -> None:
+620-        """Trains the crew for a given number of iterations."""
+621-        inputs = inputs or {}
+622-        try:
+623-            crewai_event_bus.emit(
+624-                self,
+625-                CrewTrainStartedEvent(
+626-                    crew_name=self.name,
+627-                    n_iterations=n_iterations,
+628-                    filename=filename,
+629-                    inputs=inputs,
+630-                ),
+631-            )
+632-            train_crew = self.copy()
+633-            train_crew._setup_for_training(filename)
+634-
+635-            for n_iteration in range(n_iterations):
+636-                train_crew._train_iteration = n_iteration
+637-                train_crew.kickoff(inputs=inputs)
+638-
+639-            training_data = CrewTrainingHandler(TRAINING_DATA_FILE).load()
+640-
+641-            for agent in train_crew.agents:
+642-                if training_data.get(str(agent.id)):
+643-                    result = TaskEvaluator(agent).evaluate_training_data(  # type: ignore[arg-type]
+644-                        training_data=training_data, agent_id=str(agent.id)
+645-                    )
+646-                    CrewTrainingHandler(filename).save_trained_data(
+647-                        agent_id=str(agent.role),
+648-                        trained_data=result.model_dump(),
+649-                    )
+650-
+651-            crewai_event_bus.emit(
+652-                self,
+653-                CrewTrainCompletedEvent(
+654-                    crew_name=self.name,
+655-                    n_iterations=n_iterations,
+656-                    filename=filename,
+657-                ),
+658-            )
+--
+677:            inputs: Optional input dictionary for task interpolation.
+678-            input_files: Optional dict of named file inputs for the crew.
+679-
+680-        Returns:
+681-            CrewOutput or CrewStreamingOutput if streaming is enabled.
+682-        """
+683-        get_env_context()
+684-        if self.stream:
+685-            enable_agent_streaming(self.agents)
+686-            ctx = StreamingContext()
+687-
+688-            def run_crew() -> None:
+689-                """Execute the crew and capture the result."""
+690-                try:
+691-                    self.stream = False
+692-                    crew_result = self.kickoff(inputs=inputs, input_files=input_files)
+693-                    if isinstance(crew_result, CrewOutput):
+694-                        ctx.result_holder.append(crew_result)
+695-                except Exception as exc:
+696-                    signal_error(ctx.state, exc)
+697-                finally:
+698-                    self.stream = True
+699-                    signal_end(ctx.state)
+700-
+701-            streaming_output = CrewStreamingOutput(
+702-                sync_iterator=create_chunk_generator(
+703-                    ctx.state, run_crew, ctx.output_holder
+704-                )
+705-            )
+706-            ctx.output_holder.append(streaming_output)
+707-            return streaming_output
+708-
+709-        baggage_ctx = baggage.set_baggage(
+710-            "crew_context", CrewContext(id=str(self.id), key=self.key)
+711-        )
+712-        token = attach(baggage_ctx)
+713-
+714-        try:
+715-            inputs = prepare_kickoff(self, inputs, input_files)
+716-
+717-            if self.process == Process.sequential:
+718:                result = self._run_sequential_process()
+719-            elif self.process == Process.hierarchical:
+720:                result = self._run_hierarchical_process()
+721-            else:
+722-                raise NotImplementedError(
+723-                    f"The process '{self.process}' is not implemented yet."
+724-                )
+725-
+726-            for after_callback in self.after_kickoff_callbacks:
+727-                result = after_callback(result)
+728-
+729-            result = self._post_kickoff(result)
+730-
+731-            self.usage_metrics = self.calculate_usage_metrics()
+732-
+733-            return result
+734-        except Exception as e:
+735-            crewai_event_bus.emit(
+736-                self,
+737-                CrewKickoffFailedEvent(
+738-                    error=str(e),
+739-                    crew_name=self.name,
+740-                    started_event_id=self._kickoff_event_id,
+741-                ),
+742-            )
+743-            raise
+744-        finally:
+745-            # Ensure all background memory saves complete before returning
+746-            if self._memory is not None and hasattr(self._memory, "drain_writes"):
+747-                self._memory.drain_writes()
+748-            clear_files(self.id)
+749-            detach(token)
+750-
+751-    def _post_kickoff(self, result: CrewOutput) -> CrewOutput:
+752-        return result
+753-
+754-    def kickoff_for_each(
+755-        self,
+756-        inputs: list[dict[str, Any]],
+757-        input_files: dict[str, FileInput] | None = None,
+758-    ) -> list[CrewOutput | CrewStreamingOutput]:
+759-        """Executes the Crew's workflow for each input and aggregates results.
+760-
+761-        Args:
+762-            inputs: List of input dictionaries, one per execution.
+763-            input_files: Optional dict of named file inputs shared across all executions.
+764-
+765-        Returns:
+766-            List of CrewOutput or CrewStreamingOutput objects.
+767-
+768-        If stream=True, returns a list of CrewStreamingOutput objects that must
+769-        each be iterated to get stream chunks and access results.
+770-        """
+--
+798:            inputs: Optional input dictionary for task interpolation.
+799-            input_files: Optional dict of named file inputs for the crew.
+800-
+801-        Returns:
+802-            CrewOutput or CrewStreamingOutput if streaming is enabled.
+803-
+804-        If stream=True, returns a CrewStreamingOutput that can be async-iterated
+805-        to get stream chunks. After iteration completes, access the final result
+806-        via .result.
+807-        """
+808-        inputs = inputs or {}
+809-
+810-        if self.stream:
+811-            enable_agent_streaming(self.agents)
+812-            ctx = StreamingContext(use_async=True)
+813-
+814-            async def run_crew() -> None:
+815-                try:
+816-                    self.stream = False
+817-                    result = await asyncio.to_thread(self.kickoff, inputs, input_files)
+818-                    if isinstance(result, CrewOutput):
+819-                        ctx.result_holder.append(result)
+820-                except Exception as e:
+821-                    signal_error(ctx.state, e, is_async=True)
+822-                finally:
+823-                    self.stream = True
+824-                    signal_end(ctx.state, is_async=True)
+825-
+826-            streaming_output = CrewStreamingOutput(
+827-                async_iterator=create_async_chunk_generator(
+828-                    ctx.state, run_crew, ctx.output_holder
+829-                )
+830-            )
+831-            ctx.output_holder.append(streaming_output)
+832-
+833-            return streaming_output
+834-
+835-        return await asyncio.to_thread(self.kickoff, inputs, input_files)
+836-
+837-    async def kickoff_for_each_async(
+838-        self,
+839-        inputs: list[dict[str, Any]],
+840-        input_files: dict[str, FileInput] | None = None,
+841-    ) -> list[CrewOutput | CrewStreamingOutput] | CrewStreamingOutput:
+842-        """Executes the Crew's workflow for each input asynchronously.
+843-
+844-        Args:
+845-            inputs: List of input dictionaries, one per execution.
+846-            input_files: Optional dict of named file inputs shared across all executions.
+847-
+848-        Returns:
+--
+875:            inputs: Optional input dictionary for task interpolation.
+876-            input_files: Optional dict of named file inputs for the crew.
+877-
+878-        Returns:
+879-            CrewOutput or CrewStreamingOutput if streaming is enabled.
+880-        """
+881-        if self.stream:
+882-            enable_agent_streaming(self.agents)
+883-            ctx = StreamingContext(use_async=True)
+884-
+885-            async def run_crew() -> None:
+886-                try:
+887-                    self.stream = False
+888-                    inner_result = await self.akickoff(inputs, input_files)
+889-                    if isinstance(inner_result, CrewOutput):
+890-                        ctx.result_holder.append(inner_result)
+891-                except Exception as exc:
+892-                    signal_error(ctx.state, exc, is_async=True)
+893-                finally:
+894-                    self.stream = True
+895-                    signal_end(ctx.state, is_async=True)
+896-
+897-            streaming_output = CrewStreamingOutput(
+898-                async_iterator=create_async_chunk_generator(
+899-                    ctx.state, run_crew, ctx.output_holder
+900-                )
+901-            )
+902-            ctx.output_holder.append(streaming_output)
+903-
+904-            return streaming_output
+905-
+906-        baggage_ctx = baggage.set_baggage(
+907-            "crew_context", CrewContext(id=str(self.id), key=self.key)
+908-        )
+909-        token = attach(baggage_ctx)
+910-
+911-        try:
+912-            inputs = prepare_kickoff(self, inputs, input_files)
+913-
+914-            if self.process == Process.sequential:
+915-                result = await self._arun_sequential_process()
+916-            elif self.process == Process.hierarchical:
+917-                result = await self._arun_hierarchical_process()
+918-            else:
+919-                raise NotImplementedError(
+920-                    f"The process '{self.process}' is not implemented yet."
+921-                )
+922-
+923-            for after_callback in self.after_kickoff_callbacks:
+924-                result = after_callback(result)
+925-
+--
+1016:            if task.async_execution:
+1017-                context = self._get_context(
+1018-                    task, [last_sync_output] if last_sync_output else []
+1019-                )
+1020-                async_task = asyncio.create_task(
+1021-                    task.aexecute_sync(
+1022-                        agent=exec_data.agent,
+1023-                        context=context,
+1024-                        tools=exec_data.tools,
+1025-                    )
+1026-                )
+1027-                pending_tasks.append((task, async_task, task_index))
+1028-            else:
+1029-                if pending_tasks:
+1030-                    task_outputs = await self._aprocess_async_tasks(
+1031-                        pending_tasks, was_replayed
+1032-                    )
+1033-                    pending_tasks.clear()
+1034-
+1035-                context = self._get_context(task, task_outputs)
+1036-                task_output = await task.aexecute_sync(
+1037-                    agent=exec_data.agent,
+1038-                    context=context,
+1039-                    tools=exec_data.tools,
+1040-                )
+1041-                task_outputs.append(task_output)
+1042-                self._process_task_result(task, task_output)
+1043-                self._store_execution_log(task, task_output, task_index, was_replayed)
+1044-
+1045-        if pending_tasks:
+1046-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+1047-
+1048-        return self._create_crew_output(task_outputs)
+1049-
+1050-    async def _ahandle_conditional_task(
+1051-        self,
+1052-        task: ConditionalTask,
+1053-        task_outputs: list[TaskOutput],
+1054-        pending_tasks: list[tuple[Task, asyncio.Task[TaskOutput], int]],
+1055-        task_index: int,
+1056-        was_replayed: bool,
+1057-    ) -> TaskOutput | None:
+1058-        """Handle conditional task evaluation using native async."""
+1059-        if pending_tasks:
+1060-            task_outputs = await self._aprocess_async_tasks(pending_tasks, was_replayed)
+1061-            pending_tasks.clear()
+1062-
+1063-        return check_conditional_skip(
+1064-            self, task, task_outputs, task_index, was_replayed
+1065-        )
+1066-
+--
+1141:    def _run_sequential_process(self) -> CrewOutput:
+1142-        """Executes tasks sequentially and returns the final output."""
+1143-        return self._execute_tasks(self.tasks)
+1144-
+1145:    def _run_hierarchical_process(self) -> CrewOutput:
+1146-        """Creates and assigns a manager agent to complete the tasks."""
+1147-        self._create_manager_agent()
+1148-        return self._execute_tasks(self.tasks)
+1149-
+1150-    def _create_manager_agent(self) -> None:
+1151-        if self.manager_agent is not None:
+1152-            self.manager_agent.allow_delegation = True
+1153-            manager = self.manager_agent
+1154-            if manager.tools is not None and len(manager.tools) > 0:
+1155-                self._logger.log(
+1156-                    "warning",
+1157-                    "Manager agent should not have tools",
+1158-                    color="bold_yellow",
+1159-                )
+1160-                manager.tools = []
+1161-                raise Exception("Manager agent should not have tools")
+1162-        else:
+1163-            self.manager_llm = create_llm(self.manager_llm)
+1164-            i18n = get_i18n(prompt_file=self.prompt_file)
+1165-            manager = Agent(
+1166-                role=i18n.retrieve("hierarchical_manager_agent", "role"),
+1167-                goal=i18n.retrieve("hierarchical_manager_agent", "goal"),
+1168-                backstory=i18n.retrieve("hierarchical_manager_agent", "backstory"),
+1169-                tools=AgentTools(agents=self.agents).tools(),
+1170-                allow_delegation=True,
+1171-                llm=self.manager_llm,
+1172-                verbose=self.verbose,
+1173-            )
+1174-            self.manager_agent = manager
+1175-        manager.crew = self
+1176-
+1177-    def _get_execution_start_index(self, tasks: list[Task]) -> int | None:
+1178-        return None
+1179-
+1180:    def _execute_tasks(
+1181-        self,
+1182-        tasks: list[Task],
+1183-        start_index: int | None = 0,
+1184-        was_replayed: bool = False,
+1185-    ) -> CrewOutput:
+1186-        """Executes tasks sequentially and returns the final output.
+1187-
+1188-        Args:
+1189-            tasks (List[Task]): List of tasks to execute
+1190-            manager (Optional[BaseAgent], optional): Manager agent to use for
+1191-                delegation. Defaults to None.
+1192-
+1193-        Returns:
+1194-            CrewOutput: Final output of the crew
+1195-        """
+1196-        custom_start = self._get_execution_start_index(tasks)
+1197-        if custom_start is not None:
+1198-            start_index = custom_start
+1199-
+1200-        task_outputs: list[TaskOutput] = []
+1201-        futures: list[tuple[Task, Future[TaskOutput], int]] = []
+1202-        last_sync_output: TaskOutput | None = None
+1203-
+1204-        for task_index, task in enumerate(tasks):
+1205-            exec_data, task_outputs, last_sync_output = prepare_task_execution(
+1206-                self, task, task_index, start_index, task_outputs, last_sync_output
+1207-            )
+1208-            if exec_data.should_skip:
+1209-                continue
+1210-
+1211-            if isinstance(task, ConditionalTask):
+1212-                skipped_task_output = self._handle_conditional_task(
+1213-                    task, task_outputs, futures, task_index, was_replayed
+1214-                )
+1215-                if skipped_task_output:
+1216-                    task_outputs.append(skipped_task_output)
+1217-                    continue
+1218-
+1219:            if task.async_execution:
+1220-                context = self._get_context(
+1221-                    task, [last_sync_output] if last_sync_output else []
+1222-                )
+1223-                future = task.execute_async(
+1224-                    agent=exec_data.agent,
+1225-                    context=context,
+1226-                    tools=exec_data.tools,
+1227-                )
+1228-                futures.append((task, future, task_index))
+1229-            else:
+1230-                if futures:
+1231-                    task_outputs = self._process_async_tasks(futures, was_replayed)
+1232-                    futures.clear()
+1233-
+1234-                context = self._get_context(task, task_outputs)
+1235-                task_output = task.execute_sync(
+1236-                    agent=exec_data.agent,
+1237-                    context=context,
+1238-                    tools=exec_data.tools,
+1239-                )
+1240-                task_outputs.append(task_output)
+1241-                self._process_task_result(task, task_output)
+1242-                self._store_execution_log(task, task_output, task_index, was_replayed)
+1243-
+1244-        if futures:
+1245-            task_outputs = self._process_async_tasks(futures, was_replayed)
+1246-
+1247-        return self._create_crew_output(task_outputs)
+1248-
+1249-    def _handle_conditional_task(
+1250-        self,
+1251-        task: ConditionalTask,
+1252-        task_outputs: list[TaskOutput],
+1253-        futures: list[tuple[Task, Future[TaskOutput], int]],
+1254-        task_index: int,
+1255-        was_replayed: bool,
+1256-    ) -> TaskOutput | None:
+1257-        if futures:
+1258-            task_outputs = self._process_async_tasks(futures, was_replayed)
+1259-            futures.clear()
+1260-
+1261-        return check_conditional_skip(
+1262-            self, task, task_outputs, task_index, was_replayed
+1263-        )
+1264-
+1265-    def _prepare_tools(
+1266-        self, agent: BaseAgent, task: Task, tools: list[BaseTool]
+1267-    ) -> list[BaseTool]:
+1268-        # Add delegation tools if agent allows delegation
+1269-        if hasattr(agent, "allow_delegation") and getattr(
+--
+1645:        for task in self.tasks:
+1646-            # description and expected_output might contain e.g. {topic}, {user_name}
+1647-            text = f"{task.description or ''} {task.expected_output or ''}"
+1648-            required_inputs.update(placeholder_pattern.findall(text))
+1649-
+1650-        # Scan agents for inputs
+1651-        for agent in self.agents:
+1652-            # role, goal, backstory might have placeholders like {role_detail}, etc.
+1653-            text = f"{agent.role or ''} {agent.goal or ''} {agent.backstory or ''}"
+1654-            required_inputs.update(placeholder_pattern.findall(text))
+1655-
+1656-        return required_inputs
+1657-
+1658-    def copy(self) -> Crew:  # type: ignore[override]
+1659-        """
+1660-        Creates a deep copy of the Crew instance.
+1661-
+1662-        Returns:
+1663-            Crew: A new instance with copied components
+1664-        """
+1665-
+1666-        exclude = {
+1667-            "id",
+1668-            "_rpm_controller",
+1669-            "_logger",
+1670-            "_execution_span",
+1671-            "_file_handler",
+1672-            "_cache_handler",
+1673-            "_memory",
+1674-            "agents",
+1675-            "tasks",
+1676-            "knowledge_sources",
+1677-            "knowledge",
+1678-            "manager_agent",
+1679-            "manager_llm",
+1680-        }
+1681-
+1682-        cloned_agents = [agent.copy() for agent in self.agents]
+1683-        manager_agent = self.manager_agent.copy() if self.manager_agent else None
+1684-        manager_llm = shallow_copy(self.manager_llm) if self.manager_llm else None
+1685-
+1686-        task_mapping: dict[str, Any] = {}
+1687-
+1688-        cloned_tasks = []
+1689-        existing_knowledge_sources = shallow_copy(self.knowledge_sources)
+1690-        existing_knowledge = shallow_copy(self.knowledge)
+1691-
+1692:        for task in self.tasks:
+1693-            cloned_task = task.copy(cloned_agents, task_mapping)
+1694-            cloned_tasks.append(cloned_task)
+1695-            task_mapping[task.key] = cloned_task
+1696-
+1697-        for cloned_task, original_task in zip(cloned_tasks, self.tasks, strict=False):
+1698-            if isinstance(original_task.context, list):
+1699-                cloned_context = [
+1700-                    task_mapping[context_task.key]
+1701-                    for context_task in original_task.context
+1702-                ]
+1703-                cloned_task.context = cloned_context
+1704-
+1705-        copied_data = self.model_dump(exclude=exclude)
+1706-        copied_data = {k: v for k, v in copied_data.items() if v is not None}
+1707-        if getattr(self, "_memory", None):
+1708-            copied_data["memory"] = self._memory
+1709-
+1710-        copied_data.pop("agents", None)
+1711-        copied_data.pop("tasks", None)
+1712-
+1713-        return Crew(
+1714-            **copied_data,
+1715-            agents=cloned_agents,
+1716-            tasks=cloned_tasks,
+1717-            knowledge_sources=existing_knowledge_sources,
+1718-            knowledge=existing_knowledge,
+1719-            manager_agent=manager_agent,
+1720-            manager_llm=manager_llm,
+1721-        )
+1722-
+1723-    def _set_tasks_callbacks(self) -> None:
+1724-        """Sets callback for every task suing task_callback"""
+1725:        for task in self.tasks:
+1726-            if not task.callback:
+1727-                task.callback = self.task_callback
+1728-
+1729-    def _interpolate_inputs(self, inputs: dict[str, Any]) -> None:
+1730-        """Interpolates the inputs in the tasks and agents."""
+1731-        [
+1732-            task.interpolate_inputs_and_add_conversation_history(
+1733-                # type: ignore # "interpolate_inputs" of "Task" does not return a value (it only ever returns None)
+1734-                inputs
+1735-            )
+1736:            for task in self.tasks
+1737-        ]
+1738-        for agent in self.agents:
+1739-            agent.interpolate_inputs(inputs)
+1740-
+1741-    def _finish_execution(self, final_string_output: str) -> None:
+1742-        if self.max_rpm:
+1743-            self._rpm_controller.stop_rpm_counter()
+1744-
+1745-    def calculate_usage_metrics(self) -> UsageMetrics:
+1746-        """Calculates and returns the usage metrics."""
+1747-        total_usage_metrics = UsageMetrics()
+1748-
+1749-        for agent in self.agents:
+1750-            if isinstance(agent.llm, BaseLLM):
+1751-                llm_usage = agent.llm.get_token_usage_summary()
+1752-
+1753-                total_usage_metrics.add_usage_metrics(llm_usage)
+1754-            else:
+1755-                # fallback litellm
+1756-                if hasattr(agent, "_token_process"):
+1757-                    token_sum = agent._token_process.get_summary()
+1758-                    total_usage_metrics.add_usage_metrics(token_sum)
+1759-
+1760-        if self.manager_agent and hasattr(self.manager_agent, "_token_process"):
+1761-            token_sum = self.manager_agent._token_process.get_summary()
+1762-            total_usage_metrics.add_usage_metrics(token_sum)
+1763-
+1764-        if (
+1765-            self.manager_agent
+1766-            and hasattr(self.manager_agent, "llm")
+1767-            and hasattr(self.manager_agent.llm, "get_token_usage_summary")
+1768-        ):
+1769-            if isinstance(self.manager_agent.llm, BaseLLM):
+1770-                llm_usage = self.manager_agent.llm.get_token_usage_summary()
+1771-            else:
+1772-                llm_usage = self.manager_agent.llm._token_process.get_summary()
+1773-
+1774-            total_usage_metrics.add_usage_metrics(llm_usage)
+1775-
+1776-        self.usage_metrics = total_usage_metrics
+1777-        return total_usage_metrics
+1778-
+1779-    def test(
+1780-        self,
+1781-        n_iterations: int,
+1782-        eval_llm: str | InstanceOf[BaseLLM],
+1783-        inputs: dict[str, Any] | None = None,
+1784-    ) -> None:
+1785-        """Test and evaluate the Crew with the given inputs for n iterations.
+1786-
