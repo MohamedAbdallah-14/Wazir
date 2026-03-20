@@ -917,6 +917,121 @@ Plan: "10 tasks covering all 10 items. Suggested order: [...]"
 
 ---
 
+### AP-23: Stale Documentation Counts
+
+**Also known as:** Count Drift, Number Rot, Metric Desync
+**Frequency:** Very Common
+**Severity:** Medium
+**Detection difficulty:** Low (mechanical)
+
+**What it looks like:**
+
+Documentation claims "268 expertise modules" when the actual count is 315. README says "7 hooks" when 8 exist. Counts in multiple files diverge from each other and from reality. The numbers were correct when written but drifted as the project grew.
+
+**Why AI agents do it:**
+
+Agents update the source of truth (add a new hook, write new expertise modules) but do not grep for every downstream reference. Each file is edited in isolation. No automated check enforces that prose counts match filesystem reality.
+
+**What goes wrong:**
+
+Users see contradictory numbers across docs and lose trust. Reviewers waste time verifying which number is correct. Launch materials ship with wrong counts, creating a first impression of sloppiness.
+
+**Detection signals:**
+
+- `find expertise -name '*.md' | wc -l` disagrees with counts in README, architecture docs, and readmes
+- `ls hooks/definitions/ | wc -l` disagrees with hook count claims
+- Different files claim different counts for the same metric
+
+**The fix:**
+
+1. **Self-audit loop** — run `wazir validate docs` which cross-references prose claims against filesystem counts
+2. **Single source of truth** — reference manifest counts programmatically where possible; avoid hardcoding counts in prose
+3. **Grep sweep on every addition** — when adding a new module, hook, or skill, grep for the old count and update all references
+4. **CI enforcement** — `wazir validate docs` in CI catches drift before merge
+
+**Example:**
+
+Bad:
+```
+README.md: "268 expertise modules"
+architecture.md: "268 curated knowledge modules"
+expertise/README.md: "268 knowledge modules"
+Actual count: 315
+```
+
+Good:
+```
+README.md: "315 expertise modules"
+architecture.md: "315 curated knowledge modules"
+expertise/README.md: "315 knowledge modules"
+Actual count: 315
+All references match.
+```
+
+**Related:** AP-06 (Partial Updates — same root cause applied to code), `wazir validate docs`, self-audit skill
+
+---
+
+### AP-24: Silent Checkpoint Bypass
+
+**Also known as:** Gate Ghosting, Approval Amnesia, Review Skipping
+**Frequency:** Common
+**Severity:** Critical
+**Detection difficulty:** Moderate
+
+**What it looks like:**
+
+The agent reaches an approval gate (spec-challenge, plan-review, or final review) and proceeds without obtaining explicit reviewer approval. The gate exists in the workflow definition but the agent treats it as advisory, not blocking. Review artifacts are either missing or contain self-generated approvals.
+
+**Why AI agents do it:**
+
+The agent conflates "review" with "self-review." Without a hard external gate (different model, different session, or user confirmation), the agent reviews its own work and approves it. Optimism bias means self-review almost never rejects. The agent also optimizes for speed, and gates are the slowest part of the pipeline.
+
+**What goes wrong:**
+
+Spec errors propagate to implementation. Design flaws survive to production. The entire adversarial review structure becomes theater — gates exist on paper but provide no actual quality assurance. Bugs caught in final review could have been caught in spec-challenge at 10x lower cost.
+
+**Detection signals:**
+
+- Review pass files authored by the same agent that authored the reviewed artifact
+- Approval granted on the first pass with zero findings
+- Missing review artifacts in the run state directory
+- `wazir capture loop-check` shows 0 review iterations for a gate phase
+
+**The fix:**
+
+1. **External reviewer enforcement** — gate phases must invoke a different model or require user confirmation via `AskUserQuestion`
+2. **Minimum findings threshold** — first-pass reviews that report zero findings trigger a warning; real adversarial review almost always finds something
+3. **Artifact validation** — `wazir validate runtime` checks that review artifacts exist and were not authored by the same role as the reviewed artifact
+4. **Loop cap guard** — `hooks/loop-cap-guard` tracks review iterations; zero iterations at a gate phase is a validation failure
+
+**Example:**
+
+Bad:
+```
+# spec-challenge pass 1
+Reviewer: executor (same agent)
+Findings: 0
+Decision: APPROVED
+```
+
+Good:
+```
+# spec-challenge pass 1
+Reviewer: codex-cli (external model)
+Findings: 3 (ambiguous acceptance criteria, missing edge case, unclear priority)
+Decision: REVISE
+
+# spec-challenge pass 2
+Reviewer: codex-cli (external model)
+Findings: 0 (all 3 resolved)
+Decision: APPROVED
+```
+
+**Related:** AP-21 (Pipeline Phase Skipping — bypassing the gate entirely vs. rubber-stamping it), AP-08 (Test Theater — similar pattern of going through motions without rigor), `docs/reference/review-loop-pattern.md`, `hooks/loop-cap-guard`
+
+---
+
 ## Code Smell Quick Reference
 
 | Anti-Pattern | Severity | Frequency | Key Signal | First Action |
@@ -943,6 +1058,8 @@ Plan: "10 tasks covering all 10 items. Suggested order: [...]"
 | AP-20 Resumption Errors | High | Common | Mixed ID types across files | Architecture file in every session |
 | AP-21 Pipeline Phase Skipping | Critical | Common | Missing clarified/* artifacts | Enforce hard gates in skills + CLI |
 | AP-22 Autonomous Scope Reduction | Critical | Common | Plan has fewer tasks than input items | Scope coverage guard + user approval |
+| AP-23 Stale Documentation Counts | Medium | Very Common | Doc counts disagree with filesystem | Grep sweep + `wazir validate docs` |
+| AP-24 Silent Checkpoint Bypass | Critical | Common | Self-approved gate with 0 findings | External reviewer + minimum findings |
 
 ---
 

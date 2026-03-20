@@ -24,7 +24,7 @@ The agent audits its own work in an isolated git worktree. Validates, finds stru
 
 ## 6. Composer
 
-~300 curated expertise modules across 12 domains. The composition engine assembles task-specific agents by loading the right expertise for each role, stack, and concern. The executor building a Flutter RTL app gets Flutter patterns, RTL layout rules, and mobile antipatterns composed into its context. The reviewer gets the corresponding antipattern catalog. Every dispatched agent is a specialist, not a generalist pretending.
+315 curated expertise modules across 12 domains. The composition engine assembles task-specific agents by loading the right expertise for each role, stack, and concern. The executor building a Flutter RTL app gets Flutter patterns, RTL layout rules, and mobile antipatterns composed into its context. The reviewer gets the corresponding antipattern catalog. Every dispatched agent is a specialist, not a generalist pretending.
 
 ## 7. Review Loops
 
