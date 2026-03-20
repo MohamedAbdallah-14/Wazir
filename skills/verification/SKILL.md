@@ -38,9 +38,25 @@ Every completion claim must include:
 - the exact command or deterministic check
 - the actual result
 
-Minimum rule:
+## Proof Collection
+
+Use `proof-collector` (`tooling/src/verify/proof-collector.js`) for automated evidence gathering:
+
+1. **`detectRunnableType(projectRoot)`** — detects whether the project is `web`, `api`, `cli`, or `library` from `package.json`. Detection order: `pkg.bin` (cli), web framework deps (web), API framework deps (api), default (library).
+
+2. **`collectProof(projectRoot, opts?)`** — runs type-appropriate verification commands and returns structured evidence:
+   - **web:** `npm run build` + library checks
+   - **api:** library checks (test, tsc, eslint, prettier)
+   - **cli:** `<bin> --help` + library checks
+   - **library:** `npm test`, `tsc --noEmit`, `eslint .`, `prettier --check .`
+
+All commands use `execFileSync` (never shell `exec`) for security. Evidence is returned as `{ type, evidence: [{ check, ok, output }] }`.
+
+## Minimum Rules
 
 - no success claim without fresh evidence from the current change
+- always use `proof-collector` for Node.js projects to gather deterministic evidence
+- attach the evidence array to the verification proof artifact
 
 When verification fails:
 

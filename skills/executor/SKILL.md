@@ -61,6 +61,9 @@ Run these checks before implementing:
 
 If either fails, surface the failure and do NOT proceed until resolved.
 
+> **Output to the user** before execution begins:
+> Each task is implemented with TDD (test first, then code) and reviewed before commit. This catches correctness bugs, missing tests, wiring errors, and spec drift at the task level — before they compound across tasks and become expensive to fix.
+
 ## Execute (execute workflow)
 
 Implement tasks in the order defined by the execution plan.
@@ -106,6 +109,9 @@ Review loops follow `docs/reference/review-loop-pattern.md`. Code review scoping
 Tasks always run sequentially.
 
 **Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/`.
+
+> **Output to the user** before verification:
+> Verification produces deterministic proof — actual command output, not claims. It confirms that tests pass, types check, linters are clean, and every acceptance criterion has evidence. This is the evidence gate that separates "I think it works" from "here is proof it works."
 
 ## Verify (verify workflow)
 
