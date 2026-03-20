@@ -373,10 +373,14 @@ Output: approved spec + design + execution plan in `.wazir/runs/latest/clarified
 wazir capture event --run <run-id> --event phase_exit --phase clarifier --status completed
 ```
 
-Run the phase report and display it to the user:
+Run the phase report and display savings to the user:
 ```bash
 wazir report phase --run <run-id> --phase clarifier
+wazir stats --run <run-id>
 ```
+
+**Show savings in conversation output:**
+> **Context savings this phase:** Used wazir index for [N] queries and context-mode for [M] commands, saving ~[X] tokens ([Y]% reduction). Without these, this phase would have consumed [A] tokens instead of [B].
 
 Output the report content to the user in the conversation.
 
@@ -446,12 +450,16 @@ Output: code changes + verification proof in `.wazir/runs/latest/artifacts/`.
 wazir capture event --run <run-id> --event phase_exit --phase executor --status completed
 ```
 
-Run the phase report and display it to the user:
+Run the phase report and display savings to the user:
 ```bash
 wazir report phase --run <run-id> --phase executor
+wazir stats --run <run-id>
 ```
 
 Output the report content to the user in the conversation.
+
+**Show savings in conversation output:**
+> **Context savings this phase:** Used wazir index for [N] queries and context-mode for [M] commands, saving ~[X] tokens ([Y]% reduction).
 
 ---
 

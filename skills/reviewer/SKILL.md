@@ -242,6 +242,16 @@ const recurring = getRecurringFindingHashes(db, 2);
 
 This is how Wazir evolves — findings that recur across runs become accepted learnings injected into future executor context, preventing the same mistakes.
 
+## CLI/Context-Mode Enforcement
+
+In ALL review modes, check for these violations:
+
+1. **Index usage enforcement:** If the agent performed >5 direct file reads (Read tool) without a preceding `wazir index search-symbols` query, flag as **[warning]** finding: "Agent performed [N] direct file reads without using wazir index. Use `wazir index search-symbols <query>` before reading files to reduce context consumption."
+
+2. **Context-mode enforcement:** If the agent ran a large-category command (test runners, builds, diffs, dependency trees, linting — as classified by `hooks/routing-matrix.json`) using native Bash instead of context-mode tools (when context-mode is available), flag as **[warning]** finding: "Large command `[cmd]` run without context-mode. Route through `mcp__plugin_context-mode_context-mode__execute` to reduce context usage."
+
+These are warnings, not blocking findings — they improve efficiency but don't affect correctness.
+
 ## Task-Review Log Filenames
 
 In `task-review` mode, use task-scoped log filenames and cap tracking:
