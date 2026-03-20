@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Added
+- Workflow completion enforcement — `validateRunCompletion()` ensures all enabled workflows complete before run finalizes (`wazir capture summary --complete`)
+- Mandatory security gate — pattern-based diff scanner (`tooling/src/checks/security-sensitivity.js`) auto-adds 6 security review dimensions when auth/token/SQL/etc. patterns detected
+- Three interaction modes: `auto` (overnight, Codex-required), `guided` (default), `interactive` (co-design) via `/wazir auto|interactive ...`
+- User input capture — NDJSON logging of all user messages during a run (`tooling/src/capture/user-input.js`) with retention pruning
+- Two-layer reasoning chain output — concise conversation triggers + detailed file output at `reasoning/phase-<name>-reasoning.md`
+- Input Coverage dimension in self-audit (compares original input vs plan vs commits)
+- Input Coverage dimension in plan-review (8th dimension, catches scope reduction)
+- Two-level phase model — `parent_phase` and `workflow` fields in phase report schema, hierarchy display in `wazir status`
+- CLI/context-mode enforcement — reviewer flags >5 direct reads without index query and large commands without context-mode
+- Per-phase context savings display at phase boundaries via `wazir stats`
+- Overnight skill research skill (`skills/skill-research/SKILL.md`) for competitive analysis against superpowers and other frameworks
+- Anti-pattern docs: AP-23 (skipping enabled workflows), AP-24 (clarifier deciding scope without asking)
+
+### Changed
+- Clarifier Phase 1A rewritten — research runs first, then informed question batches (3-7 per batch), every scope exclusion requires user confirmation
+- Executor enforces one commit per task (hard rule, reviewer rejects multi-task batching)
+- Per-phase savings display added to clarifier and executor phase boundaries
+
+### Fixed
+- SQLite ExperimentalWarning suppressed via lazy dynamic imports in CLI entrypoint
+- `--complete` flag properly parsed in `wazir capture summary`
+- `validateRunCompletion` filters by `workflow_policy` (enabled workflows only), not full manifest list
+
 ### Changed
 - Restructured pipeline from 14 micro-phases to 4 main phases: Init, Clarifier, Executor, Final Review
 - Removed depth and intent questions from pipeline init — depth defaults to standard (override via inline modifiers), intent inferred from request keywords
