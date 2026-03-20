@@ -1,19 +1,19 @@
 #!/usr/bin/env node
 
+// Suppress Node.js ExperimentalWarning for built-in SQLite (node:sqlite).
+// Must run before any module that transitively imports node:sqlite loads,
+// so command handlers are lazy-imported below instead of using static imports.
+const _originalEmit = process.emit;
+process.emit = function (event, ...args) {
+  if (event === 'warning' && args[0]?.name === 'ExperimentalWarning' &&
+      args[0]?.message?.includes('SQLite')) {
+    return false;
+  }
+  return _originalEmit.apply(this, [event, ...args]);
+};
+
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-
-import { runCaptureCommand } from './capture/command.js';
-import { runValidateCommand } from './commands/validate.js';
-import { runDoctorCommand } from './doctor/command.js';
-import { runExportCommand as runGeneratedExportCommand } from './export/command.js';
-import { runIndexCommand } from './index/command.js';
-import { runInitCommand } from './init/command.js';
-import { runRecallCommand } from './recall/command.js';
-import { runReportCommand } from './reports/command.js';
-import { runStateCommand } from './state/command.js';
-import { runStatsCommand } from './commands/stats.js';
-import { runStatusCommand } from './status/command.js';
 
 const COMMAND_FAMILIES = [
   'export',
@@ -29,18 +29,19 @@ const COMMAND_FAMILIES = [
   'capture'
 ];
 
-const COMMAND_HANDLERS = {
-  export: runGeneratedExportCommand,
-  validate: runValidateCommand,
-  doctor: runDoctorCommand,
-  index: runIndexCommand,
-  init: runInitCommand,
-  recall: runRecallCommand,
-  report: runReportCommand,
-  state: runStateCommand,
-  status: runStatusCommand,
-  stats: runStatsCommand,
-  capture: runCaptureCommand,
+// Lazy-load command handlers so the warning filter is active before node:sqlite loads
+const COMMAND_LOADERS = {
+  export:   () => import('./export/command.js').then(m => m.runExportCommand),
+  validate: () => import('./commands/validate.js').then(m => m.runValidateCommand),
+  doctor:   () => import('./doctor/command.js').then(m => m.runDoctorCommand),
+  index:    () => import('./index/command.js').then(m => m.runIndexCommand),
+  init:     () => import('./init/command.js').then(m => m.runInitCommand),
+  recall:   () => import('./recall/command.js').then(m => m.runRecallCommand),
+  report:   () => import('./reports/command.js').then(m => m.runReportCommand),
+  state:    () => import('./state/command.js').then(m => m.runStateCommand),
+  status:   () => import('./status/command.js').then(m => m.runStatusCommand),
+  stats:    () => import('./commands/stats.js').then(m => m.runStatsCommand),
+  capture:  () => import('./capture/command.js').then(m => m.runCaptureCommand),
 };
 
 export function parseArgs(argv) {
@@ -88,9 +89,9 @@ export async function main(argv = process.argv.slice(2)) {
     return 1;
   }
 
-  const handler = COMMAND_HANDLERS[parsed.command];
+  const loader = COMMAND_LOADERS[parsed.command];
 
-  if (!handler) {
+  if (!loader) {
     console.error(`wazir ${parsed.command} is not implemented yet`);
     return 2;
   }
@@ -98,6 +99,7 @@ export async function main(argv = process.argv.slice(2)) {
   let result;
 
   try {
+    const handler = await loader();
     result = await handler(parsed);
   } catch (error) {
     console.error(error.message);
