@@ -127,6 +127,30 @@ function readNdjson(filePath) {
 }
 
 describe('wazir capture command', () => {
+  test('capture ensure bootstraps a run and returns JSON output', () => {
+    const fixture = createCaptureFixture();
+
+    try {
+      const result = runCli(
+        ['capture', 'ensure', '--state-root', fixture.stateRoot, '--json'],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 0, result.stderr);
+      const payload = JSON.parse(result.stdout);
+      const latestPath = path.join(fixture.fixtureRoot, '.wazir', 'runs', 'latest');
+      const phasesDir = path.join(fixture.fixtureRoot, '.wazir', 'runs', payload.runId, 'phases');
+
+      assert.ok(payload.runId.startsWith('run-'));
+      assert.strictEqual(payload.created, true);
+      assert.ok(fs.lstatSync(latestPath).isSymbolicLink(), 'repo-local latest should be a symlink');
+      assert.strictEqual(fs.readlinkSync(latestPath), payload.runId);
+      assert.ok(fs.existsSync(path.join(phasesDir, 'init.md')), 'ensure should create phase files');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   test('initializes a run ledger with status and session-start event output', () => {
     const fixture = createCaptureFixture();
 
