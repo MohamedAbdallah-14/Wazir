@@ -1,0 +1,181 @@
+{
+  "challenge": "run-pruning",
+  "version": 1,
+  "total_weight": 100,
+  "dimensions": {
+    "clarification": {
+      "weight": 10,
+      "label": "Clarification",
+      "description": "Did the agent clarify requirements before writing code?",
+      "checks": [
+        {
+          "type": "artifact_exists",
+          "description": "Clarification questions, spec, or design written before code",
+          "patterns": ["**/spec.md", "**/clarif*", "**/design*", "**/requirements*"]
+        },
+        {
+          "type": "git_log_check",
+          "description": "First commit is not implementation code",
+          "pattern": "clarif|spec|design|plan|research",
+          "mode": "first_commit_matches"
+        }
+      ]
+    },
+    "research": {
+      "weight": 10,
+      "label": "Research",
+      "description": "Did the agent study existing CLI patterns before writing new code?",
+      "checks": [
+        {
+          "type": "pattern_conformance",
+          "description": "New command follows existing CLI registration pattern in cli.js",
+          "reference_file": "tooling/src/cli.js"
+        },
+        {
+          "type": "import_style",
+          "description": "Uses shared utilities: parseCommandOptions, resolveStateRoot, getRunPaths",
+          "required_imports": ["parseCommandOptions", "resolveStateRoot", "getRunPaths"]
+        }
+      ]
+    },
+    "spec_design": {
+      "weight": 10,
+      "label": "Spec/Design",
+      "description": "Did the agent write a spec or acceptance criteria before implementation?",
+      "checks": [
+        {
+          "type": "artifact_exists",
+          "description": "Written spec, plan, design, or acceptance criteria exist",
+          "patterns": ["**/spec.md", "**/plan*.md", "**/design*.md", "**/acceptance*"]
+        }
+      ]
+    },
+    "code_conformance": {
+      "weight": 15,
+      "label": "Code Conformance",
+      "description": "Does the implementation match existing CLI patterns?",
+      "checks": [
+        {
+          "type": "file_structure",
+          "description": "New files in correct directories (tooling/src/)",
+          "expected_dirs": ["tooling/src"]
+        },
+        {
+          "type": "uses_shared_utils",
+          "description": "Uses parseCommandOptions from command-options.js",
+          "required_imports": ["parseCommandOptions"]
+        },
+        {
+          "type": "formatResult_pattern",
+          "description": "Returns {exitCode, stdout} like other commands",
+          "required_patterns": ["exitCode", "stdout"]
+        },
+        {
+          "type": "json_flag_support",
+          "description": "Supports --json output flag",
+          "required_patterns": ["json", "JSON.stringify"]
+        }
+      ]
+    },
+    "test_quality": {
+      "weight": 20,
+      "label": "Test Quality",
+      "description": "Are there tests that pass and cover edge cases?",
+      "checks": [
+        {
+          "type": "test_file_exists",
+          "description": "Test file exists for prune functionality",
+          "patterns": ["**/prune*test*", "**/test*prune*", "**/capture*prune*test*"]
+        },
+        {
+          "type": "test_count",
+          "description": "At least 5 test cases",
+          "minimum": 5
+        },
+        {
+          "type": "tests_pass",
+          "description": "All prune-related tests pass when run"
+        },
+        {
+          "type": "edge_case_coverage",
+          "description": "Tests cover: no runs, active run, dry-run, expired+fresh mix",
+          "required_patterns": ["no run|nothing to|empty|0 run", "active|running|current", "dry|preview", "older|expired|fresh|retain"]
+        }
+      ]
+    },
+    "edge_case_handling": {
+      "weight": 15,
+      "label": "Edge Case Handling",
+      "description": "Does the implementation handle edge cases?",
+      "checks": [
+        {
+          "type": "code_grep",
+          "description": "Active run protection",
+          "pattern": "active|running|current|in.?progress|latest"
+        },
+        {
+          "type": "code_grep",
+          "description": "No-runs graceful exit",
+          "pattern": "no run|nothing|empty|no.+to.+prune|0 run"
+        },
+        {
+          "type": "code_grep",
+          "description": "Dry-run support",
+          "pattern": "dry.?[Rr]un|dryRun|preview|would"
+        },
+        {
+          "type": "code_grep",
+          "description": "Date/age calculation present",
+          "pattern": "days|age|older|before|retention|Date\\.now|getTime"
+        }
+      ]
+    },
+    "verification_evidence": {
+      "weight": 5,
+      "label": "Verification",
+      "description": "Is there proof that tests were actually run?",
+      "checks": [
+        {
+          "type": "git_log_check",
+          "description": "Commit messages reference test results or verification",
+          "pattern": "test|pass|verify|green|verified",
+          "mode": "any_commit_matches"
+        }
+      ]
+    },
+    "pipeline_compliance": {
+      "weight": 15,
+      "label": "Pipeline Compliance",
+      "description": "Did the agent follow the full pipeline (clarify -> research -> spec -> TDD -> verify -> review)?",
+      "checks": [
+        {
+          "type": "artifact_exists",
+          "description": "Pipeline phase artifacts exist",
+          "patterns": [".wazir/runs/**/phases/*", "**/phase-report*", ".wazir/runs/**/status.json"]
+        },
+        {
+          "type": "git_log_check",
+          "description": "Test commits appear before implementation commits (TDD evidence)",
+          "pattern": "test|spec|red|green",
+          "mode": "test_before_impl"
+        },
+        {
+          "type": "artifact_exists",
+          "description": "Review artifacts exist",
+          "patterns": ["**/review*", "**/finding*", ".wazir/runs/**/reviews/*"]
+        },
+        {
+          "type": "git_log_check",
+          "description": "Clarification or spec commit appears before any code commit",
+          "pattern": "clarif|spec|design|plan|research",
+          "mode": "clarify_before_code"
+        },
+        {
+          "type": "artifact_exists",
+          "description": "Verification proof exists",
+          "patterns": ["**/verify*", "**/proof*", "**/test-output*", "**/verification*"]
+        }
+      ]
+    }
+  }
+}
