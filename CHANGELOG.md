@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- Phase-aware write blocking — source writes denied during init/clarifier/final_review, only allowed during executor
 - Bootstrap gate — PreToolUse hook blocks Write/Edit/Bash until pipeline run exists
 - `wazir capture ensure` — idempotent run bootstrap command
 - Pipeline-active marker gates enforcement to Wazir sessions only
