@@ -40,7 +40,9 @@ export function validatePhaseTransition(phasesDir, currentPhase, nextPhase) {
     if (UNCHECKED_ITEM.test(line)) {
       // Skip if this is the transition item
       if (line.includes(TRANSITION_MARKER)) continue;
-      const text = line.replace(/^- \[ \]\s*/, '').replace(/\s*<!--.*-->/, '').trim();
+      const cleaned = line.replace(/^- \[ \]\s*/, '');
+      const commentIdx = cleaned.indexOf('<!--');
+      const text = (commentIdx === -1 ? cleaned : cleaned.slice(0, commentIdx)).trim();
       unchecked.push(text);
     }
   }

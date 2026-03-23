@@ -13,6 +13,13 @@ import path from 'node:path';
 
 const ACTIVE_HEADER = /^## Phase:\s*(\w+)\s*—\s*ACTIVE$/m;
 const CHECKED_ITEM = /^- \[x\]/i;
+
+/** Strip inline HTML comments without regex (avoids CodeQL js/bad-tag-filter). */
+function stripComment(str) {
+  const start = str.indexOf('<!--');
+  if (start === -1) return str.trim();
+  return str.slice(0, start).trim();
+}
 const UNCHECKED_ITEM = /^- \[ \]/;
 
 /**
@@ -65,9 +72,9 @@ export function extractCurrentStep(content) {
     if (/^\s+- \[/.test(line)) continue;
 
     if (CHECKED_ITEM.test(line)) {
-      items.push({ text: line.replace(/^- \[x\]\s*/i, '').replace(/\s*<!--.*-->/, '').trim(), checked: true });
+      items.push({ text: stripComment(line.replace(/^- \[x\]\s*/i, '')), checked: true });
     } else if (UNCHECKED_ITEM.test(line)) {
-      const text = line.replace(/^- \[ \]\s*/, '').replace(/\s*<!--.*-->/, '').trim();
+      const text = stripComment(line.replace(/^- \[ \]\s*/, ''));
       items.push({ text, checked: false });
       if (firstUncheckedIdx === -1) {
         firstUncheckedIdx = items.length - 1;

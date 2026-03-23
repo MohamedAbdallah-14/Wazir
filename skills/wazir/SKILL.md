@@ -380,9 +380,9 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
 
 **`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Phase 2: Clarifier
 
