@@ -11,6 +11,19 @@ import path from 'node:path';
 const PHASES = ['init', 'clarifier', 'executor', 'final_review'];
 
 /**
+ * Get run paths under the repo-local .wazir directory.
+ * Mirrors the shape of getRunPaths() from capture/store.js but rooted at projectRoot/.wazir/.
+ *
+ * @param {string} projectRoot
+ * @param {string} runId
+ * @returns {{ runRoot: string }}
+ */
+export function getRepoLocalRunPaths(projectRoot, runId) {
+  const runRoot = path.join(projectRoot, '.wazir', 'runs', runId);
+  return { runRoot };
+}
+
+/**
  * Create phase files in the run directory from templates.
  *
  * - init.md gets "— ACTIVE" header

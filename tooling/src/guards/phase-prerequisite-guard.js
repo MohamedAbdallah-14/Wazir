@@ -144,8 +144,10 @@ export function evaluatePhasePrerequisiteGuard(payload) {
 
   const missingArtifacts = [];
   for (const artifact of requiredArtifacts) {
-    const artifactPath = path.join(runPaths.runRoot, artifact);
-    if (!fs.existsSync(artifactPath)) {
+    // Dual-root lookup: check repo-local first, fall back to state-root
+    const stateRootPath = path.join(runPaths.runRoot, artifact);
+    const repoLocalPath = path.join(projectRoot, '.wazir', 'runs', runId, artifact);
+    if (!fs.existsSync(repoLocalPath) && !fs.existsSync(stateRootPath)) {
       missingArtifacts.push(artifact);
     }
   }
