@@ -15,7 +15,8 @@ try {
 
   const tool = payload.tool_name || '';
   const command = payload.tool_input?.command || '';
-  const result = evaluateBootstrapGate(projectRoot, { tool, command });
+  const filePath = payload.tool_input?.file_path || '';
+  const result = evaluateBootstrapGate(projectRoot, { tool, command, filePath });
 
   if (result.decision === 'deny') {
     process.stdout.write(JSON.stringify({

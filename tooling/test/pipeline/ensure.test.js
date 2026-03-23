@@ -36,6 +36,16 @@ describe('wazir capture ensure', () => {
     assert.ok(fs.existsSync(path.join(proj, '.wazir', 'state', 'pipeline-active')));
   });
 
+  test('creates repo-local latest symlink for hooks', () => {
+    const proj = path.join(tmpDir, 'project');
+    const state = path.join(tmpDir, 'state');
+    const result = ensureRun(proj, state);
+    const latestPath = path.join(proj, '.wazir', 'runs', 'latest');
+
+    assert.ok(fs.lstatSync(latestPath).isSymbolicLink(), 'latest should be a symlink');
+    assert.strictEqual(fs.readlinkSync(latestPath), result.runId);
+  });
+
   test('resumes existing incomplete run', () => {
     const proj = path.join(tmpDir, 'project');
     const state = path.join(tmpDir, 'state');
