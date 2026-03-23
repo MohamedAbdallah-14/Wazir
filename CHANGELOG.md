@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- Bootstrap gate — PreToolUse hook blocks Write/Edit/Bash until pipeline run exists
+- `wazir capture ensure` — idempotent run bootstrap command
+- Pipeline-active marker gates enforcement to Wazir sessions only
+- Updated Layer 2 reminder wording with compliance request and skill usage guidance
 - Pipeline enforcement v2 — markdown phase file checklists with hook injection (76% compliance, up from 40-58%)
 - Phase file templates (`templates/phases/`) with pre-defined checklists for init, clarifier, executor, final_review
 - Template renderer with run-config workflow policy filtering (disabled workflows auto-completed)

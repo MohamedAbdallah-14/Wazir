@@ -2,7 +2,7 @@
 name: wz:skill-research
 description: Deep competitive analysis of Wazir skills against the ecosystem. Research only — never auto-applies changes.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Skill Research — Overnight Competitive Analysis
 
@@ -96,7 +96,7 @@ For each skill, produce specific, actionable recommendations:
 
 **Recommendations are NEVER auto-applied.** They go in the report for human review.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 ## Output Format
 
 Reports saved to `reports/skill-audit-<YYYY-MM-DD>/`:
@@ -189,4 +189,4 @@ After all skills are analyzed:
 >
 > **Next:** Review reports and decide which recommendations to implement.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

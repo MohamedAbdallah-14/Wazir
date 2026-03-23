@@ -2,7 +2,7 @@
 name: wz:tdd
 description: Use for implementation work that changes behavior. Follow RED -> GREEN -> REFACTOR with evidence at each step.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Test-Driven Development
 
@@ -24,7 +24,7 @@ Sequence:
 1. RED
 Write or update a test that expresses the new behavior or the bug being fixed, then run it and confirm failure.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 **Test quality check (single-pass):** Before proceeding to GREEN, verify:
 - Are these tests testing the right behavior?
 - Are they real assertions, not tautologies?
@@ -45,4 +45,4 @@ Rules:
 
 For the full review loop pattern, see `docs/reference/review-loop-pattern.md`. TDD uses a single-pass quality check, not the full loop.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

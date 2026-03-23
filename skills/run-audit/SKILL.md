@@ -2,7 +2,7 @@
 name: run-audit
 description: Run a structured audit on your codebase — security, code quality, architecture, performance, dependencies, or custom. Produces a report or actionable plan.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Run Audit — Structured Codebase Audit Pipeline
 
@@ -107,7 +107,7 @@ The composed researcher will:
    - **Location** — file path and line number
    - **Evidence** — code snippet or pattern detected, with source citation
    - **Remediation** — how to fix it
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 6. Produce a summary: total findings, severity breakdown, top recommendations
 7. List open risks and unknowns (per researcher contract)
 
@@ -211,4 +211,4 @@ Audit type maps to `audit-*` concerns in `expertise/composition-map.yaml`, compo
 
 Note: Only `audit-*` concerns have `researcher` entries in the composition map. Other existing concerns (e.g., `security-auth`, `architecture-patterns`) are keyed on `executor`/`verifier`/`reviewer` and will not be loaded for the researcher role by the composition engine.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

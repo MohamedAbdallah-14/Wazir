@@ -2,7 +2,7 @@
 name: wz:brainstorming
 description: Use before implementation work to turn operator briefings into an approved design with explicit trade-offs.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Brainstorming
 
@@ -28,7 +28,7 @@ Read `input/` first, then inspect only the repo surfaces needed to understand th
 
 Rules:
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 1. Do not write implementation code before the design is reviewed with the operator.
 2. Ask clarifying questions only when the ambiguity changes scope, architecture, or acceptance criteria.
 3. Propose 2-3 approaches with trade-offs and a recommendation.
@@ -54,4 +54,4 @@ Required outputs:
 - explicit recommendation and rejected alternatives
 
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

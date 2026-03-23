@@ -2,7 +2,7 @@
 name: wz:executing-plans
 description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Executing Plans
 
@@ -50,7 +50,7 @@ For each task:
    - Cap tracking: `wazir capture loop-check --task-id <NNN>`
    - This is NOT the final scored review -- it is a per-task gate using 5 task-execution dimensions
    - See `docs/reference/review-loop-pattern.md` for the full review loop contract
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 5. Only after review passes: mark as completed, commit
 
 **Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/` alongside the artifact. The loop runs for `pass_counts[depth]` passes with no cap guard.
@@ -97,4 +97,4 @@ After all tasks complete and verified:
 - **wz:writing-plans** - Creates the plan this skill executes
 - **wz:finishing-a-development-branch** - Complete development after all tasks
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

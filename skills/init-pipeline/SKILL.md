@@ -2,7 +2,7 @@
 name: wz:init-pipeline
 description: Initialize the Wazir pipeline — zero-config by default, auto-detects host and project stack. No mandatory questions.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Initialize Pipeline
 
@@ -62,7 +62,7 @@ Run `wazir init` (default: auto mode). This automatically:
 
 ## Interactive Flow (Power Users)
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 Triggered by `wazir init --interactive`. For users who want manual control.
 
 ### Pipeline Mode
@@ -122,4 +122,4 @@ If Codex selected:
 - **Wait for answer** — never proceed past a question until the user responds
 - **No open-ended questions** — every question has concrete options to pick from
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
