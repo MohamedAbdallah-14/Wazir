@@ -2,7 +2,7 @@
 name: wz:wazir
 description: One-command pipeline — type /wazir followed by what you want to build. Handles init, clarification, execution, review, and audits automatically.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Wazir — Full Pipeline Runner
 
@@ -58,6 +58,16 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 | **Final Review** | Review vs original input, learn, prepare next | `wz:reviewer` | Verdict + learnings + handoff |
 
 ---
+
+# Phase 0: Bootstrap (MANDATORY FIRST STEP)
+
+**Before ANYTHING else**, run this command:
+
+```bash
+wazir capture ensure
+```
+
+This creates or resumes a pipeline run. Until this runs, you CANNOT write code — the bootstrap gate will block all Write/Edit/Bash calls. Please try 100% compliance with Wazir pipeline and skill usage.
 
 # Phase 1: Init
 
@@ -377,12 +387,12 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 ```
 
 **Progress markers between workflows:** After each workflow completes, output:
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
 
 **`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"
 
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Phase 2: Clarifier
 
@@ -762,4 +772,4 @@ Create the `reasoning/` directory during run init. Every phase skill (clarifier,
 - **No open-ended questions** — every question has concrete options to pick from
 - **Inline answers accepted** — users can type the number or the option name
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

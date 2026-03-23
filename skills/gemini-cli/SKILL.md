@@ -2,7 +2,7 @@
 name: wz:gemini-cli
 description: How to use Gemini CLI programmatically for headless reviews, automation, and sandbox operations within Wazir pipelines.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Gemini CLI Integration
 
@@ -132,7 +132,7 @@ Sandbox uses a pre-built `gemini-cli-sandbox` Docker image for isolation.
 - CLI flag: `-m <model>` or `--model <model>`
 - Environment variable: `export GEMINI_MODEL="gemini-3-pro"`
 - Interactive: `/model` slash command
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 - Config: `settings.json` model field
 
 **Note:** With a Google login (not API key), the CLI may auto-blend Pro and Flash models based on task complexity and system capacity.
@@ -261,4 +261,4 @@ Gemini CLI reads configuration from:
 
 Key config fields: `model`, `approvalMode`, `sandbox`, `mcpServers`, `tools`, `requireApprovals`.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

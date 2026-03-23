@@ -2,7 +2,7 @@
 name: wz:writing-plans
 description: Use after clarification, research, and design approval to create an execution-grade implementation plan.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Writing Plans
 
@@ -37,7 +37,7 @@ The plan must include:
 - ordered sections
 - concrete tasks and subtasks
 - acceptance criteria per section
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 - verification commands or manual checks per section
 - cleanup steps where needed
 
@@ -71,4 +71,4 @@ Standalone mode: if no `.wazir/runs/latest/` exists, artifacts go to `docs/plans
 
 After the loop completes, present findings summary and wait for user approval before completing.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

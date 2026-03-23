@@ -6,7 +6,7 @@
  * Idempotent — re-running does not duplicate reminders.
  */
 
-const REMINDER = '<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->';
+const REMINDER = '<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->';
 
 /**
  * Inject 3 pipeline reminders into a skill file content string.

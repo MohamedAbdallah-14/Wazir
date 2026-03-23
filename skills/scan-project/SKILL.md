@@ -2,7 +2,7 @@
 name: scan-project
 description: Build a project profile from manifests, docs, tests, and `input/` so clarification and planning start from evidence.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Scan Project
 
@@ -29,7 +29,7 @@ Inspect the smallest set of repo surfaces needed to answer:
 
 ## Index build / refresh
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 After the initial scan, ensure a Wazir index is available for
 symbol-level exploration in later phases:
 
@@ -55,4 +55,4 @@ Rules:
 - prefer manifests, scripts, CI config, and current docs over assumptions
 - treat inactive surfaces as historical context only
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

@@ -2,7 +2,7 @@
 name: self-audit
 description: Run a self-audit loop in an isolated git worktree — validates, audits, fixes, verifies, and merges back only on green. Safe self-improvement that cannot break the main working tree.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Self-Audit — Worktree-Isolated Audit-Fix Loop
 
@@ -179,7 +179,7 @@ Beyond CLI checks, inspect for:
 
 9. **Expertise Coverage**
    - Read `expertise/composition-map.yaml`
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
    - For every module path referenced, check that the file exists under `expertise/`
    - Missing files are findings
 
@@ -355,4 +355,4 @@ const db = openStateDb(stateRoot);
 
 All findings are persisted across runs, enabling trend detection and learning extraction.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

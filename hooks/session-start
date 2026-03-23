@@ -95,7 +95,20 @@ refreshIndex();
 
 function injectPipelineStatus() {
   try {
+    const markerPath = join(projectRoot, '.wazir', 'state', 'pipeline-active');
     const latestPath = join(projectRoot, '.wazir', 'runs', 'latest');
+
+    if (existsSync(markerPath) && !existsSync(latestPath)) {
+      process.stdout.write(
+        `<system-reminder>\n` +
+        `BOOTSTRAP REQUIRED: A Wazir pipeline session is active but no run exists.\n` +
+        `Run \`wazir capture ensure\` BEFORE doing anything else.\n` +
+        `Please try 100% compliance with Wazir pipeline and skill usage.\n` +
+        `</system-reminder>\n`,
+      );
+      return;
+    }
+
     if (!existsSync(latestPath)) return;
 
     const phasesDir = join(latestPath, 'phases');
