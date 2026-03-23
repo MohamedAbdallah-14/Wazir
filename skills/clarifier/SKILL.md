@@ -2,6 +2,7 @@
 name: wz:clarifier
 description: Run the clarification pipeline — research, clarify scope, brainstorm design, generate task specs and execution plan. Pauses for user approval between phases.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Clarifier
 
@@ -199,6 +200,7 @@ Wait for the user's selection before continuing. Route feedback: plan correction
 **Before starting this phase, output to the user:**
 
 > **Spec Hardening** — About to convert the clarified scope into a measurable, testable specification and then run adversarial spec-challenge review to find gaps.
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 >
 > **Why this matters:** Without hardening, acceptance criteria stay vague ("it should work well") instead of measurable ("response time under 200ms for 95th percentile"). Vague specs pass any implementation, making review meaningless.
 >
@@ -395,3 +397,5 @@ When the plan is approved:
 > - Plan: `.wazir/runs/latest/clarified/execution-plan.md`
 >
 > **Next:** Run `/executor` to implement the plan.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

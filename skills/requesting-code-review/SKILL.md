@@ -2,6 +2,7 @@
 name: wz:requesting-code-review
 description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Requesting Code Review
 
@@ -70,6 +71,7 @@ Include explicit loop parameters:
 **3. Act on feedback:**
 - Fix Critical issues immediately
 - Fix Important issues before proceeding
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 - Note Minor issues for later
 - Push back if reviewer is wrong (with reasoning)
 
@@ -136,3 +138,5 @@ You: [Fix progress indicators]
 - Request clarification
 
 See template at: ./code-reviewer.md
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

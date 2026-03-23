@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- Pipeline enforcement v2 — markdown phase file checklists with hook injection (76% compliance, up from 40-58%)
+- Phase file templates (`templates/phases/`) with pre-defined checklists for init, clarifier, executor, final_review
+- Template renderer with run-config workflow policy filtering (disabled workflows auto-completed)
+- PreToolUse injection hook — injects current pipeline step on every Write/Edit/Bash call
+- Stop hook — blocks premature completion when active phase has unchecked items
+- Phase transition validation — `wazir capture event` validates checklists before accepting transitions
+- `wazir pipeline init` command — renders phase files from templates after run-config exists
+- Dual-root artifact lookup — guards check repo-local then fall back to state-root
+- Layer 2 skill reminders — 3 pipeline compliance tags in all 29 skill files via `wazir export build`
+- Plugin sync script (`scripts/sync-plugin.sh`) for clean state after rollbacks
+- Enforcement research synthesis (30+ papers, 7-agent research) at `docs/research/`
 - Workflow completion enforcement — `validateRunCompletion()` ensures all enabled workflows complete before run finalizes (`wazir capture summary --complete`)
 - Mandatory security gate — pattern-based diff scanner (`tooling/src/checks/security-sensitivity.js`) auto-adds 6 security review dimensions when auth/token/SQL/etc. patterns detected
 - Three interaction modes: `auto` (overnight, Codex-required), `guided` (default), `interactive` (co-design) via `/wazir auto|interactive ...`

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wazir.dev/schemas/decision.schema.json",
+  "title": "Decision Log Entry",
+  "type": "object",
+  "required": ["timestamp", "phase", "decision", "reason"],
+  "properties": {
+    "timestamp": { "type": "string", "format": "date-time" },
+    "phase": { "type": "string", "minLength": 1 },
+    "decision": { "type": "string", "maxLength": 200 },
+    "reason": { "type": "string", "maxLength": 500 },
+    "task_id": { "type": "string" }
+  },
+  "additionalProperties": false
+}

@@ -297,7 +297,7 @@ describe('protected-path-write-guard — Claude Code payload format (I9)', () =>
 });
 
 describe('hook canonicalization (I9)', () => {
-  test('hooks/hooks.json contains exactly 4 hooks', () => {
+  test('hooks/hooks.json contains exactly 6 hooks', () => {
     const hooksPath = path.join(ROOT, 'hooks', 'hooks.json');
     const hooksContent = JSON.parse(fs.readFileSync(hooksPath, 'utf8'));
 
@@ -311,11 +311,13 @@ describe('hook canonicalization (I9)', () => {
       }
     }
 
-    assert.strictEqual(hookCommands.length, 4, `Expected 4 hooks, got ${hookCommands.length}: ${hookCommands.join(', ')}`);
+    assert.strictEqual(hookCommands.length, 6, `Expected 6 hooks, got ${hookCommands.length}: ${hookCommands.join(', ')}`);
     assert.ok(hookCommands.includes('./hooks/protected-path-write-guard'));
     assert.ok(hookCommands.includes('./hooks/context-mode-router'));
     assert.ok(hookCommands.includes('./hooks/loop-cap-guard'));
     assert.ok(hookCommands.includes('./hooks/session-start'));
+    assert.ok(hookCommands.includes('./hooks/pipeline-phase-injector'));
+    assert.ok(hookCommands.includes('./hooks/stop-pipeline-gate'));
   });
 
   test('hooks.json hooks field matches settings.json hooks field (generated from canonical)', () => {

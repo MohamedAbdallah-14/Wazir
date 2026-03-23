@@ -2,6 +2,7 @@
 name: wz:codex-cli
 description: How to use Codex CLI programmatically for reviews, execution, and sandbox operations within Wazir pipelines.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Codex CLI Integration
 
@@ -131,6 +132,7 @@ Browse or execute Codex Cloud tasks from the terminal without opening the TUI.
 Evaluate execpolicy rule files and check whether a command would be allowed, prompted, or blocked.
 
 ### codex auth
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 Authenticate Codex using ChatGPT OAuth, device auth, or an API key piped over stdin.
 
@@ -258,3 +260,5 @@ Codex CLI reads configuration from:
 - Command-line flags and `-c key=value` overrides (highest precedence)
 
 Key config fields: `model`, `approval_policy`, `sandbox_mode`, `providers`.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

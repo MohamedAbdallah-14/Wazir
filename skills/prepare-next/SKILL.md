@@ -2,6 +2,7 @@
 name: prepare-next
 description: Use after a run or execution slice completes to produce a clean next-run handoff without auto-applying stale context.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Prepare Next
 
@@ -46,6 +47,7 @@ Read from the current run directory:
 
 ## Step 2: Write Handoff
 
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 Write to `.wazir/runs/<run-id>/handoff.md` using this structure:
 
 ```markdown
@@ -89,3 +91,5 @@ wazir capture summary --run <run-id>
 - Do NOT auto-load proposed or unreviewed learnings into the next run
 - Do NOT carry forward stale context — each new run reads fresh state
 - Do NOT compress or delete files the user might need — only archive verbose intermediate logs
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

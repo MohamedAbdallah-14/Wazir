@@ -2,6 +2,7 @@
 name: wz:using-git-worktrees
 description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - creates isolated git worktrees with smart directory selection and safety verification
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Using Git Worktrees
 
@@ -89,6 +90,7 @@ No .gitignore verification needed - outside project entirely.
 
 ### 1. Detect Project Name
 
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 ```bash
 project=$(basename "$(git rev-parse --show-toplevel)")
 ```
@@ -174,3 +176,5 @@ git worktree remove --force <path>
 git worktree prune
 git worktree list  # Verify
 ```
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

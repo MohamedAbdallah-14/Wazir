@@ -2,6 +2,7 @@
 name: wz:reviewer
 description: Run the review phase — adversarial review of implementation against the approved spec, plan, and verification evidence.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Reviewer
 
@@ -249,6 +250,7 @@ Read `interaction_mode` from run-config:
 - **`auto`:** No user checkpoints. Present verdict and let gating agent decide. On escalation, write reason and STOP.
 - **`guided`:** Standard behavior — present verdict, ask user how to proceed.
 - **`interactive`:** Discuss findings with user: "I found a potential auth bypass in `src/auth.js:42` — here's why I rated it high severity. Do you agree, or is there context I'm missing?" Show detailed reasoning for each dimension score.
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 ## CLI/Context-Mode Enforcement
 
@@ -494,3 +496,5 @@ Ask the user via AskUserQuestion:
   3. "Review findings in detail"
 
 Wait for the user's selection before continuing.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

@@ -2,6 +2,7 @@
 name: wz:humanize
 description: Use when reviewing or editing any text artifact (specs, plans, code comments, commit messages, content, documentation) to detect and remove AI writing patterns. Runs a 4-phase pipeline -- Scan for AI vocabulary and structural patterns, Identify severity and domain, Rewrite problematic sections, Verify meaning preservation. Invoke on existing text that needs corrective humanization. For preventive humanization, the composition engine loads domain-specific rules automatically.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Humanize
 
@@ -69,6 +70,7 @@ Group findings by section so rewrites can be done in context rather than word-by
 
 If the scan finds fewer than 3 findings total and all are low severity, report "no changes needed" and skip Phases 3-4. Do not force rewrites on already-clean text.
 
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 ## Phase 3: Rewrite
 
 Apply fixes, starting with high-severity findings.
@@ -134,3 +136,5 @@ Report:
 - Summary of changes made, grouped by severity
 - Any domain exceptions that were preserved
 - Confirmation that meaning was preserved (Pass 2 result)
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

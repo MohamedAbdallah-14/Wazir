@@ -27,18 +27,37 @@ always:
     - antipatterns/code/state-management-antipatterns.md
     - quality/evidence-based-verification.md
   reviewer:
-    - antipatterns/process/ai-coding-antipatterns.md
-    - antipatterns/code/code-smells.md
-    - antipatterns/process/code-review-antipatterns.md
-    - antipatterns/code/dependency-antipatterns.md
-    - architecture/foundations/architectural-thinking.md
-    - architecture/foundations/coupling-and-cohesion.md
-    - antipatterns/code/architecture-antipatterns.md
-    - architecture/foundations/domain-driven-design.md
+    # Mode-agnostic core — loaded for ALL review modes (~6K tokens)
+    - digests/reviewer/review-methodology-digest.md
+    - digests/reviewer/ai-coding-digest.md
   content-author:
     - i18n/content/translation-management.md
     - i18n/foundations/string-externalization.md
     - i18n/foundations/pluralization-and-gender.md
+
+# Mode-specific reviewer composition
+# Loaded ON TOP of always.reviewer based on the --mode flag
+# Total budget per mode: ~15-25K tokens (digests + auto + stack modules)
+reviewer_modes:
+  task-review:
+    - digests/reviewer/code-smells-digest.md
+    - digests/reviewer/error-handling-digest.md
+  spec-challenge:
+    - digests/reviewer/architectural-thinking-digest.md
+    - digests/reviewer/ddd-digest.md
+  design-review:
+    - digests/reviewer/architectural-thinking-digest.md
+    - digests/reviewer/coupling-cohesion-digest.md
+  plan-review:
+    - digests/reviewer/architectural-thinking-digest.md
+    - digests/reviewer/coupling-cohesion-digest.md
+    - digests/reviewer/ai-coding-digest.md
+  final:
+    - digests/reviewer/code-smells-digest.md
+    - digests/reviewer/architecture-antipatterns-digest.md
+    - digests/reviewer/dependency-risk-digest.md
+  research-review: []
+  clarification-review: []
 
 auto:
   all-stacks:

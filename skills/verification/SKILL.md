@@ -2,6 +2,7 @@
 name: wz:verification
 description: Use before claiming work is complete. Every completion claim needs fresh command evidence or another deterministic proof path.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Verification
 
@@ -37,6 +38,7 @@ Every completion claim must include:
 - what was verified
 - the exact command or deterministic check
 - the actual result
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 ## Proof Collection
 
@@ -71,3 +73,5 @@ Ask the user via AskUserQuestion:
   3. "Abort and review what went wrong"
 
 Wait for the user's selection before continuing.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

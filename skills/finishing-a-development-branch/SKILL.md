@@ -2,6 +2,7 @@
 name: wz:finishing-a-development-branch
 description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Finishing a Development Branch
 
@@ -92,6 +93,7 @@ git merge <feature-branch>
 
 # Verify tests on merged result
 
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 # If tests pass
 git branch -d <feature-branch>
 ```
@@ -180,3 +182,5 @@ git worktree remove <path>
 **No confirmation for discard**
 - **Problem:** Accidentally delete work
 - **Fix:** Require typed "discard" confirmation
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

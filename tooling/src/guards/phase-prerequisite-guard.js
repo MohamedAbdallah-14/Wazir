@@ -144,8 +144,18 @@ export function evaluatePhasePrerequisiteGuard(payload) {
 
   const missingArtifacts = [];
   for (const artifact of requiredArtifacts) {
-    const artifactPath = path.join(runPaths.runRoot, artifact);
-    if (!fs.existsSync(artifactPath)) {
+    // Dual-root lookup: check repo-local first, fall back to state-root
+    const stateRootPath = path.join(runPaths.runRoot, artifact);
+    const repoLocalPath = path.join(projectRoot, '.wazir', 'runs', runId, artifact);
+    // Guard against path traversal (e.g., "../" in artifact names)
+    const stateRootResolved = path.resolve(stateRootPath);
+    const repoLocalResolved = path.resolve(repoLocalPath);
+    if (!stateRootResolved.startsWith(path.resolve(runPaths.runRoot)) &&
+        !repoLocalResolved.startsWith(path.resolve(path.join(projectRoot, '.wazir', 'runs', runId)))) {
+      missingArtifacts.push(artifact);
+      continue;
+    }
+    if (!fs.existsSync(repoLocalResolved) && !fs.existsSync(stateRootResolved)) {
       missingArtifacts.push(artifact);
     }
   }

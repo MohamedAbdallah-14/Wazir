@@ -7,7 +7,16 @@ const DEFAULT_PHASE_POLICY = {
   enabled: true,
 };
 
-export function readRunConfig(runPaths) {
+export function readRunConfig(runPaths, projectRoot) {
+  // Dual-root lookup: check repo-local first, fall back to state-root
+  if (projectRoot) {
+    const runId = path.basename(runPaths.runRoot);
+    const repoLocalPath = path.join(projectRoot, '.wazir', 'runs', runId, 'run-config.yaml');
+    if (fs.existsSync(repoLocalPath)) {
+      return readYamlFile(repoLocalPath);
+    }
+  }
+
   const configPath = path.join(runPaths.runRoot, 'run-config.yaml');
   if (!fs.existsSync(configPath)) {
     return { phase_policy: {} };

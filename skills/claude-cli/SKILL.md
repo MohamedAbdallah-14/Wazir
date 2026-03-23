@@ -2,6 +2,7 @@
 name: wz:claude-cli
 description: How to use Claude Code CLI programmatically for reviews, automation, and non-interactive operations within Wazir pipelines.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Claude Code CLI Integration
 
@@ -161,6 +162,7 @@ Store permanent permissions in `.claude/settings.json`:
 
 ```bash
 # Pipe a diff for review
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 git diff main | claude -p "Review this diff for correctness"
 
 # Pipe file content
@@ -318,3 +320,5 @@ Claude Code reads configuration from (highest to lowest precedence):
 7. Auto Memory (persisted learnings)
 
 Key config fields in `settings.json`: `model`, `maxTokens`, `permissions.allowedTools`, `permissions.deny`, `env`.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

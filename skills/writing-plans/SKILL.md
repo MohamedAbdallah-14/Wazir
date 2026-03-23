@@ -2,6 +2,7 @@
 name: wz:writing-plans
 description: Use after clarification, research, and design approval to create an execution-grade implementation plan.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Writing Plans
 
@@ -36,6 +37,7 @@ The plan must include:
 - ordered sections
 - concrete tasks and subtasks
 - acceptance criteria per section
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 - verification commands or manual checks per section
 - cleanup steps where needed
 
@@ -68,3 +70,5 @@ Loop depth follows the project's depth config (quick/standard/deep).
 Standalone mode: if no `.wazir/runs/latest/` exists, artifacts go to `docs/plans/` and review logs go alongside (`docs/plans/YYYY-MM-DD-<topic>-review-pass-N.md`). Loop cap guard is not invoked in standalone mode.
 
 After the loop completes, present findings summary and wait for user approval before completing.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

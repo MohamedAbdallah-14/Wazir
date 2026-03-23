@@ -2,6 +2,7 @@
 name: wz:wazir
 description: One-command pipeline — type /wazir followed by what you want to build. Handles init, clarification, execution, review, and audits automatically.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Wazir — Full Pipeline Runner
 
@@ -59,6 +60,8 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 ---
 
 # Phase 1: Init
+
+**Before starting:** Check `.wazir/runs/latest/phases/init.md` for your current checklist. Complete all items before proceeding to Phase 2.
 
 ## Step 1: Capture the Request
 
@@ -379,8 +382,11 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 **`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"
 
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Phase 2: Clarifier
+
+**Before starting:** Check `.wazir/runs/latest/phases/clarifier.md` for your current checklist. Complete all items before proceeding to Phase 3.
 
 **Before starting this phase, output to the user:**
 
@@ -439,6 +445,8 @@ Output the report content to the user in the conversation.
 ---
 
 # Phase 3: Executor
+
+**Before starting:** Check `.wazir/runs/latest/phases/executor.md` for your current checklist. Complete all items before proceeding to Phase 4.
 
 **Before starting this phase, output to the user:**
 
@@ -516,6 +524,8 @@ Output the report content to the user in the conversation.
 ---
 
 # Phase 4: Final Review
+
+**Before starting:** Check `.wazir/runs/latest/phases/final_review.md` for your current checklist. Complete all items before marking the run complete.
 
 **Before starting this phase, output to the user:**
 
@@ -751,3 +761,5 @@ Create the `reasoning/` directory during run init. Every phase skill (clarifier,
 - **Wait for answer** — never proceed past a question until the user responds
 - **No open-ended questions** — every question has concrete options to pick from
 - **Inline answers accepted** — users can type the number or the option name
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

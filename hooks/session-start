@@ -4,6 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { findActivePhase, extractCurrentStep } from '../tooling/src/hooks/phase-injector.js';
+
 const hooksDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = dirname(hooksDir);
 const skillFile = join(projectRoot, 'skills', 'using-skills', 'SKILL.md');
@@ -86,6 +88,46 @@ function refreshIndex() {
 }
 
 refreshIndex();
+
+// ---------------------------------------------------------------------------
+// Pipeline status injection (Layer 1 enforcement)
+// ---------------------------------------------------------------------------
+
+function injectPipelineStatus() {
+  try {
+    const latestPath = join(projectRoot, '.wazir', 'runs', 'latest');
+    if (!existsSync(latestPath)) return;
+
+    const phasesDir = join(latestPath, 'phases');
+    if (!existsSync(phasesDir)) return;
+
+    const active = findActivePhase(phasesDir);
+    if (!active) return;
+
+    const step = extractCurrentStep(active.content);
+    if (!step) return;
+
+    // Count completed items for progress summary
+    const checkedCount = step.stepNum - 1;
+
+    let output = `<system-reminder>\n`;
+    output += `PIPELINE STATUS: Phase ${active.phase} — ACTIVE (step ${step.stepNum} of ${step.totalSteps})\n`;
+    if (checkedCount > 0) {
+      output += `COMPLETED: steps 1-${checkedCount}\n`;
+    }
+    output += `CURRENT: ${step.current}\n`;
+    if (step.next) {
+      output += `NEXT: ${step.next}\n`;
+    }
+    output += `</system-reminder>\n`;
+
+    process.stdout.write(output);
+  } catch {
+    // Fail-open: no injection on error
+  }
+}
+
+injectPipelineStatus();
 
 process.stdout.write(
   `<cli-bootstrap-guidance>\n` +

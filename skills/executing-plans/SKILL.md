@@ -2,6 +2,7 @@
 name: wz:executing-plans
 description: Use when you have a written implementation plan to execute in a separate session with review checkpoints
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Executing Plans
 
@@ -49,6 +50,7 @@ For each task:
    - Cap tracking: `wazir capture loop-check --task-id <NNN>`
    - This is NOT the final scored review -- it is a per-task gate using 5 task-execution dimensions
    - See `docs/reference/review-loop-pattern.md` for the full review loop contract
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 5. Only after review passes: mark as completed, commit
 
 **Standalone mode:** When no `.wazir/runs/latest/` exists, review logs go to `docs/plans/` alongside the artifact. The loop runs for `pass_counts[depth]` passes with no cap guard.
@@ -94,3 +96,5 @@ After all tasks complete and verified:
 - **wz:using-git-worktrees** - REQUIRED: Set up isolated workspace before starting
 - **wz:writing-plans** - Creates the plan this skill executes
 - **wz:finishing-a-development-branch** - Complete development after all tasks
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

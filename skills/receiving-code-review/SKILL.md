@@ -2,6 +2,7 @@
 name: wz:receiving-code-review
 description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Code Review Reception
 
@@ -73,6 +74,7 @@ WHY: Items may be related. Partial understanding = wrong implementation.
 the user: "Fix 1-6"
 You understand 1,2,3,6. Unclear on 4,5.
 
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 WRONG: Implement 1,2,3,6 now, ask about 4,5 later
 RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
 ```
@@ -142,3 +144,5 @@ FOR multi-item feedback:
 | Feedback contradicts user's decisions | Stop, discuss with user |
 | "Implement properly" suggestion | YAGNI check first |
 | Multiple items, some unclear | Clarify ALL unclear items before implementing ANY |
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

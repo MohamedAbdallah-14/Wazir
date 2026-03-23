@@ -18,6 +18,8 @@ import {
   writeSummary,
 } from './store.js';
 import { readRunConfig, getPhaseLoopCap } from './run-config.js';
+import { createPhaseFiles, createRepoLocalSymlink } from '../pipeline/phase-files.js';
+import { validatePhaseTransition, updatePhaseHeaders } from '../pipeline/transition.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
 import { evaluateLoopCapGuard } from '../guards/loop-cap-guard.js';
 import { evaluatePhasePrerequisiteGuard } from '../guards/phase-prerequisite-guard.js';
@@ -140,7 +142,7 @@ function handleInit(parsed, context = {}) {
   // Initialize usage tracking for this run
   initUsage(runPaths, options.run);
 
-  // Write run ID to latest pointer for session recovery
+  // Write run ID to latest pointer for session recovery (state-root)
   const latestPath = path.join(stateRoot, 'runs', 'latest');
   try {
     fs.mkdirSync(path.dirname(latestPath), { recursive: true });
@@ -148,6 +150,32 @@ function handleInit(parsed, context = {}) {
   } catch {
     process.stderr.write('Warning: could not write latest run pointer\n');
   }
+
+  // Create phase files from templates (pipeline enforcement)
+  const repoLocalRunDir = path.join(projectRoot, '.wazir', 'runs', options.run);
+  try {
+    fs.mkdirSync(repoLocalRunDir, { recursive: true });
+    createPhaseFiles(repoLocalRunDir, projectRoot);
+  } catch (err) {
+    process.stderr.write(`Warning: could not create phase files: ${err.message}\n`);
+  }
+
+  // Create repo-local symlink (.wazir/runs/latest -> run-id)
+  try {
+    createRepoLocalSymlink(projectRoot, options.run);
+  } catch (err) {
+    process.stderr.write(`Warning: could not create repo-local symlink: ${err.message}\n`);
+  }
+
+  // Auto-check all init phase items — init is completed by capture init itself
+  const initPhasePath = path.join(repoLocalRunDir, 'phases', 'init.md');
+  try {
+    if (fs.existsSync(initPhasePath)) {
+      let initContent = fs.readFileSync(initPhasePath, 'utf8');
+      initContent = initContent.replace(/^- \[ \]/gm, '- [x]');
+      fs.writeFileSync(initPhasePath, initContent, 'utf8');
+    }
+  } catch { /* best effort */ }
 
   return formatResult({
     run_id: options.run,
@@ -187,6 +215,40 @@ function handleEvent(parsed, context = {}) {
           stdout: options.json ? `${JSON.stringify(guardResult, null, 2)}\n` : '',
         };
       }
+    }
+
+    // Phase checklist validation — validate all non-transition items are checked
+    // Only runs if phase files exist (created by `wazir capture init` with pipeline enforcement)
+    const repoLocalPhasesDir = path.join(projectRoot, '.wazir', 'runs', options.run, 'phases');
+    if (fs.existsSync(repoLocalPhasesDir)) {
+      const currentStatus = fs.existsSync(runPaths.statusPath) ? readStatus(runPaths) : null;
+      const currentPhase = currentStatus?.phase ?? 'init';
+      const currentPhaseFile = path.join(repoLocalPhasesDir, `${currentPhase}.md`);
+      // Only validate if transitioning to a DIFFERENT phase and current phase is ACTIVE
+      const phaseContent = fs.existsSync(currentPhaseFile) ? fs.readFileSync(currentPhaseFile, 'utf8') : '';
+      const isTransition = currentPhase !== options.phase;
+      if (isTransition && phaseContent.includes('— ACTIVE')) {
+        const transResult = validatePhaseTransition(repoLocalPhasesDir, currentPhase, options.phase);
+        if (!transResult.valid) {
+          return {
+            exitCode: 1,
+            stderr: `Cannot transition. Phase ${currentPhase} has ${transResult.unchecked.length} unchecked items: ${transResult.unchecked.join(', ')}\n`,
+            stdout: '',
+          };
+        }
+        // Update phase headers (current → COMPLETED, next → ACTIVE)
+        updatePhaseHeaders(repoLocalPhasesDir, currentPhase, options.phase);
+        process.stderr.write('Phase transition complete. Run `/compact` to clear context.\n');
+      }
+    }
+  }
+
+  // Terminal state: phase_exit on final_review
+  if (options.event === 'phase_exit' && options.phase === 'final_review') {
+    const repoLocalPhasesDir = path.join(projectRoot, '.wazir', 'runs', options.run, 'phases');
+    if (fs.existsSync(repoLocalPhasesDir)) {
+      updatePhaseHeaders(repoLocalPhasesDir, 'final_review', null);
+      process.stderr.write('Run complete. All phases passed.\n');
     }
   }
 

@@ -2,6 +2,7 @@
 name: design
 description: Guide the designer role through open-pencil MCP workflow to produce design artifacts from an approved spec.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Design
 
@@ -38,6 +39,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 8. **Save** -- `save_file` to persist the `.fig`.
 9. **Generate code** -- use CLI `open-pencil export design.fig -f jsx --style tailwind` for Tailwind JSX.
 10. **Extract tokens** -- `analyze_colors`, `analyze_typography`, `analyze_spacing` to build tokens JSON.
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 ## Key MCP Tools
 
@@ -72,3 +74,5 @@ If the open-pencil MCP server is not running or Bun is not installed, the design
 2. Use design variables for all colors and spacing -- no hardcoded hex values.
 3. Export screenshots after every major change for visual verification.
 4. Create a `diff_create` snapshot before modifications to enable rollback.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
