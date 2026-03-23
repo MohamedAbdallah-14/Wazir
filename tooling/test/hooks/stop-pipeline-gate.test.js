@@ -60,15 +60,11 @@ describe('stop-pipeline-gate', () => {
     assert.strictEqual(result.decision, 'approve');
   });
 
-  test('error with active run → block (fail-closed)', async () => {
+  test('phases dir exists but no ACTIVE header → block (fail-closed)', async () => {
     if (!evaluateStopGate) return;
-    // Directory exists but no valid phase files
-    const runDir = makePhasesDir({ 'garbage.md': 'not a phase file' });
-    // Create a marker that says "run is active" (phases dir exists)
+    const runDir = makePhasesDir({ 'garbage.md': 'not a phase file with no active header' });
     const result = evaluateStopGate(runDir, 'task complete');
-    // No ACTIVE phase found → fail-closed if run dir has phases dir
-    // Actually, no ACTIVE phase = no unchecked items = approve
-    assert.strictEqual(result.decision, 'approve');
+    assert.strictEqual(result.decision, 'block', 'Should fail-closed when phase files exist but none is ACTIVE');
     fs.rmSync(runDir, { recursive: true, force: true });
   });
 
@@ -79,9 +75,14 @@ describe('stop-pipeline-gate', () => {
     });
 
     const signals = ['TASK COMPLETE', 'All Done', 'Ready to Commit', 'Work Is Finished',
-      'implementation complete', 'shall I create a PR', 'that covers everything'];
+      'implementation complete', 'shall I create a PR', 'that covers everything',
+      'pipeline complete', 'run complete', 'everything is done'];
 
     for (const signal of signals) {
+      // Reset loop guard counter before each signal test
+      const countPath = path.join(runDir, 'phases', '.stop-block-count');
+      try { fs.unlinkSync(countPath); } catch { /* ok */ }
+
       const result = evaluateStopGate(runDir, signal);
       assert.strictEqual(result.decision, 'block', `Signal "${signal}" should trigger block`);
     }
@@ -106,6 +107,50 @@ describe('stop-pipeline-gate', () => {
       const result = evaluateStopGate(runDir, msg);
       assert.strictEqual(result.decision, 'approve', `Normal message "${msg}" should NOT block`);
     }
+    fs.rmSync(runDir, { recursive: true, force: true });
+  });
+
+  test('loop guard: 3 consecutive blocks then 4th approved', async () => {
+    if (!evaluateStopGate) return;
+    const runDir = makePhasesDir({
+      'executor.md': '## Phase: executor — ACTIVE\n- [ ] step\n',
+    });
+
+    // First 3 blocks
+    for (let i = 0; i < 3; i++) {
+      const result = evaluateStopGate(runDir, 'task complete');
+      assert.strictEqual(result.decision, 'block', `Block ${i + 1} should block`);
+    }
+
+    // 4th should approve (loop guard)
+    const result = evaluateStopGate(runDir, 'task complete');
+    assert.strictEqual(result.decision, 'approve', '4th consecutive block should be approved (loop guard)');
+    assert.ok(result.reason.includes('Loop guard'));
+
+    // After reset, should block again
+    const afterReset = evaluateStopGate(runDir, 'task complete');
+    assert.strictEqual(afterReset.decision, 'block', 'After loop guard reset, should block again');
+
+    fs.rmSync(runDir, { recursive: true, force: true });
+  });
+
+  test('loop guard counter resets on approve', async () => {
+    if (!evaluateStopGate) return;
+    const runDir = makePhasesDir({
+      'executor.md': '## Phase: executor — ACTIVE\n- [ ] step\n',
+    });
+
+    // 2 blocks
+    evaluateStopGate(runDir, 'task complete');
+    evaluateStopGate(runDir, 'task complete');
+
+    // 1 approve (normal message — resets counter)
+    evaluateStopGate(runDir, 'Here is a progress update');
+
+    // Next block should be counted from 0 again
+    const result = evaluateStopGate(runDir, 'task complete');
+    assert.strictEqual(result.decision, 'block', 'Counter should have reset after approve');
+
     fs.rmSync(runDir, { recursive: true, force: true });
   });
 });

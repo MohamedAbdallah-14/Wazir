@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { findActivePhase, extractCurrentStep } from '../tooling/src/hooks/phase-injector.js';
 
 const hooksDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = dirname(hooksDir);
@@ -99,50 +101,23 @@ function injectPipelineStatus() {
     const phasesDir = join(latestPath, 'phases');
     if (!existsSync(phasesDir)) return;
 
-    // Dynamic import not available in top-level; inline the logic
-    const files = readdirSync(phasesDir).filter(f => f.endsWith('.md') && !f.includes('.log.'));
-    let activePhase = null;
-    let activeContent = null;
+    const active = findActivePhase(phasesDir);
+    if (!active) return;
 
-    for (const file of files) {
-      const content = readFileSync(join(phasesDir, file), 'utf-8');
-      const match = content.match(/^## Phase:\s*(\w+)\s*—\s*ACTIVE$/m);
-      if (match) {
-        activePhase = match[1];
-        activeContent = content;
-        break;
-      }
-    }
+    const step = extractCurrentStep(active.content);
+    if (!step) return;
 
-    if (!activePhase || !activeContent) return;
-
-    // Count checked and unchecked items
-    const lines = activeContent.split('\n');
-    let inCodeBlock = false;
-    const items = [];
-    for (const line of lines) {
-      if (line.trimStart().startsWith('```')) { inCodeBlock = !inCodeBlock; continue; }
-      if (inCodeBlock) continue;
-      if (/^\s+- \[/.test(line)) continue; // skip sub-items
-      if (/^- \[x\]/i.test(line)) items.push({ checked: true, text: line.replace(/^- \[x\]\s*/i, '').replace(/\s*<!--.*-->/, '').trim() });
-      else if (/^- \[ \]/.test(line)) items.push({ checked: false, text: line.replace(/^- \[ \]\s*/, '').replace(/\s*<!--.*-->/, '').trim() });
-    }
-
-    const checkedCount = items.filter(i => i.checked).length;
-    const firstUnchecked = items.find(i => !i.checked);
-    if (!firstUnchecked) return; // All done
-
-    const stepNum = items.indexOf(firstUnchecked) + 1;
-    const nextUnchecked = items.find((item, i) => i > items.indexOf(firstUnchecked) && !item.checked);
+    // Count completed items for progress summary
+    const checkedCount = step.stepNum - 1;
 
     let output = `<system-reminder>\n`;
-    output += `PIPELINE STATUS: Phase ${activePhase} — ACTIVE (step ${stepNum} of ${items.length})\n`;
+    output += `PIPELINE STATUS: Phase ${active.phase} — ACTIVE (step ${step.stepNum} of ${step.totalSteps})\n`;
     if (checkedCount > 0) {
       output += `COMPLETED: steps 1-${checkedCount}\n`;
     }
-    output += `CURRENT: ${firstUnchecked.text}\n`;
-    if (nextUnchecked) {
-      output += `NEXT: ${nextUnchecked.text}\n`;
+    output += `CURRENT: ${step.current}\n`;
+    if (step.next) {
+      output += `NEXT: ${step.next}\n`;
     }
     output += `</system-reminder>\n`;
 
