@@ -45,9 +45,16 @@ function readLatestRunId(projectRoot) {
   return null;
 }
 
-function isSourcePath(filePath) {
+function isSourcePath(filePath, projectRoot) {
   if (!filePath) return false;
-  const normalized = filePath.replace(/\\/g, '/');
+  // Resolve to repo-relative path
+  let normalized = filePath.replace(/\\/g, '/');
+  if (path.isAbsolute(normalized)) {
+    const rel = path.relative(projectRoot, normalized).replace(/\\/g, '/');
+    if (rel.startsWith('..')) return false; // outside project
+    normalized = rel;
+  }
+  if (normalized.startsWith('./')) normalized = normalized.slice(2);
   return !NON_SOURCE_PREFIXES.some(prefix => normalized.startsWith(prefix));
 }
 
@@ -108,11 +115,12 @@ export function evaluateBootstrapGate(projectRoot, payload) {
     }
 
     // Non-executor phases: block source file writes
-    if (isSourcePath(filePath)) {
+    if (isSourcePath(filePath, projectRoot)) {
+      const runPath = runId ? `.wazir/runs/${runId}/phases/${phase}.md` : `the current phase checklist`;
       return {
         decision: 'deny',
         reason: `Source file writes are blocked during ${phase} phase. Complete the ${phase} phase checklist before writing source code.`,
-        systemMessage: `PHASE GATE: You are in the ${phase} phase. Source file writes are only allowed during the executor phase. Please follow your current phase checklist at .wazir/runs/latest/phases/${phase}.md. Use wz: skills as instructed.`,
+        systemMessage: `PHASE GATE: You are in the ${phase} phase. Source file writes are only allowed during the executor phase. Please follow your checklist at ${runPath}. Use wz: skills as instructed.`,
       };
     }
   }
