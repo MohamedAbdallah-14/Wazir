@@ -6,84 +6,76 @@ import os from 'node:os';
 import { runPruneCommand } from '../../src/commands/prune.js';
 
 describe('wazir prune command', () => {
-  let tmpDir;
-  let projectRoot;
+  let tmpDir, projectRoot;
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-prune-test-'));
     projectRoot = tmpDir;
-
-    // Create basic .wazir/runs structure
-    const runsDir = path.join(projectRoot, '.wazir', 'runs');
-    fs.mkdirSync(runsDir, { recursive: true });
+    fs.mkdirSync(path.join(projectRoot, '.wazir', 'runs'), { recursive: true });
   });
 
   afterEach(() => {
-    if (fs.existsSync(tmpDir)) {
-      fs.rmSync(tmpDir, { recursive: true });
-    }
+    if (fs.existsSync(tmpDir)) fs.rmSync(tmpDir, { recursive: true });
   });
 
-  describe('basic invocation', () => {
-    it('returns success with no args', () => {
-      const result = runPruneCommand(
-        { args: [] },
-        { cwd: projectRoot },
-      );
-
-      assert.strictEqual(result.exitCode, 0);
-      assert(result.stdout, 'should have stdout');
-      assert(!result.stderr, 'should not have stderr');
-    });
-
-    it('displays help with --help flag', () => {
-      const result = runPruneCommand(
-        { args: ['--help'] },
-        { cwd: projectRoot },
-      );
-
-      assert.strictEqual(result.exitCode, 0);
-      assert(result.stdout.toLowerCase().includes('usage') || result.stdout.toLowerCase().includes('keep'), 'help should include usage or keep option');
-    });
+  it('lists runs without deletion', () => {
+    const runsDir = path.join(projectRoot, '.wazir', 'runs');
+    fs.mkdirSync(path.join(runsDir, 'run-20260320-120000'), { recursive: true });
+    const result = runPruneCommand({ args: [] }, { cwd: projectRoot });
+    assert.strictEqual(result.exitCode, 0);
+    assert(result.stdout.includes('run-20260320'));
   });
 
-  describe('json output', () => {
-    it('outputs valid JSON with --json flag', () => {
-      const result = runPruneCommand(
-        { args: ['--json'] },
-        { cwd: projectRoot },
-      );
-
-      assert.strictEqual(result.exitCode, 0);
-      assert.doesNotThrow(() => JSON.parse(result.stdout));
-      const json = JSON.parse(result.stdout);
-      assert(json.runs_total !== undefined, 'JSON should have runs_total');
-    });
+  it('shows help with --help', () => {
+    const result = runPruneCommand({ args: ['--help'] }, { cwd: projectRoot });
+    assert.strictEqual(result.exitCode, 0);
+    assert(result.stdout.toLowerCase().includes('usage'));
   });
 
-  describe('run listing', () => {
-    it('lists runs when they exist', () => {
-      const runsDir = path.join(projectRoot, '.wazir', 'runs');
-      fs.mkdirSync(path.join(runsDir, 'run-20260324-010000'), { recursive: true });
-      fs.mkdirSync(path.join(runsDir, 'run-20260324-020000'), { recursive: true });
+  it('deletes runs with --keep and --force', () => {
+    const runsDir = path.join(projectRoot, '.wazir', 'runs');
+    fs.mkdirSync(path.join(runsDir, 'run-20260320-120000'), { recursive: true });
+    fs.mkdirSync(path.join(runsDir, 'run-20260324-010000'), { recursive: true });
 
-      const result = runPruneCommand(
-        { args: [] },
-        { cwd: projectRoot },
-      );
+    const result = runPruneCommand({ args: ['--keep', '1', '--force'] }, { cwd: projectRoot });
+    assert.strictEqual(result.exitCode, 0);
+    assert(result.stdout.includes('Deleted'));
 
-      assert.strictEqual(result.exitCode, 0);
-      assert(result.stdout.includes('run-20260324'), 'should show run IDs');
-    });
+    const remaining = fs.readdirSync(runsDir).filter(f => f.startsWith('run-'));
+    assert.strictEqual(remaining.length, 1);
+  });
 
-    it('shows friendly message when no runs exist', () => {
-      const result = runPruneCommand(
-        { args: [] },
-        { cwd: projectRoot },
-      );
+  it('outputs JSON with --json', () => {
+    const result = runPruneCommand({ args: ['--json'] }, { cwd: projectRoot });
+    assert.strictEqual(result.exitCode, 0);
+    const json = JSON.parse(result.stdout);
+    assert(json.runs_total !== undefined);
+    assert(json.deleted_runs !== undefined);
+  });
 
-      assert.strictEqual(result.exitCode, 0);
-      assert(result.stdout.length > 0, 'should have output');
-    });
+  it('skips deletion without --force', () => {
+    const runsDir = path.join(projectRoot, '.wazir', 'runs');
+    fs.mkdirSync(path.join(runsDir, 'run-20260320-120000'), { recursive: true });
+    fs.mkdirSync(path.join(runsDir, 'run-20260324-010000'), { recursive: true });
+
+    const result = runPruneCommand({ args: ['--keep', '0'] }, { cwd: projectRoot });
+    assert.strictEqual(result.exitCode, 0);
+
+    const remaining = fs.readdirSync(runsDir).filter(f => f.startsWith('run-'));
+    assert.strictEqual(remaining.length, 2);
+  });
+
+  it('protects latest symlink target', () => {
+    const runsDir = path.join(projectRoot, '.wazir', 'runs');
+    fs.mkdirSync(path.join(runsDir, 'run-20260320-120000'), { recursive: true });
+    fs.mkdirSync(path.join(runsDir, 'run-20260324-010000'), { recursive: true });
+    fs.symlinkSync('run-20260320-120000', path.join(runsDir, 'latest'));
+
+    const result = runPruneCommand({ args: ['--keep', '1', '--force'] }, { cwd: projectRoot });
+    assert.strictEqual(result.exitCode, 0);
+
+    // Both should remain: the new one and the protected old one
+    const remaining = fs.readdirSync(runsDir).filter(f => f.startsWith('run-'));
+    assert.strictEqual(remaining.length, 2);
   });
 });
