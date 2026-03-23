@@ -18,6 +18,7 @@ import {
   writeSummary,
 } from './store.js';
 import { readRunConfig, getPhaseLoopCap } from './run-config.js';
+import { createPhaseFiles, createRepoLocalSymlink } from '../pipeline/phase-files.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
 import { evaluateLoopCapGuard } from '../guards/loop-cap-guard.js';
 import { evaluatePhasePrerequisiteGuard } from '../guards/phase-prerequisite-guard.js';
@@ -140,13 +141,29 @@ function handleInit(parsed, context = {}) {
   // Initialize usage tracking for this run
   initUsage(runPaths, options.run);
 
-  // Write run ID to latest pointer for session recovery
+  // Write run ID to latest pointer for session recovery (state-root)
   const latestPath = path.join(stateRoot, 'runs', 'latest');
   try {
     fs.mkdirSync(path.dirname(latestPath), { recursive: true });
     fs.writeFileSync(latestPath, options.run, 'utf8');
   } catch {
     process.stderr.write('Warning: could not write latest run pointer\n');
+  }
+
+  // Create phase files from templates (pipeline enforcement)
+  const repoLocalRunDir = path.join(projectRoot, '.wazir', 'runs', options.run);
+  try {
+    fs.mkdirSync(repoLocalRunDir, { recursive: true });
+    createPhaseFiles(repoLocalRunDir, projectRoot);
+  } catch (err) {
+    process.stderr.write(`Warning: could not create phase files: ${err.message}\n`);
+  }
+
+  // Create repo-local symlink (.wazir/runs/latest -> run-id)
+  try {
+    createRepoLocalSymlink(projectRoot, options.run);
+  } catch (err) {
+    process.stderr.write(`Warning: could not create repo-local symlink: ${err.message}\n`);
   }
 
   return formatResult({
