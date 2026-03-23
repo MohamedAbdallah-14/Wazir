@@ -5,6 +5,7 @@
  *   pipeline init --run <id>  — render phase checklists from run-config
  */
 
+import path from 'node:path';
 import { findProjectRoot } from '../project-root.js';
 import { runPipelineInit } from './init.js';
 
@@ -20,7 +21,8 @@ export function runPipelineCommand(parsed) {
           stderr: 'Usage: wazir pipeline init --run <id>\n',
         };
       }
-      return runPipelineInit(runId, projectRoot, projectRoot);
+      const templatesRoot = path.join(projectRoot, 'templates');
+      return runPipelineInit(runId, projectRoot, templatesRoot);
     }
     default:
       return {

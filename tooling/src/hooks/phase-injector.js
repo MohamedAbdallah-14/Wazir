@@ -36,15 +36,21 @@ export function findActivePhase(phasesDir) {
     return null; // Directory doesn't exist
   }
 
+  const activeFiles = [];
   for (const file of files) {
     const content = fs.readFileSync(path.join(phasesDir, file), 'utf8');
     const match = content.match(ACTIVE_HEADER);
     if (match) {
-      return { phase: match[1], content };
+      activeFiles.push({ phase: match[1], content });
     }
   }
 
-  return null;
+  if (activeFiles.length > 1) {
+    // Multiple ACTIVE phases = malformed state. Return error marker.
+    return { phase: '__malformed__', content: '', malformed: true, reason: `Multiple ACTIVE phases: ${activeFiles.map(f => f.phase).join(', ')}` };
+  }
+
+  return activeFiles[0] ?? null;
 }
 
 /**

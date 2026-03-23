@@ -36,10 +36,14 @@ const MAX_CONSECUTIVE_BLOCKS = 3;
  * @param {string} phasesDir
  * @returns {number}
  */
-function readBlockCount(phasesDir) {
+function readBlockCount(phasesDir, currentPhase) {
   try {
     const countPath = `${phasesDir}/.stop-block-count`;
-    return parseInt(fs.readFileSync(countPath, 'utf8').trim(), 10) || 0;
+    const raw = fs.readFileSync(countPath, 'utf8').trim();
+    // Format: "phase:count" — reset if phase changed
+    const [savedPhase, countStr] = raw.includes(':') ? raw.split(':') : ['', raw];
+    if (savedPhase !== currentPhase) return 0;
+    return parseInt(countStr, 10) || 0;
   } catch {
     return 0;
   }
@@ -50,9 +54,9 @@ function readBlockCount(phasesDir) {
  * @param {string} phasesDir
  * @param {number} count
  */
-function writeBlockCount(phasesDir, count) {
+function writeBlockCount(phasesDir, currentPhase, count) {
   try {
-    fs.writeFileSync(`${phasesDir}/.stop-block-count`, String(count), 'utf8');
+    fs.writeFileSync(`${phasesDir}/.stop-block-count`, `${currentPhase}:${count}`, 'utf8');
   } catch { /* best effort */ }
 }
 
@@ -90,10 +94,19 @@ export function evaluateStopGate(runDir, agentMessage = '') {
     };
   }
 
+  // 2b. Handle malformed state (multiple ACTIVE phases)
+  if (active.malformed) {
+    return {
+      decision: 'block',
+      reason: active.reason,
+      systemMessage: `Pipeline state malformed: ${active.reason}`,
+    };
+  }
+
   // 3. Check for unchecked items
   const step = extractCurrentStep(active.content);
   if (!step) {
-    writeBlockCount(phasesDir, 0); // Reset counter on approve
+    writeBlockCount(phasesDir, active.phase, 0); // Reset counter on approve
     return { decision: 'approve', reason: 'All items checked — phase complete.' };
   }
 
@@ -102,14 +115,14 @@ export function evaluateStopGate(runDir, agentMessage = '') {
   const hasCompletionSignal = COMPLETION_SIGNALS.some(sig => msgLower.includes(sig));
 
   if (!hasCompletionSignal) {
-    writeBlockCount(phasesDir, 0); // Reset counter on approve
+    writeBlockCount(phasesDir, active.phase, 0); // Reset counter on approve
     return { decision: 'approve', reason: 'No completion signal — normal turn.' };
   }
 
-  // 5. Loop guard: prevent infinite blocking
-  const blockCount = readBlockCount(phasesDir);
+  // 5. Loop guard: prevent infinite blocking (per-phase counter)
+  const blockCount = readBlockCount(phasesDir, active.phase);
   if (blockCount >= MAX_CONSECUTIVE_BLOCKS) {
-    writeBlockCount(phasesDir, 0); // Reset counter
+    writeBlockCount(phasesDir, active.phase, 0); // Reset counter
     return {
       decision: 'approve',
       reason: `Loop guard: ${MAX_CONSECUTIVE_BLOCKS} consecutive blocks reached — allowing stop to prevent deadlock.`,
@@ -117,7 +130,7 @@ export function evaluateStopGate(runDir, agentMessage = '') {
   }
 
   // All conditions met — block
-  writeBlockCount(phasesDir, blockCount + 1);
+  writeBlockCount(phasesDir, active.phase, blockCount + 1);
   const uncheckedCount = step.totalSteps - step.stepNum + 1;
   return {
     decision: 'block',

@@ -51,6 +51,12 @@ export function validatePhaseTransition(phasesDir, currentPhase, nextPhase) {
     return { valid: false, unchecked };
   }
 
+  // Verify exactly one transition marker exists
+  const transitionMatches = (content.match(/<!-- transition -->/g) || []).length;
+  if (transitionMatches !== 1) {
+    return { valid: false, unchecked: [`Malformed phase file: expected 1 transition marker, found ${transitionMatches}`] };
+  }
+
   // Auto-complete the transition item
   content = content.replace(
     /^(- \[ \].*<!-- transition -->)/m,

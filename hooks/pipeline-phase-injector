@@ -16,7 +16,14 @@ import { fileURLToPath } from 'node:url';
 import { findActivePhase, extractCurrentStep, formatInjection } from '../tooling/src/hooks/phase-injector.js';
 
 const hooksDir = dirname(fileURLToPath(import.meta.url));
-const projectRoot = dirname(hooksDir);
+// Use CWD as project root (hooks run via ./hooks/... relative to project).
+// Fallback to dirname(hooksDir) if CWD doesn't contain .wazir/.
+const projectRoot = (() => {
+  const cwd = process.cwd();
+  const fromFile = dirname(hooksDir);
+  try { readFileSync(join(cwd, '.wazir', 'runs', 'latest'), 'utf8'); return cwd; } catch { /* */ }
+  return fromFile;
+})();
 
 try {
   // Read stdin (Claude Code sends tool call payload)

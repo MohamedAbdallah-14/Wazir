@@ -47,6 +47,9 @@ describe('session-start pipeline injection', () => {
 
   afterEach(() => {
     fs.rmSync(tmpRunDir, { recursive: true, force: true });
+    // Restore latest symlink to avoid polluting other tests
+    const latestPath = path.join(ROOT, '.wazir', 'runs', 'latest');
+    try { fs.unlinkSync(latestPath); } catch { /* ok */ }
   });
 
   test('injects PIPELINE STATUS when active run exists', () => {
