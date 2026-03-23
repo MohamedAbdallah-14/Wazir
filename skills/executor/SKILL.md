@@ -2,7 +2,7 @@
 name: wz:executor
 description: Run the execution phase — implement the approved plan with TDD, quality gates, and verification.
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Executor
 
@@ -100,7 +100,7 @@ For each task:
    - See `docs/reference/review-loop-pattern.md` for full protocol
    - NOTE: this is the per-task review (5 dims), not the final scored review (7 dims) which runs in Phase 4
 5. **Commit** — only after review passes, commit with conventional commit format: `<type>(<scope>): <description>`
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
    - **HARD RULE: One task = one commit.** Commit after EACH task completes its review. Never batch multiple tasks into a single commit. If the reviewer detects multi-task batching, the commit is REJECTED.
 6. **CHANGELOG** — if user-facing change, update `CHANGELOG.md` under `[Unreleased]` using keepachangelog types: Added, Changed, Fixed, Removed, Deprecated, Security.
 7. **Record** evidence at `.wazir/runs/latest/artifacts/task-NNN/`
@@ -197,4 +197,4 @@ When all tasks are complete and verified:
 >
 > **Next:** Run `/reviewer --mode final` to review against the original input.
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

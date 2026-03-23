@@ -2,7 +2,7 @@
 name: wz:writing-skills
 description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
 ---
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 # Writing Skills
 
@@ -87,7 +87,7 @@ API docs, syntax guides, tool documentation
 
 ```
 skills/
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
   skill-name/
     SKILL.md              # Main reference (required)
     supporting-file.md    # Additional context (optional)
@@ -171,4 +171,4 @@ ELSE action_z
 **REQUIRED SUB-SKILL:** Use wz:verification
 ```
 
-<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

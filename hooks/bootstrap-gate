@@ -1,0 +1,50 @@
+#!/usr/bin/env node
+
+/**
+ * PreToolUse hook: bootstrap gate.
+ *
+ * Blocks Write/Edit/Bash when pipeline is active but no run exists.
+ * Forces the agent to run `wazir capture ensure` before doing any work.
+ *
+ * Exit 0 = allow, Exit 2 = deny.
+ */
+
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { evaluateBootstrapGate } from '../tooling/src/hooks/bootstrap-gate.js';
+
+const hooksDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = process.cwd() || dirname(hooksDir);
+
+try {
+  let payload = {};
+  try {
+    const stdin = readFileSync(0, 'utf8');
+    if (stdin.trim()) payload = JSON.parse(stdin);
+  } catch { /* no stdin */ }
+
+  const tool = payload.tool_name || '';
+  const command = payload.tool_input?.command || '';
+
+  const result = evaluateBootstrapGate(projectRoot, { tool, command });
+
+  if (result.decision === 'deny') {
+    process.stdout.write(JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: 'deny',
+      },
+      systemMessage: result.systemMessage || result.reason,
+    }) + '\n');
+    process.exit(2);
+  }
+
+  process.stdout.write('{}\n');
+  process.exit(0);
+} catch (error) {
+  process.stderr.write(`[bootstrap-gate] ${error.message}\n`);
+  process.stdout.write('{}\n');
+  process.exit(0); // fail-open on errors
+}

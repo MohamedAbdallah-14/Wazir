@@ -18,6 +18,7 @@ import {
   writeSummary,
 } from './store.js';
 import { readRunConfig, getPhaseLoopCap } from './run-config.js';
+import { ensureRun } from '../pipeline/ensure.js';
 import { createPhaseFiles, createRepoLocalSymlink } from '../pipeline/phase-files.js';
 import { validatePhaseTransition, updatePhaseHeaders } from '../pipeline/transition.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
@@ -548,10 +549,12 @@ export function runCaptureCommand(parsed, context = {}) {
         return handleUsage(parsed, context);
       case 'loop-check':
         return handleLoopCheck(parsed, context);
+      case 'ensure':
+        return handleEnsure(parsed, context);
       default:
         return {
           exitCode: 1,
-          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check> ...\n',
+          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check|ensure> ...\n',
         };
     }
   } catch (error) {
@@ -560,4 +563,24 @@ export function runCaptureCommand(parsed, context = {}) {
       stderr: `${error.message}\n`,
     };
   }
+}
+
+function handleEnsure(parsed, context = {}) {
+  const projectRoot = context.projectRoot || findProjectRoot();
+  const stateRoot = context.stateRoot || resolveStateRoot(projectRoot);
+
+  const result = ensureRun(projectRoot, stateRoot);
+
+  const msg = result.created
+    ? `Created new run: ${result.runId}`
+    : `Resumed existing run: ${result.runId}`;
+
+  if (parsed.options?.json) {
+    return {
+      exitCode: 0,
+      stdout: JSON.stringify({ ...result, message: msg }, null, 2) + '\n',
+    };
+  }
+
+  return { exitCode: 0, stdout: msg + '\n' };
 }
