@@ -114,3 +114,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - CHANGELOG/gitflow hard gates before PR (validate changelog + validate commits)
 - All checkpoints use numbered interactive options with (Recommended) markers
 - Reviewer documents 5 owned responsibilities (Codex integration, dimensions, pass counting, attribution, dimension set recording)
+
+## [Unreleased]
+
+### Added
+- `wazir prune` command to manage old run directories
+  - List runs with `wazir prune`
+  - Keep N newest runs with `--keep N` (default: 5)
+  - Delete old runs with `--keep N --force`
+  - Automatically protects run pointed to by `.wazir/runs/latest` symlink
+  - Preview deletions with confirmation prompt (skip with --force)
+  - JSON output with `--json` flag
+  - Support for custom state-root with `--state-root PATH`
+  - Help text with `wazir prune --help`
+
