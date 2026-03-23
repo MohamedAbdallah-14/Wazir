@@ -1,7 +1,7 @@
 # Pipeline Enforcement Design — Markdown Phase Files + Hook Injection
 
 **Date:** 2026-03-23
-**Status:** Draft (review pass 5 — superpowers x3 + wz:code-reviewer x1 + codex CLI x1)
+**Status:** Draft (review pass 9 — superpowers x3 + wz:code-reviewer x1 + codex CLI x5)
 **Goal:** Achieve 80% pipeline compliance (current: 40-58%)
 
 ---
@@ -217,7 +217,12 @@ Each phase has a pre-defined checklist template with exact commands and skill in
 
 The agent checks its own boxes. An agent that skips the clarifier skill can also skip checking the clarifier checkbox. The checklist catches "forgot to do it" (compliance failure) but not "pretended to do it" (deception). The Stop hook and transition validation catch unchecked items, not unperformed work.
 
-Mitigation: the existing `phase_prerequisites` in the manifest already defines required artifacts per phase (e.g., executor requires `clarified/clarification.md`). The `evaluatePhasePrerequisiteGuard` function validates these on `phase_enter` events. This is STRONGER than checking log files — it validates that the clarifier skill produced its actual structured outputs, not just that the agent wrote a log entry. The phase file transition adds a second layer (checklist boxes), and the existing prerequisite guard adds a third (artifact existence). Together they catch "forgot to do it" and "did something but not the right thing."
+Mitigation: the existing `phase_prerequisites` in the manifest defines required artifacts per phase (e.g., executor requires `clarified/clarification.md`). The `evaluatePhasePrerequisiteGuard` function validates these on `phase_enter` events. **IMPORTANT: Run root unification required.** Currently three things are split between state-root (`~/.wazir/projects/<slug>/`) and repo-local (`.wazir/`):
+- Artifacts: skills write to `.wazir/runs/latest/clarified/`, guard reads from state-root
+- run-config.yaml: skills write repo-locally, `readRunConfig` reads from state-root
+- Phase files: this design creates them repo-locally
+
+**Resolution:** Phase files and artifacts must be resolvable from both locations. The implementation should update ALL run-state readers (`evaluatePhasePrerequisiteGuard`, `readRunConfig`, `validateRunCompletion`, `readStatus`) to check repo-local `.wazir/runs/<id>/` FIRST, then fall back to state-root `~/.wazir/projects/<slug>/runs/<id>/`. This preserves the existing state-root contract (live run state stays outside the repo for clean worktrees) while ensuring hooks, guards, and `wazir capture summary --complete` can find artifacts and config regardless of where skills wrote them. Phase files are always repo-local (hooks need them relative to project root). Events and summaries remain at state-root. This is a prerequisite implementation task. The phase file transition adds a second layer (checklist boxes), and the updated prerequisite guard adds a third (artifact existence). Together they catch "forgot to do it" and "did something but not the right thing."
 
 ## Phase Transitions
 
@@ -251,9 +256,18 @@ If the user needs to re-run a phase:
 
 The Stop hook fires on EVERY assistant turn end, not just when the agent believes the task is finished. A naive "block if unchecked items" would deadlock normal multi-turn conversations (agent can't ask questions, can't pause for user to run `/compact`, can't send progress updates).
 
-**Narrow condition:** The Stop hook only blocks if the agent's final message contains a completion signal (e.g., "task complete", "all done", offering to commit/PR, or no further action proposed). Normal conversational turns, questions to the user, and phase transition messages are allowed through.
+**Narrow condition:** The Stop hook only blocks when ALL of these are true:
+1. A pipeline run is active (`.wazir/runs/latest` exists and has phase files)
+2. The agent's stop reason explicitly signals task completion (e.g., contains "task complete", "all done", "ready to commit", "shall I create a PR", "work is finished")
 
-Implementation: the Stop hook reads the agent's stop reason from stdin. If it contains completion-like language AND the active phase has unchecked items, block. Otherwise, allow.
+The hook does NOT block on:
+- Normal mid-phase turns (progress updates, asking questions, presenting results)
+- Phase transition messages ("run /compact", "phase transition complete")
+- Any turn where the agent is clearly continuing work or waiting for user input
+
+Implementation: the Stop hook maintains a short allowlist of completion-signal patterns. Only messages matching those patterns AND having unchecked items trigger a block. All other turns pass through unconditionally. This is deliberately permissive — false negatives (letting the agent stop early) are less harmful than false positives (deadlocking normal conversation).
+
+If no pipeline run is active (standalone mode, no `.wazir/runs/latest`), the Stop hook exits 0 immediately — it is only armed when a run is in progress.
 
 - If blocked: injects reason: "Cannot complete. Phase [X] has [N] unchecked items: [list]"
 - If allowed: normal turn end, agent continues conversation
@@ -265,7 +279,8 @@ Implementation: the Stop hook reads the agent's stop reason from stdin. If it co
 |------|---------|-------------------|---------------------------|
 | SessionStart | exit 0, inject current step | N/A | exit 0, inject warning "No pipeline state found" |
 | PreToolUse (injection) | exit 0, inject current step via systemMessage | N/A | exit 0, no injection (fail-open for injection) |
-| Stop | exit 0, allow stop | exit 2, block with reason | exit 2, block (fail-closed) |
+| Stop (run active) | exit 0, allow stop | exit 2, block with reason | exit 2, block (fail-closed) |
+| Stop (no run active) | exit 0, allow stop | N/A | exit 0, allow stop (not armed) |
 | `wazir capture event` | exit 0, transition | exit 1, reject with unchecked list | exit 1, error message |
 
 Injection hooks fail-open (missing files shouldn't block work). Stop hook fails-closed (missing files shouldn't allow premature exit).
@@ -327,7 +342,7 @@ The wazir skill remains the core reference. Updates needed:
 0. **Spike: verify hook injection mechanisms.** Write minimal PreToolUse hook emitting `{"systemMessage": "test"}`, confirm agent sees text. Write minimal Stop hook with exit code 2, confirm it blocks. 30-minute timebox. If either fails, redesign that layer before proceeding.
 1. Measure compliance baseline (before any changes)
 2. Create phase templates in `templates/phases/`
-3. Update SessionStart hook to create phase files from templates (preserve existing session-start logic: skill injection, index refresh, CLI bootstrap)
+3. Phase file creation: `wazir capture init` creates phase files with `init.md` set to ACTIVE (with a minimal init checklist: "write briefing", "create branch", "write run-config", "run pipeline init"). All other phases are NOT ACTIVE with headers only. This arms enforcement from the first tool call AND provides a valid ACTIVE phase. Later, after the wazir skill writes run-config.yaml, `wazir pipeline init --run <id>` re-renders the non-init phase files with full checklists based on workflow policy. SessionStart hook only READS phase files — it never creates or overwrites them.
 4. Update PreToolUse hook to inject current step from active phase file
 5. Add Stop hook to block premature completion
 6. Update `wazir capture event` to validate checklists on transition
