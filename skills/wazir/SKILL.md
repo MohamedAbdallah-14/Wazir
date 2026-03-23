@@ -61,6 +61,8 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 
 # Phase 1: Init
 
+**Before starting:** Check `.wazir/runs/latest/phases/init.md` for your current checklist. Complete all items before proceeding to Phase 2.
+
 ## Step 1: Capture the Request
 
 Take whatever the user wrote after `/wazir` and save it as the briefing:
@@ -384,6 +386,8 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 
 # Phase 2: Clarifier
 
+**Before starting:** Check `.wazir/runs/latest/phases/clarifier.md` for your current checklist. Complete all items before proceeding to Phase 3.
+
 **Before starting this phase, output to the user:**
 
 > **Clarifier Phase** — About to research your codebase, clarify requirements, harden the spec, brainstorm designs, and produce an execution plan.
@@ -441,6 +445,8 @@ Output the report content to the user in the conversation.
 ---
 
 # Phase 3: Executor
+
+**Before starting:** Check `.wazir/runs/latest/phases/executor.md` for your current checklist. Complete all items before proceeding to Phase 4.
 
 **Before starting this phase, output to the user:**
 
@@ -518,6 +524,8 @@ Output the report content to the user in the conversation.
 ---
 
 # Phase 4: Final Review
+
+**Before starting:** Check `.wazir/runs/latest/phases/final_review.md` for your current checklist. Complete all items before marking the run complete.
 
 **Before starting this phase, output to the user:**
 
