@@ -29,6 +29,16 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/stop-pipeline-gate"
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "hooks": [
