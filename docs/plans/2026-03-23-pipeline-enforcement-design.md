@@ -1,7 +1,7 @@
 # Pipeline Enforcement Design — Markdown Phase Files + Hook Injection
 
 **Date:** 2026-03-23
-**Status:** Draft (review pass 9 — superpowers x3 + wz:code-reviewer x1 + codex CLI x5)
+**Status:** Draft (review pass 10 — superpowers x3 + wz:code-reviewer x1 + codex CLI x6)
 **Goal:** Achieve 80% pipeline compliance (current: 40-58%)
 
 ---
@@ -222,7 +222,13 @@ Mitigation: the existing `phase_prerequisites` in the manifest defines required 
 - run-config.yaml: skills write repo-locally, `readRunConfig` reads from state-root
 - Phase files: this design creates them repo-locally
 
-**Resolution:** Phase files and artifacts must be resolvable from both locations. The implementation should update ALL run-state readers (`evaluatePhasePrerequisiteGuard`, `readRunConfig`, `validateRunCompletion`, `readStatus`) to check repo-local `.wazir/runs/<id>/` FIRST, then fall back to state-root `~/.wazir/projects/<slug>/runs/<id>/`. This preserves the existing state-root contract (live run state stays outside the repo for clean worktrees) while ensuring hooks, guards, and `wazir capture summary --complete` can find artifacts and config regardless of where skills wrote them. Phase files are always repo-local (hooks need them relative to project root). Events and summaries remain at state-root. This is a prerequisite implementation task. The phase file transition adds a second layer (checklist boxes), and the updated prerequisite guard adds a third (artifact existence). Together they catch "forgot to do it" and "did something but not the right thing."
+**Resolution:** Dual-root lookup must be **per-file-type**, not blanket:
+- **Phase files:** always repo-local `.wazir/runs/<id>/phases/` (hooks need project-root-relative paths)
+- **Artifacts** (`clarified/`, `artifacts/`): check repo-local first, fall back to state-root (skills write repo-locally, guards read state-root)
+- **run-config.yaml**: check repo-local first, fall back to state-root (same split as artifacts)
+- **status.json, events.ndjson**: always state-root `~/.wazir/projects/<slug>/runs/<id>/` (capture system writes here, `readStatus`/`validateRunCompletion`/`appendEvent` must NOT read from repo-local to avoid shadow conflicts)
+
+Implementation: update `evaluatePhasePrerequisiteGuard` and `readRunConfig` to add repo-local fallback for artifacts/config. Do NOT change `readStatus`, `appendEvent`, or `validateRunCompletion` — these stay state-root-only. This is a prerequisite implementation task. The phase file transition adds a second layer (checklist boxes), and the updated prerequisite guard adds a third (artifact existence). Together they catch "forgot to do it" and "did something but not the right thing."
 
 ## Phase Transitions
 
