@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import { readJsonFile, readYamlFile } from '../loaders.js';
 import { validateAgainstSchema } from '../schema-validator.js';
+import { injectReminders } from '../pipeline/skill-reminder-injector.js';
 
 function hashContent(content) {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -449,6 +450,24 @@ export function buildHostExports(projectRoot) {
   }
 
   const backupCleanupErrors = cleanupCommittedBackups(committedHosts);
+
+  // Post-build: inject pipeline reminders into all skill files (Layer 2 enforcement)
+  const skillsDir = path.join(projectRoot, 'skills');
+  if (fs.existsSync(skillsDir)) {
+    const skillDirs = fs.readdirSync(skillsDir).filter(d =>
+      fs.statSync(path.join(skillsDir, d)).isDirectory(),
+    );
+    for (const dir of skillDirs) {
+      const skillFile = path.join(skillsDir, dir, 'SKILL.md');
+      if (fs.existsSync(skillFile)) {
+        const content = fs.readFileSync(skillFile, 'utf8');
+        const updated = injectReminders(content);
+        if (updated !== content) {
+          fs.writeFileSync(skillFile, updated, 'utf8');
+        }
+      }
+    }
+  }
 
   return {
     hosts,

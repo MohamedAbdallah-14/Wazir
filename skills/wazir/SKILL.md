@@ -2,6 +2,7 @@
 name: wz:wazir
 description: One-command pipeline — type /wazir followed by what you want to build. Handles init, clarification, execution, review, and audits automatically.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Wazir — Full Pipeline Runner
 
@@ -377,6 +378,7 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
 
 **`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 ---
 
@@ -751,3 +753,5 @@ Create the `reasoning/` directory during run init. Every phase skill (clarifier,
 - **Wait for answer** — never proceed past a question until the user responds
 - **No open-ended questions** — every question has concrete options to pick from
 - **Inline answers accepted** — users can type the number or the option name
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

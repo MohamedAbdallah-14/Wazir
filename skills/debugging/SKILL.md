@@ -2,6 +2,7 @@
 name: wz:debugging
 description: Use when behavior is wrong or verification fails. Follow an observe-hypothesize-test-fix loop instead of guesswork.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Debugging
 
@@ -37,6 +38,7 @@ Follow this order:
    4. `wazir recall file <path> --start-line N --end-line M`
       — read ONLY the suspect code slice.
    5. Escalate to a full file read only if the bug cannot be localized from slices.
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
    6. If recall fails (no index/summaries), fall back to direct file reads — the
       generic OBSERVE methodology (read files, inspect state, gather evidence)
       still applies.
@@ -71,3 +73,5 @@ See `docs/reference/review-loop-pattern.md` for cap guard integration.
 - change one thing at a time
 - keep evidence for each failed hypothesis
 - if three cycles fail, record the blocker in the active execution artifact or handoff instead of inventing certainty
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

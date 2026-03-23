@@ -2,6 +2,7 @@
 name: wz:subagent-driven-development
 description: Use when executing implementation plans with independent tasks in the current session
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Subagent-Driven Development
 
@@ -96,6 +97,7 @@ digraph process {
     "More tasks remain?" -> "Capture PRE_TASK_SHA" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
     "Dispatch final code reviewer subagent for entire implementation" -> "Use wz:finishing-a-development-branch";
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 }
 ```
 
@@ -188,3 +190,5 @@ If codex exits non-zero during review, log the error, mark the pass as codex-una
 **If subagent fails task:**
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->

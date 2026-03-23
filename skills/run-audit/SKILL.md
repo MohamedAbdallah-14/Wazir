@@ -2,6 +2,7 @@
 name: run-audit
 description: Run a structured audit on your codebase — security, code quality, architecture, performance, dependencies, or custom. Produces a report or actionable plan.
 ---
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 
 # Run Audit — Structured Codebase Audit Pipeline
 
@@ -106,6 +107,7 @@ The composed researcher will:
    - **Location** — file path and line number
    - **Evidence** — code snippet or pattern detected, with source citation
    - **Remediation** — how to fix it
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
 6. Produce a summary: total findings, severity breakdown, top recommendations
 7. List open risks and unknowns (per researcher contract)
 
@@ -208,3 +210,5 @@ Audit type maps to `audit-*` concerns in `expertise/composition-map.yaml`, compo
 | Custom | All `audit-*` concerns combined — researcher uses the full set and focuses based on the user's description |
 
 Note: Only `audit-*` concerns have `researcher` entries in the composition map. Other existing concerns (e.g., `security-auth`, `architecture-patterns`) are keyed on `executor`/`verifier`/`reviewer` and will not be loaded for the researcher role by the composition engine.
+
+<!-- PIPELINE: Check .wazir/runs/latest/phases/ for your current phase. Complete all items before proceeding. -->
