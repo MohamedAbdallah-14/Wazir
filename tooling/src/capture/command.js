@@ -566,11 +566,10 @@ export function runCaptureCommand(parsed, context = {}) {
 }
 
 function handleEnsure(parsed, context = {}) {
-  const projectRoot = context.projectRoot || findProjectRoot();
-  const stateRoot = context.stateRoot || resolveStateRoot(projectRoot);
+  const { projectRoot, stateRoot, options } = resolveCaptureContext(parsed, context);
   const result = ensureRun(projectRoot, stateRoot);
   const msg = result.created ? `Created new run: ${result.runId}` : `Resumed existing run: ${result.runId}`;
-  if (parsed.options?.json) {
+  if (options.json) {
     return { exitCode: 0, stdout: JSON.stringify({ ...result, message: msg }, null, 2) + '\n' };
   }
   return { exitCode: 0, stdout: msg + '\n' };
