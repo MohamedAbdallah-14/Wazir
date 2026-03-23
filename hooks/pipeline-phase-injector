@@ -1,0 +1,51 @@
+#!/usr/bin/env node
+
+/**
+ * PreToolUse hook: injects current pipeline phase step into agent context.
+ *
+ * Reads phase files from .wazir/runs/latest/phases/, finds the ACTIVE phase,
+ * extracts the current unchecked step, and outputs systemMessage JSON.
+ *
+ * Exit 0 always (fail-open — never blocks tool execution).
+ */
+
+import { readFileSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { findActivePhase, extractCurrentStep, formatInjection } from '../tooling/src/hooks/phase-injector.js';
+
+const hooksDir = dirname(fileURLToPath(import.meta.url));
+const projectRoot = dirname(hooksDir);
+
+try {
+  // Read stdin (Claude Code sends tool call payload)
+  try { readFileSync(0, 'utf8'); } catch { /* ignore */ }
+
+  // Resolve phases directory
+  const latestPath = join(projectRoot, '.wazir', 'runs', 'latest');
+  const phasesDir = join(latestPath, 'phases');
+
+  const active = findActivePhase(phasesDir);
+  if (!active) {
+    // No active phase — no injection
+    process.stdout.write('{}\n');
+    process.exit(0);
+  }
+
+  const step = extractCurrentStep(active.content);
+  if (!step) {
+    // All steps checked — no injection needed
+    process.stdout.write('{}\n');
+    process.exit(0);
+  }
+
+  const json = formatInjection(active.phase, step.current, step.next, step.stepNum, step.totalSteps);
+  process.stdout.write(json + '\n');
+  process.exit(0);
+} catch (error) {
+  // Fail-open: log error, output empty JSON, exit 0
+  process.stderr.write(`[pipeline-phase-injector] ${error.message}\n`);
+  process.stdout.write('{}\n');
+  process.exit(0);
+}

@@ -35,6 +35,6 @@
     "hooks/definitions/protected_path_write_guard.yaml": "6683d41778b823e2a4e606065597569aa04363f091e135e165de9732f1fc2171",
     "hooks/definitions/session_start.yaml": "9383fcf1f8304c87e57726478a461706c0fc73dc62bcc4d8661f2eeffa43a82d",
     "hooks/definitions/stop_handoff_harvest.yaml": "67a3c0a8bb7cb66b88e77dc79e748082e964d278c47935662c453922a846482b",
-    "hooks/hooks.json": "f255345793951b5cf6f6d8c9a8b6a6ad2d3140023453410127a6f70d8e110c26"
+    "hooks/hooks.json": "dc1020054fc646bf16671d169266af1b8eba8913dd60f2f15d7a01a2d4597c85"
   }
 }

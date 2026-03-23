@@ -18,6 +18,15 @@
             "command": "./hooks/context-mode-router"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./hooks/pipeline-phase-injector"
+          }
+        ]
       }
     ],
     "SessionStart": [
