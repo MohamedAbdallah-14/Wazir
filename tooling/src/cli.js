@@ -27,7 +27,8 @@ const COMMAND_FAMILIES = [
   'status',
   'stats',
   'capture',
-  'pipeline'
+  'pipeline',
+  'prune'
 ];
 
 // Lazy-load command handlers so the warning filter is active before node:sqlite loads
@@ -44,6 +45,7 @@ const COMMAND_LOADERS = {
   stats:    () => import('./commands/stats.js').then(m => m.runStatsCommand),
   capture:  () => import('./capture/command.js').then(m => m.runCaptureCommand),
   pipeline: () => import('./pipeline/command.js').then(m => m.runPipelineCommand),
+  prune:    () => import('./commands/prune.js').then(m => m.runPruneCommand),
 };
 
 export function parseArgs(argv) {
