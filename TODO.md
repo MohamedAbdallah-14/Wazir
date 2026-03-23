@@ -10,9 +10,14 @@
 
 ## Phase B: Brainstorm — IN PROGRESS
 - [ ] Brainstorm enforcement architecture based on ALL research
-- [ ] Decide: Approach A (markdown TODO), B (SQLite gates), or C (hybrid)
+- [x] Decide approach: COMBINED — stack 3 independent mechanisms for compound miss-rate reduction
 - [ ] Write execution plan
 - [ ] Decide on context minimization strategy (current wazir skill = 753 lines = too much)
+
+### Combined Enforcement Strategy (3 layers, each ~50% catch → combined ~87.5%)
+1. **Hook injection** — SessionStart/PreToolUse hooks inject current step into agent context automatically. Agent can't avoid seeing it. Catches: agent never reads the pipeline file.
+2. **File reminders** — Short (1-2 line) identical pipeline compliance tags at start, middle, end of every skill file. Not prose, not persuasion — mechanical instruction ("Read .pipeline.md. Follow current step."). Catches: agent reads skill but ignores pipeline.
+3. **Minimal PIPELINE context, full TASK context** — Externalize phase ordering, step checklists, and process rules to .pipeline.md. Inject ONLY current step via hooks. Keep expertise modules, specs, plans, and domain knowledge in full context — that's task context the agent needs to do good work. TME pattern (100% completion) removed task MANAGEMENT, not task KNOWLEDGE.
 
 ## Phase C: Context Minimization (NEW — from memory/context research)
 - [ ] Reduce wazir skill to current-step-only injection (TME pattern: 100% completion, 0 hallucinations)
@@ -32,11 +37,17 @@
 - [ ] Measure compliance after prompt changes
 
 ## Ideas (not yet prioritized)
-- [ ] UI for pipeline progress (pixel-agents inspiration) — deferred until enforcement works
+- [ ] Build compliance self-audit skill — manual post-session skill for brutal honest self-evaluation, possibly with external reviewer tool
+- [ ] UI for pipeline progress (pixel-agents inspiration, claude-replay) — deferred until enforcement works
 - [ ] Expand to Codex, Gemini, Cursor after Claude Code works well
 - [ ] Study GSD's context rot solution (fresh 200K subagent contexts per task)
 - [ ] ContextCov approach: auto-generate executable constraints from SKILL.md files (arXiv:2603.00822)
 - [ ] Process Reward Model for step-level compliance checking (needs domain-specific training data)
+
+## Compliance Target
+- **80%** pipeline conformance measured by post-session self-audit
+- Current baseline: ~40-58% across 7 sessions
+- Research ceiling: ~87.5% (3-layer compound enforcement)
 
 ## Research References
 - docs/research/2026-03-23-enforcement-research-synthesis.md — 7-agent synthesis (hooks, frameworks, prompting, HITL, validation, fine-tuning, academic)
