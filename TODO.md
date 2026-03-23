@@ -25,6 +25,14 @@
 - [ ] Measure context window usage before/after
 - [ ] Measure compliance impact of smaller context
 
+## BLOCKER: PreToolUse injection is advisory, not blocking
+Codex confirmed: even with phase files created, the PreToolUse injection hook never denies tool calls (always exit 0). The agent can ignore the injected "CURRENT: clarifier step 1" and write code. The Stop hook only fires on stop, not during work. The ONLY hard enforcement is `wazir capture event` transition validation — but if the agent never calls it, nothing stops it.
+
+Options to fix:
+- [ ] Make PreToolUse hook DENY Write/Edit during wrong phase (not just inject a message)
+- [ ] Add phase-aware write guard: if current phase is clarifier, block Write to src/ files
+- [ ] Combine with bootstrap gate pattern: if phase is clarifier, only allow wazir/git/read + .wazir writes
+
 ## Phase D: Hook Enforcement
 - [ ] SessionStart hook creates pipeline-state.json automatically (research priority #1)
 - [ ] Artifact validation on `wazir capture event` phase transitions
