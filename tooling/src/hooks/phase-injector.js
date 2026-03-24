@@ -180,6 +180,17 @@ export function resolveActiveScope(runDir) {
       };
     });
 
+  // All entries filtered out — fall back to pipeline scope
+  if (normalizedStack.length === 0) {
+    return {
+      type: 'pipeline',
+      phasesDir: pipelinePhasesDir,
+      skill: null,
+      invocationId: null,
+      stack: [pipelineEntry],
+    };
+  }
+
   // Top of stack = active scope
   const top = normalizedStack[normalizedStack.length - 1];
 
