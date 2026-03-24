@@ -167,6 +167,26 @@ describe('capture: skill scope commands', () => {
     assert.ok(!hasSkill, 'Skill scope should be popped from stack');
   });
 
+  test('ensure --scope skill without --skill exits 1 with usage (I-3)', () => {
+    if (!runCaptureCommand) return;
+    const result = runCaptureCommand(
+      { subcommand: 'ensure', args: ['--scope', 'skill', '--run', 'run-001'] },
+      { cwd: projectRoot },
+    );
+    assert.strictEqual(result.exitCode, 1, 'Should exit 1 without --skill');
+    assert.ok(result.stderr.includes('Usage'), `Should show usage message, got: ${result.stderr}`);
+  });
+
+  test('ensure --scope skill rejects invalid skill name (I-1)', () => {
+    if (!runCaptureCommand) return;
+    const result = runCaptureCommand(
+      { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', '../../etc', '--run', 'run-001'] },
+      { cwd: projectRoot },
+    );
+    assert.strictEqual(result.exitCode, 1, 'Should reject path traversal in skill name');
+    assert.ok(result.stderr.includes('Invalid skill name'), `Should mention invalid name, got: ${result.stderr}`);
+  });
+
   test('skill-exit rejects when phases are incomplete', () => {
     if (!runCaptureCommand) return;
     runCaptureCommand(

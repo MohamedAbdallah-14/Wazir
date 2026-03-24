@@ -607,6 +607,12 @@ function handleEnsureSkill(projectRoot, options) {
   }
 
   const skillName = options.skill;
+
+  // I-1: Validate skillName to prevent path traversal
+  if (!/^[a-z0-9-]+$/.test(skillName)) {
+    return { exitCode: 1, stderr: `Invalid skill name: "${skillName}". Must match /^[a-z0-9-]+$/.\n` };
+  }
+
   const runId = options.run || readLatestRunIdFromProject(projectRoot);
   if (!runId) {
     return { exitCode: 1, stderr: 'No active run found. Run `wazir capture ensure` first.\n' };

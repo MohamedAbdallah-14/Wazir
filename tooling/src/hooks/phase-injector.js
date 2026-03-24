@@ -159,13 +159,23 @@ export function resolveActiveScope(runDir) {
     };
   }
 
-  // Normalize stack entries
-  const normalizedStack = stack.map(entry => ({
-    type: entry.type,
-    phasesDir: entry.phases_dir,
-    skill: entry.skill ?? null,
-    invocationId: entry.invocation_id ?? null,
-  }));
+  // I-2: Reject phases_dir that points outside the runs tree
+  const runsAncestor = path.dirname(runDir); // .wazir/runs/
+  const normalizedStack = stack.map(entry => {
+    let phasesDir = entry.phases_dir;
+    if (phasesDir && path.isAbsolute(phasesDir)) {
+      const rel = path.relative(runsAncestor, phasesDir);
+      if (rel.startsWith('..') || path.isAbsolute(rel)) {
+        phasesDir = pipelinePhasesDir;
+      }
+    }
+    return {
+      type: entry.type,
+      phasesDir: phasesDir || pipelinePhasesDir,
+      skill: entry.skill ?? null,
+      invocationId: entry.invocation_id ?? null,
+    };
+  });
 
   // Top of stack = active scope
   const top = normalizedStack[normalizedStack.length - 1];

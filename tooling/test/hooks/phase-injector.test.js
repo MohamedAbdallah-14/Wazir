@@ -223,4 +223,41 @@ describe('phase-injector: resolveActiveScope', () => {
     assert.strictEqual(result.stack[1].skill, 'self-audit');
     assert.strictEqual(result.stack[1].phasesDir, skillPhasesDir);
   });
+
+  test('returns pipeline fallback for malformed YAML (I-4)', () => {
+    if (!resolveActiveScope) return;
+    const runDir = path.join(tmpDir, 'runs', 'run-001');
+    const phasesDir = path.join(runDir, 'phases');
+    fs.mkdirSync(phasesDir, { recursive: true });
+    fs.writeFileSync(path.join(phasesDir, 'executor.md'), '## Phase: executor — ACTIVE\n- [ ] step\n');
+
+    // Write malformed YAML
+    fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), 'not: valid: yaml: [["');
+
+    const result = resolveActiveScope(runDir);
+    assert.strictEqual(result.type, 'pipeline', 'Should fall back to pipeline on malformed YAML');
+    assert.strictEqual(result.phasesDir, phasesDir);
+    assert.strictEqual(result.skill, null);
+  });
+
+  test('falls back to pipeline when phases_dir escapes run directory (I-2)', () => {
+    if (!resolveActiveScope) return;
+    const runDir = path.join(tmpDir, 'runs', 'run-001');
+    const phasesDir = path.join(runDir, 'phases');
+    fs.mkdirSync(phasesDir, { recursive: true });
+    fs.writeFileSync(path.join(phasesDir, 'executor.md'), '## Phase: executor — ACTIVE\n- [ ] step\n');
+
+    const stackContent = [
+      'stack:',
+      '  - type: skill',
+      '    skill: evil',
+      '    invocation_id: x',
+      '    phases_dir: /etc/evil/phases',
+    ].join('\n');
+    fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackContent);
+
+    const result = resolveActiveScope(runDir);
+    // phases_dir should be replaced with pipeline fallback
+    assert.strictEqual(result.phasesDir, phasesDir, 'Escaped phases_dir should fall back to pipeline phases');
+  });
 });
