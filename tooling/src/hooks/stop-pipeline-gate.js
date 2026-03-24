@@ -147,6 +147,9 @@ export function evaluateStopGate(runDir, agentMessage = '') {
     if (skillActive) {
       skillStep = extractCurrentStep(skillActive.content);
       skillPhase = skillActive.phase;
+    } else {
+      // Fail closed: skill scope exists but no active phase file found
+      return { decision: 'block', reason: `Skill scope "${scope.skill}" has no active phase file — cannot verify completion. Use \`wazir capture skill-exit\` to close the skill scope.` };
     }
   }
 

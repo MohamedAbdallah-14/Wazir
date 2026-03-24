@@ -77,7 +77,7 @@ describe('session-start pipeline injection', () => {
     fs.mkdirSync(skillPhasesDir, { recursive: true });
     fs.writeFileSync(path.join(skillPhasesDir, '01-validate.md'), '## Phase: validate — ACTIVE\nsource_write_policy: deny\n- [ ] Run validators\n- [ ] Capture results\n');
 
-    const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${phasesDir}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+    const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: ${JSON.stringify(phasesDir)}\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: ${JSON.stringify(skillPhasesDir)}\n`;
     fs.writeFileSync(path.join(tmpRunDir, 'scope-stack.yaml'), stackYaml);
 
     const result = runSessionStart();

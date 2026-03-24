@@ -621,6 +621,11 @@ function handleEnsureSkill(projectRoot, options) {
     return { exitCode: 1, stderr: 'No active run found. Run `wazir capture ensure` first.\n' };
   }
 
+  // Validate runId to prevent path traversal
+  if (!/^[\w-]+$/.test(runId)) {
+    return { exitCode: 1, stderr: `Invalid run ID: "${runId}". Must contain only word characters and hyphens.\n` };
+  }
+
   const runDir = path.join(projectRoot, '.wazir', 'runs', runId);
   if (!fs.existsSync(runDir)) {
     return { exitCode: 1, stderr: `Run directory not found: ${runDir}\n` };
@@ -632,10 +637,11 @@ function handleEnsureSkill(projectRoot, options) {
     return { exitCode: 1, stderr: `No skill phase templates found at: templates/phases/skills/${skillName}/\n` };
   }
 
-  // Generate invocation ID
+  // Generate invocation ID with random suffix for uniqueness
   const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const rand = Math.random().toString(36).slice(2, 6);
   const prefix = skillName.replace(/[^a-z0-9]/g, '').slice(0, 8);
-  const invocationId = `${prefix}-${ts}`;
+  const invocationId = `${prefix}-${ts}-${rand}`;
 
   // Create skill invocation directory with phases
   const skillDir = path.join(runDir, 'skills', invocationId);
@@ -755,6 +761,9 @@ function handleSkillPhase(parsed, context = {}) {
 
   const targetPath = path.join(skillPhasesDir, targetFile);
   let targetContent = fs.readFileSync(targetPath, 'utf8');
+  if (!targetContent.includes('— NOT ACTIVE')) {
+    return { exitCode: 1, stderr: `Cannot activate phase "${options.phase}": target file does not contain "— NOT ACTIVE" header.\n` };
+  }
   targetContent = targetContent.replace('— NOT ACTIVE', '— ACTIVE');
   fs.writeFileSync(targetPath, targetContent);
 

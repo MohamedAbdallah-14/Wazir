@@ -125,7 +125,7 @@ describe('bootstrap-gate', () => {
       fs.writeFileSync(path.join(skillPhasesDir, '01-validate.md'), '## Phase: validate — ACTIVE\nsource_write_policy: deny\n- [ ] Run validators\n');
 
       // Write scope-stack.yaml manually
-      const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${path.join(runDir, 'phases')}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+      const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: ${JSON.stringify(path.join(runDir, 'phases'))}\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: ${JSON.stringify(skillPhasesDir)}\n`;
       fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackYaml);
 
       const r = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: 'src/index.js' });
@@ -148,7 +148,7 @@ describe('bootstrap-gate', () => {
       fs.mkdirSync(skillPhasesDir, { recursive: true });
       fs.writeFileSync(path.join(skillPhasesDir, '03-fix.md'), '## Phase: fix — ACTIVE\nsource_write_policy: allow\n- [ ] Apply fixes\n');
 
-      const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${path.join(runDir, 'phases')}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+      const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: ${JSON.stringify(path.join(runDir, 'phases'))}\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: ${JSON.stringify(skillPhasesDir)}\n`;
       fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackYaml);
 
       const r = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: 'src/index.js' });

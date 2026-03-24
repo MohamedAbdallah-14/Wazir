@@ -40,7 +40,7 @@ Wazir-managed agents produce **dramatically higher quality output** than bare-me
 
 ## Quality Metrics Summary
 
-```
+```text
                     Bare-Metal    Wazir     Improvement
                     ----------    -----     -----------
 Test Failures (B1)     100          83       -17%
@@ -52,7 +52,7 @@ Phase Tracking          0%        100%       +100%
 
 ## Process Metrics Summary
 
-```
+```text
                     Bare-Metal    Wazir
                     ----------    -----
 Init phase            ✗            ✓ (100%)
@@ -111,7 +111,7 @@ Wazir takes ~1.7x longer (clarification + phase tracking), but this is front-loa
 
 ## Comparison Chart
 
-```
+```text
 Test Failures by Benchmark
 
 Benchmark 1    ████████████████████ 100  Bare-Metal

@@ -170,7 +170,7 @@ describe('stop-pipeline-gate', () => {
     fs.writeFileSync(path.join(skillPhasesDir, '01-validate.md'), '## Phase: validate — ACTIVE\n- [ ] Run validators\n');
 
     // Write scope-stack.yaml
-    const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${path.join(runDir, 'phases')}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+    const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: ${JSON.stringify(path.join(runDir, 'phases'))}\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: ${JSON.stringify(skillPhasesDir)}\n`;
     fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackYaml);
 
     const result = evaluateStopGate(runDir, 'task complete');

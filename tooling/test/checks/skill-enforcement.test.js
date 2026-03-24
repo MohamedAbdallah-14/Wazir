@@ -1,4 +1,4 @@
-import { describe, test, beforeEach, afterEach } from 'node:test';
+import { describe, test, before, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,6 +9,11 @@ let validateSkillsAtProjectRoot;
 describe('skill enforcement.phased validation', () => {
   let tmpDir;
 
+  before(async () => {
+    const mod = await import('../../src/checks/skills.js');
+    validateSkillsAtProjectRoot = mod.validateSkillsAtProjectRoot;
+  });
+
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-skill-enforce-'));
   });
@@ -17,14 +22,7 @@ describe('skill enforcement.phased validation', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test('setup: import', async () => {
-    const mod = await import('../../src/checks/skills.js');
-    validateSkillsAtProjectRoot = mod.validateSkillsAtProjectRoot;
-    assert.ok(validateSkillsAtProjectRoot);
-  });
-
   test('passes when skill has enforcement.phased and matching templates exist', () => {
-    if (!validateSkillsAtProjectRoot) return;
     // Create skill with enforcement frontmatter
     const skillDir = path.join(tmpDir, 'skills', 'self-audit');
     fs.mkdirSync(skillDir, { recursive: true });
@@ -48,7 +46,7 @@ describe('skill enforcement.phased validation', () => {
   });
 
   test('fails when skill has enforcement.phased but no templates', () => {
-    if (!validateSkillsAtProjectRoot) return;
+
     const skillDir = path.join(tmpDir, 'skills', 'self-audit');
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), [
@@ -70,7 +68,7 @@ describe('skill enforcement.phased validation', () => {
   });
 
   test('passes when skill has no enforcement section', () => {
-    if (!validateSkillsAtProjectRoot) return;
+
     const skillDir = path.join(tmpDir, 'skills', 'brainstorming');
     fs.mkdirSync(skillDir, { recursive: true });
     fs.writeFileSync(path.join(skillDir, 'SKILL.md'), [
