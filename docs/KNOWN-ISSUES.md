@@ -64,7 +64,7 @@ Last updated: 2026-03-24
 **Root cause:** Context window fills with conversation history, tool outputs, file contents. Pipeline instructions get buried. Research: 15-47% performance drop as context grows (Stanford "Lost in the Middle"), all 18 LLMs below 50% at 32K tokens (Chroma 2025).
 **Impact:** Later phases have lower compliance than earlier phases.
 **Mitigation:** `/compact` between phases (manual, can't be automated). PreToolUse injection re-injects current step. Skill reminders at start/middle/end of files.
-**Fix:** Tmux session isolation — each phase runs in fresh context with `--allowedTools` restrictions.
+**Fix:** No fix decided. Context rot research preserved in v3 findings doc.
 
 ### KI-007: No programmatic way to trigger /compact
 
@@ -74,7 +74,7 @@ Last updated: 2026-03-24
 **Root cause:** `/compact` is a user-only command. Not available via Bash, hooks, or agent tools.
 **Impact:** Context rot between phases is not mitigated in automated (-p mode) or when user doesn't manually compact.
 **Workaround:** Design system to degrade gracefully without compact. PreToolUse injection still fires regardless. Auto-compact triggers near context limit.
-**Fix:** Tmux session isolation makes compact irrelevant (fresh context per phase).
+**Fix:** No fix decided. Context rot research preserved in v3 findings doc.
 
 ---
 
@@ -142,7 +142,43 @@ Last updated: 2026-03-24
 **Root cause:** `isDirectExecution()` uses `realpathSync` which resolves differently in worktrees vs main workspace.
 **Impact:** Self-audit quality scoring unreliable in worktrees.
 
-### KI-015: CodeRabbit Bash bypass
+### KI-015: init-pipeline skill skips interactive questions
+
+**Status:** Open
+**First seen:** Session 11 (2026-03-24)
+**Symptom:** `/wz:init-pipeline` runs `wazir init` in zero-config mode without asking the user any questions. User gets no say in pipeline mode, model routing, or external tool configuration.
+**Root cause:** Skill defaults to zero-config flow. Interactive flow only triggers with `wazir init --interactive`, but the skill never offers that choice.
+**Impact:** User has no control over pipeline setup. Must manually reconfigure after the fact.
+**Fix:** init-pipeline skill should ask the user whether they want zero-config or interactive mode before running `wazir init`. Interactive should be the presented option, not a hidden flag.
+
+### KI-016: config.json stores per-run values as project config
+
+**Status:** Open
+**First seen:** Session 11 (2026-03-24)
+**Symptom:** `config.json` contains `default_depth: "standard"` and `default_intent: "feature"`. These are per-run values inferred from request text, not project-level configuration.
+**Root cause:** `autoInit()` in `tooling/src/init/auto-detect.js` writes these to the persistent config. They should only exist in the run's `run-config.json`.
+**Impact:** Misleading config. Users think they're setting project defaults, but `inferIntent()` and `parseDepthModifier()` override them per-run anyway.
+**Fix:** Remove `default_depth` and `default_intent` from `autoInit()` config output. These belong in per-run state only.
+
+### KI-017: context-mode detection uses wrong plugin directory name
+
+**Status:** Open
+**First seen:** Session 11 (2026-03-24)
+**Symptom:** `context_mode.enabled: false` in config even when context-mode is installed.
+**Root cause:** `autoInit()` fallback check (line 235) looks for `~/.claude/plugins/cache/context-mode/` but the actual installed directory is `~/.claude/plugins/cache/claude-context-mode/`.
+**Impact:** Context-mode features disabled. Routing matrix falls back to native Bash for large commands.
+**Fix:** Check for both `context-mode` and `claude-context-mode` directory names, or glob for `*context-mode*`.
+
+### KI-018: `wazir pipeline init --run` arg parsing fails
+
+**Status:** Open
+**First seen:** Session 11 (2026-03-24)
+**Symptom:** `wazir pipeline init --run run-YYYYMMDD-HHMMSS` exits 1 with "Usage: wazir pipeline init --run <id>".
+**Root cause:** CLI arg parser (`tooling/src/cli.js:parseArgs`) puts `--run` and the run ID into `parsed.args[]` but `runPipelineCommand` reads `parsed.options?.run` which is always undefined.
+**Impact:** `wazir pipeline init` cannot be called from the CLI. Must be called programmatically via Node import.
+**Fix:** Parse `--run` from `parsed.args` array in `runPipelineCommand`, or add options parsing to the CLI arg parser.
+
+### KI-019: CodeRabbit Bash bypass
 
 **Status:** Known limitation, accepted
 **First seen:** PR #11 CodeRabbit review

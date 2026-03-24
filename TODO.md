@@ -16,16 +16,26 @@
 - [x] Strip mustache markers in createPhaseFiles for immediate usability
 - [x] Benchmark: Sonnet — 36x fewer test failures with Wazir vs bare-metal (1 vs 36)
 - [x] Benchmark: Haiku — 67% compliance without human reminders
+- [x] KI-005: TodoWrite redirect — existing-list guard in SKILL.md Phase 0
 
-## Current: Extend enforcement to all structured skills
-Agents skip 80% of skill instructions. Self-audit ran Phase 1 only, skipped Phase 2-5. The enforcement hooks only work for /wazir pipeline phases. Every skill with structured phases needs the same enforcement pattern. Design in progress with Codex.
+## Current: Ship remaining cheap enforcement fixes
+
+### KI-004: Symlink consistency
+- [ ] Unify `latest` pointer creation — always symlink, one code path
+- [ ] All hooks fail-open when this pointer breaks — high blast radius
 
 ## Next
-- [ ] Implement skill-level enforcement — scope stack design at docs/plans/2026-03-24-skill-level-enforcement-design.md
-- [ ] Make sub-skills pipeline-aware — clarifier/executor/reviewer should call `capture ensure` and track phases when invoked standalone (not just via /wazir). Currently they have zero pipeline awareness — no run creation, no phase tracking, no enforcement.
-- [ ] DeCRIM-style prompt restructuring — decomposed constraints, not prose paragraphs
-- [ ] Measure compliance after prompt changes
-- [ ] Build compliance self-audit that actually enforces its own phases
+- [ ] Measure compliance with KI-001 + KI-002 + KI-003 + KI-005 all fixed
+- [ ] If still below 70%: add `.claude/agents/wz-clarifier.md` with `tools:` restriction (subagent-level enforcement, no rewrite)
+- [ ] Skill-level enforcement — scope stack design at docs/plans/2026-03-24-skill-level-enforcement-design.md
+- [ ] Sub-skills pipeline awareness (KI-009)
+- [ ] DeCRIM-style prompt restructuring
+
+## Banked (researched, not building now)
+- [ ] `claude -p` orchestrator — main session dispatches phases as separate `-p` calls with `--disallowedTools`. Fresh context per phase. Clarifier loop protocol. Executor parallel batches with per-task worktrees. Full design in docs/plans/2026-03-24-enforcement-v3-findings.md + research from 2026-03-24 session.
+- [ ] Typed artifact envelopes between phases (Codex recommendation)
+- [ ] Append-only event log for audit trail (Codex recommendation)
+- [ ] Restriction test matrix — canary jobs for forbidden writes/commits/skips
 
 ## Future
 - [ ] UI for pipeline progress (pixel-agents, claude-replay)
