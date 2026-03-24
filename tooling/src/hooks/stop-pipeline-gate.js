@@ -14,7 +14,7 @@
  */
 
 import fs from 'node:fs';
-import { findActivePhase, extractCurrentStep } from './phase-injector.js';
+import { findActivePhase, extractCurrentStep, resolveActiveScope } from './phase-injector.js';
 
 const COMPLETION_SIGNALS = [
   'task complete',
@@ -103,9 +103,22 @@ export function evaluateStopGate(runDir, agentMessage = '') {
     };
   }
 
-  // 3. Check for unchecked items
+  // 3. Check for unchecked items in pipeline phase
   const step = extractCurrentStep(active.content);
-  if (!step) {
+
+  // 3b. Check scope stack for skill-level unchecked items
+  const scope = resolveActiveScope(runDir);
+  let skillStep = null;
+  let skillPhase = null;
+  if (scope.type === 'skill') {
+    const skillActive = findActivePhase(scope.phasesDir);
+    if (skillActive) {
+      skillStep = extractCurrentStep(skillActive.content);
+      skillPhase = skillActive.phase;
+    }
+  }
+
+  if (!step && !skillStep) {
     writeBlockCount(phasesDir, active.phase, 0); // Reset counter on approve
     return { decision: 'approve', reason: 'All items checked — phase complete.' };
   }
@@ -131,6 +144,17 @@ export function evaluateStopGate(runDir, agentMessage = '') {
 
   // All conditions met — block
   writeBlockCount(phasesDir, active.phase, blockCount + 1);
+
+  // Prefer skill scope message if skill has unchecked items
+  if (skillStep) {
+    const skillUnchecked = skillStep.totalSteps - skillStep.stepNum + 1;
+    return {
+      decision: 'block',
+      reason: `Cannot stop. Skill ${scope.skill} phase ${skillPhase} has ${skillUnchecked} unchecked items. Current: ${skillStep.current}`,
+      systemMessage: `You have unchecked skill items in ${scope.skill} phase ${skillPhase}. Complete them before finishing.`,
+    };
+  }
+
   const uncheckedCount = step.totalSteps - step.stepNum + 1;
   return {
     decision: 'block',

@@ -134,6 +134,27 @@ describe('stop-pipeline-gate', () => {
     fs.rmSync(runDir, { recursive: true, force: true });
   });
 
+  test('blocks when skill scope has unchecked items even if pipeline phase is complete', async () => {
+    if (!evaluateStopGate) return;
+    const runDir = makePhasesDir({
+      'executor.md': '## Phase: executor — ACTIVE\n- [x] all done\n',
+    });
+
+    // Create skill scope with unchecked items
+    const skillPhasesDir = path.join(runDir, 'skills', 'sa-001', 'phases');
+    fs.mkdirSync(skillPhasesDir, { recursive: true });
+    fs.writeFileSync(path.join(skillPhasesDir, '01-validate.md'), '## Phase: validate — ACTIVE\n- [ ] Run validators\n');
+
+    // Write scope-stack.yaml
+    const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${path.join(runDir, 'phases')}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+    fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackYaml);
+
+    const result = evaluateStopGate(runDir, 'task complete');
+    assert.strictEqual(result.decision, 'block', 'Should block: skill scope has unchecked items');
+    assert.ok(result.reason.includes('skill') || result.reason.includes('validate'), 'Reason should mention skill');
+    fs.rmSync(runDir, { recursive: true, force: true });
+  });
+
   test('loop guard counter resets on approve', async () => {
     if (!evaluateStopGate) return;
     const runDir = makePhasesDir({
