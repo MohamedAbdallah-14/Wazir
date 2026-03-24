@@ -8,7 +8,7 @@ Last updated: 2026-03-24
 
 ### KI-001: Bootstrap gate blocks .wazir/ writes
 
-**Status:** Open
+**Status:** Fixed (commit 2b80677)
 **First seen:** Session 10 (2026-03-24)
 **Symptom:** `PreToolUse:Write says: BOOTSTRAP REQUIRED` when writing to `.wazir/runs/latest/phases/clarifier.md`
 **Root cause:** Bootstrap gate checks for run existence via `latest` pointer. If pointer breaks (symlink deleted, not created, or stale), gate falls through to "no run exists" and blocks ALL writes including `.wazir/` paths.
@@ -17,7 +17,7 @@ Last updated: 2026-03-24
 
 ### KI-002: Agent games phase files by direct edit
 
-**Status:** Open
+**Status:** Fixed (commit c583f2e)
 **First seen:** Session 10 (2026-03-24)
 **Symptom:** Agent writes `[x]` on all checklist items in phase files without doing the work. Sets header to ACTIVE/COMPLETED directly.
 **Root cause:** `.wazir/runs/*/phases/*.md` files are writable in all phases. Agent finds this escape hatch and uses it to skip clarifier/executor phases.
@@ -27,7 +27,7 @@ Last updated: 2026-03-24
 
 ### KI-003: Multiple ACTIVE phases cause Stop hook deadlock
 
-**Status:** Open
+**Status:** Fixed (commit 373502b)
 **First seen:** Session 10 (2026-03-24)
 **Symptom:** `Stop hook: {"decision":"block","reason":"Multiple ACTIVE phases: executor, init"}`
 **Root cause:** Agent manually sets multiple phase files to ACTIVE (via KI-002 gaming). Stop hook detects malformed state and blocks. Agent can't stop, can't fix state (if KI-001 also active).
