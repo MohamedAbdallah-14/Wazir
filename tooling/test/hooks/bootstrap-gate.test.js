@@ -108,6 +108,54 @@ describe('bootstrap-gate', () => {
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   });
 
+  // Scope-aware tests
+  test('blocks Write during executor when skill scope has deny policy', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
+    try {
+      fs.mkdirSync(path.join(tmp, '.wazir', 'state'), { recursive: true });
+      fs.writeFileSync(path.join(tmp, '.wazir', 'state', 'pipeline-active'), 'true');
+      const runDir = path.join(tmp, '.wazir', 'runs', 'test-run');
+      fs.mkdirSync(path.join(runDir, 'phases'), { recursive: true });
+      fs.writeFileSync(path.join(runDir, 'phases', 'executor.md'), '## Phase: executor — ACTIVE\n- [ ] Implement\n');
+      fs.writeFileSync(path.join(tmp, '.wazir', 'runs', 'latest'), 'test-run');
+
+      // Create skill scope with deny policy
+      const skillPhasesDir = path.join(runDir, 'skills', 'sa-001', 'phases');
+      fs.mkdirSync(skillPhasesDir, { recursive: true });
+      fs.writeFileSync(path.join(skillPhasesDir, '01-validate.md'), '## Phase: validate — ACTIVE\nsource_write_policy: deny\n- [ ] Run validators\n');
+
+      // Write scope-stack.yaml manually
+      const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${path.join(runDir, 'phases')}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+      fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackYaml);
+
+      const r = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: 'src/index.js' });
+      assert.strictEqual(r.decision, 'deny', 'Should deny: skill validate phase has deny policy');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  });
+
+  test('allows Write during executor when skill scope has allow policy', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
+    try {
+      fs.mkdirSync(path.join(tmp, '.wazir', 'state'), { recursive: true });
+      fs.writeFileSync(path.join(tmp, '.wazir', 'state', 'pipeline-active'), 'true');
+      const runDir = path.join(tmp, '.wazir', 'runs', 'test-run');
+      fs.mkdirSync(path.join(runDir, 'phases'), { recursive: true });
+      fs.writeFileSync(path.join(runDir, 'phases', 'executor.md'), '## Phase: executor — ACTIVE\n- [ ] Implement\n');
+      fs.writeFileSync(path.join(tmp, '.wazir', 'runs', 'latest'), 'test-run');
+
+      // Create skill scope with allow policy (fix phase)
+      const skillPhasesDir = path.join(runDir, 'skills', 'sa-001', 'phases');
+      fs.mkdirSync(skillPhasesDir, { recursive: true });
+      fs.writeFileSync(path.join(skillPhasesDir, '03-fix.md'), '## Phase: fix — ACTIVE\nsource_write_policy: allow\n- [ ] Apply fixes\n');
+
+      const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${path.join(runDir, 'phases')}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+      fs.writeFileSync(path.join(runDir, 'scope-stack.yaml'), stackYaml);
+
+      const r = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: 'src/index.js' });
+      assert.strictEqual(r.decision, 'allow', 'Should allow: both executor and fix phase allow writes');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  });
+
   test('allows wazir commands through gate', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
     try {

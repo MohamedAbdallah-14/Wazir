@@ -11,7 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { findActivePhase } from './phase-injector.js';
+import { findActivePhase, resolveActiveScope } from './phase-injector.js';
 
 const BOOTSTRAP_ALLOWLIST = [
   'wazir', 'git checkout', 'git branch', 'git status', 'git log', 'git diff',
@@ -56,6 +56,18 @@ function isSourcePath(filePath, projectRoot) {
   }
   if (normalized.startsWith('./')) normalized = normalized.slice(2);
   return !NON_SOURCE_PREFIXES.some(prefix => normalized.startsWith(prefix));
+}
+
+/**
+ * Read the source_write_policy from the active skill phase file.
+ * @param {string} skillPhasesDir - Path to the skill's phases directory
+ * @returns {'allow'|'deny'} Write policy (defaults to 'deny')
+ */
+function getSkillWritePolicy(skillPhasesDir) {
+  const active = findActivePhase(skillPhasesDir);
+  if (!active) return 'deny';
+  const match = active.content.match(/^source_write_policy:\s*(allow|deny)/m);
+  return match ? match[1] : 'deny';
 }
 
 export function evaluateBootstrapGate(projectRoot, payload) {
@@ -109,19 +121,33 @@ export function evaluateBootstrapGate(projectRoot, payload) {
     const active = findActivePhase(phasesDir);
     const phase = active?.phase || 'init';
 
-    // executor allows everything
-    if (phase === 'executor') {
+    // Non-executor pipeline phases: block source file writes
+    if (phase !== 'executor') {
+      if (isSourcePath(filePath, projectRoot)) {
+        const runPath = runId ? `.wazir/runs/${runId}/phases/${phase}.md` : `the current phase checklist`;
+        return {
+          decision: 'deny',
+          reason: `Source file writes are blocked during ${phase} phase. Complete the ${phase} phase checklist before writing source code.`,
+          systemMessage: `PHASE GATE: You are in the ${phase} phase. Source file writes are only allowed during the executor phase. Please follow your checklist at ${runPath}. Use wz: skills as instructed.`,
+        };
+      }
       return { decision: 'allow' };
     }
 
-    // Non-executor phases: block source file writes
-    if (isSourcePath(filePath, projectRoot)) {
-      const runPath = runId ? `.wazir/runs/${runId}/phases/${phase}.md` : `the current phase checklist`;
-      return {
-        decision: 'deny',
-        reason: `Source file writes are blocked during ${phase} phase. Complete the ${phase} phase checklist before writing source code.`,
-        systemMessage: `PHASE GATE: You are in the ${phase} phase. Source file writes are only allowed during the executor phase. Please follow your checklist at ${runPath}. Use wz: skills as instructed.`,
-      };
+    // executor phase — check scope stack for skill-level write policy
+    const runDir = path.join(projectRoot, '.wazir', 'runs', runId);
+    const scope = resolveActiveScope(runDir);
+    if (scope.type === 'skill' && isSourcePath(filePath, projectRoot)) {
+      const skillWritePolicy = getSkillWritePolicy(scope.phasesDir);
+      if (skillWritePolicy === 'deny') {
+        const skillPhase = findActivePhase(scope.phasesDir);
+        const skillPhaseName = skillPhase?.phase || 'unknown';
+        return {
+          decision: 'deny',
+          reason: `Source writes blocked by skill scope: ${scope.skill} (phase: ${skillPhaseName}, policy: deny).`,
+          systemMessage: `SKILL PHASE GATE: Skill ${scope.skill} phase ${skillPhaseName} denies source writes. Complete the skill phase or transition to a phase that allows writes.`,
+        };
+      }
     }
   }
 
