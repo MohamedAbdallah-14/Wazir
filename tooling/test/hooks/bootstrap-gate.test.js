@@ -156,6 +156,29 @@ describe('bootstrap-gate', () => {
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   });
 
+  test('allows Write to .wazir/ path even when no run exists (KI-001)', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
+    try {
+      fs.mkdirSync(path.join(tmp, '.wazir', 'state'), { recursive: true });
+      fs.writeFileSync(path.join(tmp, '.wazir', 'state', 'pipeline-active'), 'true');
+      // No run exists — normally would deny
+      const r1 = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: '.wazir/runs/latest/clarified/spec.md' });
+      assert.strictEqual(r1.decision, 'allow', '.wazir/ paths must bypass bootstrap gate (KI-001)');
+      const r2 = evaluateBootstrapGate(tmp, { tool: 'Edit', filePath: path.join(tmp, '.wazir', 'runs', 'test', 'spec.md') });
+      assert.strictEqual(r2.decision, 'allow', 'Absolute .wazir/ paths must also bypass');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  });
+
+  test('allows git add and git commit through gate', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
+    try {
+      fs.mkdirSync(path.join(tmp, '.wazir', 'state'), { recursive: true });
+      fs.writeFileSync(path.join(tmp, '.wazir', 'state', 'pipeline-active'), 'true');
+      assert.strictEqual(evaluateBootstrapGate(tmp, { tool: 'Bash', command: 'git add tooling/src/foo.js' }).decision, 'allow');
+      assert.strictEqual(evaluateBootstrapGate(tmp, { tool: 'Bash', command: 'git commit -m "fix"' }).decision, 'allow');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  });
+
   test('allows wazir commands through gate', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
     try {

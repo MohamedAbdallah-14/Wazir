@@ -15,7 +15,9 @@ import { findActivePhase, resolveActiveScope } from './phase-injector.js';
 
 const BOOTSTRAP_ALLOWLIST = [
   'wazir', 'git checkout', 'git branch', 'git status', 'git log', 'git diff',
+  'git add', 'git commit', 'git stash', 'git push',
   'which ', 'ls ', 'pwd', 'echo ', 'cat ', 'head ', 'npm test', 'npm run', 'node ',
+  'rm .wazir/',
 ];
 
 const NON_SOURCE_PREFIXES = [
@@ -102,6 +104,11 @@ export function evaluateBootstrapGate(projectRoot, payload) {
 
   // No run exists → bootstrap gate
   if (!hasRun) {
+    // .wazir/ paths always bypass — gate protects source files, not pipeline state (KI-001)
+    if ((tool === 'Write' || tool === 'Edit') && filePath && !isSourcePath(filePath, projectRoot)) {
+      return { decision: 'allow' };
+    }
+
     if (tool === 'Bash') {
       const cmdLower = command.toLowerCase().trim();
       if (BOOTSTRAP_ALLOWLIST.some(prefix => cmdLower.startsWith(prefix))) {
