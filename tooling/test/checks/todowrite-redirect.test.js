@@ -42,6 +42,14 @@ describe('TodoWrite redirect (Fix 1): wz:wazir Phase 0 creates TaskCreate from c
     );
   });
 
+  test('Phase 0 guards against pre-existing or stale task lists', () => {
+    assert.ok(phase0, 'phase0 must be extracted');
+    assert.ok(
+      phase0.includes('already exist') || phase0.includes('stale'),
+      'Phase 0 must instruct agent to handle pre-existing or stale task lists (must contain "already exist" or "stale")',
+    );
+  });
+
   test('TaskCreate instructions come AFTER wazir capture ensure', () => {
     assert.ok(phase0, 'phase0 must be extracted');
     const captureEnsureIdx = phase0.indexOf('wazir capture ensure');

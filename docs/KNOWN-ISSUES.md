@@ -49,12 +49,12 @@ Last updated: 2026-03-24
 
 ### KI-005: Agent creates competing TodoWrite list
 
-**Status:** Open
+**Status:** Fixed
 **First seen:** Session 10 (2026-03-24)
 **Symptom:** Agent creates its own todo list ("implement step 1, write tests, commit") that doesn't match pipeline phases. Agent follows todo list instead of phase checklist.
 **Root cause:** TodoWrite is an available tool. Agent naturally creates task lists early in sessions. This list competes with phase files for the agent's attention.
 **Impact:** Agent drifts from pipeline to its own plan. Phase compliance drops.
-**Fix:** Pre-populate TodoWrite from active phase checklist immediately after `capture ensure`. Agent's todo list = pipeline checklist.
+**Fix:** SKILL.md Phase 0 now instructs agent to call TaskList before creating tasks. If tasks already exist matching the checklist, skip. If stale tasks exist, replace with fresh checklist tasks.
 
 ### KI-006: Context rot within single session
 
