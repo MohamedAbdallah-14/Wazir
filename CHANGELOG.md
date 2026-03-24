@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ## [Unreleased]
 
 ### Added
+- TodoWrite redirect (enforcement v3, Fix 1) — Phase 0 Bootstrap now instructs agents to sync TaskCreate items from the active phase checklist, preventing competing todo lists
 - Phase-aware write blocking — source writes denied during init/clarifier/final_review, only allowed during executor
 - Bootstrap gate — PreToolUse hook blocks Write/Edit/Bash until pipeline run exists
 - `wazir capture ensure` — idempotent run bootstrap command
