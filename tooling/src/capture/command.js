@@ -257,6 +257,9 @@ function handleEvent(parsed, context = {}) {
       updatePhaseHeaders(repoLocalPhasesDir, 'final_review', null);
       process.stderr.write('Run complete. All phases passed.\n');
     }
+    // Delete pipeline-active marker so bootstrap gate stops firing (KI-016)
+    const markerPath = path.join(projectRoot, '.wazir', 'state', 'pipeline-active');
+    try { fs.unlinkSync(markerPath); } catch { /* already gone */ }
   }
 
   const status = readStatus(runPaths);

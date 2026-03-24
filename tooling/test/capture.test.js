@@ -956,4 +956,36 @@ describe('loop-check', () => {
       fixture.cleanup();
     }
   });
+
+  test('pipeline-active marker deleted on final_review phase_exit (KI-016)', () => {
+    const fixture = createCaptureFixture();
+    try {
+      // Create the pipeline-active marker
+      const stateDir = path.join(fixture.fixtureRoot, '.wazir', 'state');
+      fs.mkdirSync(stateDir, { recursive: true });
+      const markerPath = path.join(stateDir, 'pipeline-active');
+      fs.writeFileSync(markerPath, 'true');
+
+      // Init a run
+      runCli(
+        ['capture', 'init', '--run', 'run-marker-test', '--phase', 'final_review', '--status', 'in_progress', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      // Create phase files with final_review ACTIVE
+      const phasesDir = path.join(fixture.fixtureRoot, '.wazir', 'runs', 'run-marker-test', 'phases');
+      fs.mkdirSync(phasesDir, { recursive: true });
+      fs.writeFileSync(path.join(phasesDir, 'final_review.md'), '## Phase: final_review — ACTIVE\n- [x] done\n');
+
+      // Fire phase_exit on final_review (terminal state)
+      runCli(
+        ['capture', 'event', '--run', 'run-marker-test', '--event', 'phase_exit', '--phase', 'final_review', '--status', 'completed', '--state-root', fixture.stateRoot],
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(fs.existsSync(markerPath), false, 'pipeline-active marker must be deleted on pipeline completion (KI-016)');
+    } finally {
+      fixture.cleanup();
+    }
+  });
 });
