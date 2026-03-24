@@ -179,6 +179,30 @@ describe('bootstrap-gate', () => {
     } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
   });
 
+  test('blocks Write to phase files in any phase (KI-002)', () => {
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
+    try {
+      fs.mkdirSync(path.join(tmp, '.wazir', 'state'), { recursive: true });
+      fs.writeFileSync(path.join(tmp, '.wazir', 'state', 'pipeline-active'), 'true');
+      fs.mkdirSync(path.join(tmp, '.wazir', 'runs', 'test-run', 'phases'), { recursive: true });
+      fs.writeFileSync(path.join(tmp, '.wazir', 'runs', 'test-run', 'phases', 'executor.md'), '## Phase: executor — ACTIVE\n- [ ] step\n');
+      fs.writeFileSync(path.join(tmp, '.wazir', 'runs', 'latest'), 'test-run');
+
+      // Write to phase file should be blocked even during executor
+      const r1 = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: '.wazir/runs/test-run/phases/executor.md' });
+      assert.strictEqual(r1.decision, 'deny', 'Phase file writes must be blocked (KI-002)');
+      assert.ok(r1.reason.includes('phase file'), 'Reason should mention phase files');
+
+      // Edit to phase file should also be blocked
+      const r2 = evaluateBootstrapGate(tmp, { tool: 'Edit', filePath: path.join(tmp, '.wazir', 'runs', 'test-run', 'phases', 'init.md') });
+      assert.strictEqual(r2.decision, 'deny', 'Phase file edits must be blocked (KI-002)');
+
+      // Write to other .wazir/ paths should still be allowed
+      const r3 = evaluateBootstrapGate(tmp, { tool: 'Write', filePath: '.wazir/runs/test-run/clarified/spec.md' });
+      assert.strictEqual(r3.decision, 'allow', 'Non-phase .wazir/ paths should be allowed');
+    } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  });
+
   test('allows wazir commands through gate', () => {
     const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-boot-'));
     try {

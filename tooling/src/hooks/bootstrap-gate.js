@@ -47,17 +47,33 @@ function readLatestRunId(projectRoot) {
   return null;
 }
 
-function isSourcePath(filePath, projectRoot) {
-  if (!filePath) return false;
-  // Resolve to repo-relative path
+function normalizePath(filePath, projectRoot) {
   let normalized = filePath.replace(/\\/g, '/');
   if (path.isAbsolute(normalized)) {
     const rel = path.relative(projectRoot, normalized).replace(/\\/g, '/');
-    if (rel.startsWith('..')) return false; // outside project
+    if (rel.startsWith('..')) return null; // outside project
     normalized = rel;
   }
   if (normalized.startsWith('./')) normalized = normalized.slice(2);
+  return normalized;
+}
+
+function isSourcePath(filePath, projectRoot) {
+  if (!filePath) return false;
+  const normalized = normalizePath(filePath, projectRoot);
+  if (normalized === null) return false;
   return !NON_SOURCE_PREFIXES.some(prefix => normalized.startsWith(prefix));
+}
+
+/**
+ * Detect writes to phase files — only CLI commands should modify these (KI-002).
+ * Matches: .wazir/runs/<anything>/phases/<anything>.md
+ */
+function isPhaseFilePath(filePath, projectRoot) {
+  if (!filePath) return false;
+  const normalized = normalizePath(filePath, projectRoot);
+  if (normalized === null) return false;
+  return /^\.wazir\/runs\/[^/]+\/phases\/[^/]+\.md$/.test(normalized);
 }
 
 /**
@@ -100,6 +116,15 @@ export function evaluateBootstrapGate(projectRoot, payload) {
   // Read is always allowed
   if (tool === 'Read' || tool === 'Glob' || tool === 'Grep') {
     return { decision: 'allow' };
+  }
+
+  // Block Write/Edit to phase files — only CLI commands modify these (KI-002)
+  if ((tool === 'Write' || tool === 'Edit') && isPhaseFilePath(filePath, projectRoot)) {
+    return {
+      decision: 'deny',
+      reason: 'Cannot write to phase file directly. Use `wazir capture event` to transition phases.',
+      systemMessage: 'PHASE FILE PROTECTED: Phase files can only be modified by CLI commands (wazir capture event, wazir pipeline init). Do not edit phase files directly.',
+    };
   }
 
   // No run exists → bootstrap gate
