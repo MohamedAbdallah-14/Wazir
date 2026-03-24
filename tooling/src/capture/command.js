@@ -16,11 +16,15 @@ import {
   writeCaptureOutput,
   writeStatus,
   writeSummary,
+  readScopeStack,
+  pushScope,
+  popScope,
 } from './store.js';
 import { readRunConfig, getPhaseLoopCap } from './run-config.js';
 import { ensureRun } from '../pipeline/ensure.js';
 import { createPhaseFiles, createRepoLocalSymlink } from '../pipeline/phase-files.js';
 import { validatePhaseTransition, updatePhaseHeaders } from '../pipeline/transition.js';
+import { findActivePhase, extractCurrentStep } from '../hooks/phase-injector.js';
 import { readUsage, generateReport, initUsage, recordCaptureSavings, recordPhaseUsage } from './usage.js';
 import { evaluateLoopCapGuard } from '../guards/loop-cap-guard.js';
 import { evaluatePhasePrerequisiteGuard } from '../guards/phase-prerequisite-guard.js';
@@ -76,6 +80,8 @@ function resolveCaptureContext(parsed, context = {}) {
       'command',
       'exit-code',
       'task-id',
+      'scope',
+      'skill',
     ],
   });
   const stateRoot = resolveStateRoot(projectRoot, manifest, {
@@ -551,10 +557,14 @@ export function runCaptureCommand(parsed, context = {}) {
         return handleLoopCheck(parsed, context);
       case 'ensure':
         return handleEnsure(parsed, context);
+      case 'skill-phase':
+        return handleSkillPhase(parsed, context);
+      case 'skill-exit':
+        return handleSkillExit(parsed, context);
       default:
         return {
           exitCode: 1,
-          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check|ensure> ...\n',
+          stderr: 'Usage: wazir capture <init|event|route|output|summary|usage|loop-check|ensure|skill-phase|skill-exit> ...\n',
         };
     }
   } catch (error) {
@@ -566,11 +576,223 @@ export function runCaptureCommand(parsed, context = {}) {
 }
 
 function handleEnsure(parsed, context = {}) {
+  // Quick check for --scope skill without full parsing (avoids unknown option errors)
+  const scopeIdx = (parsed.args || []).indexOf('--scope');
+  if (scopeIdx !== -1 && parsed.args[scopeIdx + 1] === 'skill') {
+    const { projectRoot, options } = resolveProjectContext(parsed, context);
+    return handleEnsureSkill(projectRoot, options);
+  }
+
   const { projectRoot, stateRoot, options } = resolveCaptureContext(parsed, context);
   const result = ensureRun(projectRoot, stateRoot);
   const msg = result.created ? `Created new run: ${result.runId}` : `Resumed existing run: ${result.runId}`;
   if (options.json) {
     return { exitCode: 0, stdout: JSON.stringify({ ...result, message: msg }, null, 2) + '\n' };
+  }
+  return { exitCode: 0, stdout: msg + '\n' };
+}
+
+function resolveProjectContext(parsed, context = {}) {
+  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
+  const { options } = parseCommandOptions(parsed.args, {
+    boolean: ['json', 'complete'],
+    string: ['run', 'phase', 'scope', 'skill'],
+  });
+  return { projectRoot, options };
+}
+
+function handleEnsureSkill(projectRoot, options) {
+  if (!options.skill) {
+    return { exitCode: 1, stderr: 'Usage: wazir capture ensure --scope skill --skill <name> [--run <id>]\n' };
+  }
+
+  const skillName = options.skill;
+  const runId = options.run || readLatestRunIdFromProject(projectRoot);
+  if (!runId) {
+    return { exitCode: 1, stderr: 'No active run found. Run `wazir capture ensure` first.\n' };
+  }
+
+  const runDir = path.join(projectRoot, '.wazir', 'runs', runId);
+  if (!fs.existsSync(runDir)) {
+    return { exitCode: 1, stderr: `Run directory not found: ${runDir}\n` };
+  }
+
+  // Check for skill phase templates
+  const templatesDir = path.join(projectRoot, 'templates', 'phases', 'skills', skillName);
+  if (!fs.existsSync(templatesDir)) {
+    return { exitCode: 1, stderr: `No skill phase templates found at: templates/phases/skills/${skillName}/\n` };
+  }
+
+  // Generate invocation ID
+  const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+  const prefix = skillName.replace(/[^a-z0-9]/g, '').slice(0, 8);
+  const invocationId = `${prefix}-${ts}`;
+
+  // Create skill invocation directory with phases
+  const skillDir = path.join(runDir, 'skills', invocationId);
+  const skillPhasesDir = path.join(skillDir, 'phases');
+  fs.mkdirSync(skillPhasesDir, { recursive: true });
+
+  // Render skill phase templates
+  const templateFiles = fs.readdirSync(templatesDir)
+    .filter(f => f.endsWith('.md'))
+    .sort();
+
+  for (let i = 0; i < templateFiles.length; i++) {
+    let content = fs.readFileSync(path.join(templatesDir, templateFiles[i]), 'utf8');
+
+    // First phase gets ACTIVE header, rest get NOT ACTIVE
+    if (i === 0) {
+      content = content.replace(/^## Phase: (\w+)/m, '## Phase: $1 — ACTIVE');
+    } else {
+      content = content.replace(/^## Phase: (\w+)/m, '## Phase: $1 — NOT ACTIVE');
+    }
+
+    fs.writeFileSync(path.join(skillPhasesDir, templateFiles[i]), content);
+  }
+
+  // Write skill scope metadata
+  fs.writeFileSync(path.join(skillDir, 'scope.yaml'), [
+    `skill: ${skillName}`,
+    `invocation_id: ${invocationId}`,
+    `created_at: ${new Date().toISOString()}`,
+    `status: active`,
+    '',
+  ].join('\n'));
+
+  // Push onto scope stack
+  pushScope(runDir, {
+    type: 'skill',
+    skill: skillName,
+    invocation_id: invocationId,
+    phases_dir: skillPhasesDir,
+  });
+
+  const msg = `Entered skill scope: ${skillName} (${invocationId})`;
+  if (options.json) {
+    return { exitCode: 0, stdout: JSON.stringify({ skill: skillName, invocation_id: invocationId, phases_dir: skillPhasesDir, message: msg }, null, 2) + '\n' };
+  }
+  return { exitCode: 0, stdout: msg + '\n' };
+}
+
+function readLatestRunIdFromProject(projectRoot) {
+  const latestPath = path.join(projectRoot, '.wazir', 'runs', 'latest');
+  try {
+    const stat = fs.lstatSync(latestPath);
+    if (stat.isSymbolicLink()) return path.basename(fs.readlinkSync(latestPath));
+    if (stat.isFile()) return fs.readFileSync(latestPath, 'utf8').trim() || null;
+  } catch { return null; }
+  return null;
+}
+
+function handleSkillPhase(parsed, context = {}) {
+  const { projectRoot, options } = resolveProjectContext(parsed, context);
+
+  requireOption(options, 'phase', 'Usage: wazir capture skill-phase --phase <name> [--run <id>]');
+
+  const runId = options.run || readLatestRunIdFromProject(projectRoot);
+  if (!runId) return { exitCode: 1, stderr: 'No active run found.\n' };
+
+  const runDir = path.join(projectRoot, '.wazir', 'runs', runId);
+  const stack = readScopeStack(runDir);
+  const skillScope = stack.filter(e => e.type === 'skill').pop();
+
+  if (!skillScope) {
+    return { exitCode: 1, stderr: 'No active skill scope. Enter one with `wazir capture ensure --scope skill --skill <name>` first.\n' };
+  }
+
+  const skillPhasesDir = skillScope.phases_dir;
+
+  // Find current active skill phase
+  const active = findActivePhase(skillPhasesDir);
+  if (!active) {
+    return { exitCode: 1, stderr: 'No active skill phase found.\n' };
+  }
+
+  // Validate all items checked before transition
+  const step = extractCurrentStep(active.content);
+  if (step) {
+    return {
+      exitCode: 1,
+      stderr: `Cannot transition. Skill phase ${active.phase} has ${step.totalSteps - step.stepNum + 1} unchecked items. Current: ${step.current}\n`,
+    };
+  }
+
+  // Find the target phase file
+  const phaseFiles = fs.readdirSync(skillPhasesDir).filter(f => f.endsWith('.md')).sort();
+  const targetFile = phaseFiles.find(f => {
+    const content = fs.readFileSync(path.join(skillPhasesDir, f), 'utf8');
+    const match = content.match(/^## Phase:\s*(\w+)/m);
+    return match && match[1] === options.phase;
+  });
+
+  if (!targetFile) {
+    return { exitCode: 1, stderr: `Target skill phase '${options.phase}' not found in templates.\n` };
+  }
+
+  // Update headers: current → COMPLETED, target → ACTIVE
+  // Find current active file
+  const currentFile = phaseFiles.find(f => {
+    const content = fs.readFileSync(path.join(skillPhasesDir, f), 'utf8');
+    return content.includes('— ACTIVE');
+  });
+
+  if (currentFile) {
+    const currentPath = path.join(skillPhasesDir, currentFile);
+    let content = fs.readFileSync(currentPath, 'utf8');
+    content = content.replace('— ACTIVE', '— COMPLETED');
+    fs.writeFileSync(currentPath, content);
+  }
+
+  const targetPath = path.join(skillPhasesDir, targetFile);
+  let targetContent = fs.readFileSync(targetPath, 'utf8');
+  targetContent = targetContent.replace('— NOT ACTIVE', '— ACTIVE');
+  fs.writeFileSync(targetPath, targetContent);
+
+  const msg = `Skill phase transition: ${active.phase} → ${options.phase}`;
+  if (options.json) {
+    return { exitCode: 0, stdout: JSON.stringify({ from: active.phase, to: options.phase, message: msg }, null, 2) + '\n' };
+  }
+  return { exitCode: 0, stdout: msg + '\n' };
+}
+
+function handleSkillExit(parsed, context = {}) {
+  const { projectRoot, options } = resolveProjectContext(parsed, context);
+
+  const runId = options.run || readLatestRunIdFromProject(projectRoot);
+  if (!runId) return { exitCode: 1, stderr: 'No active run found.\n' };
+
+  const runDir = path.join(projectRoot, '.wazir', 'runs', runId);
+  const stack = readScopeStack(runDir);
+  const skillScope = stack.filter(e => e.type === 'skill').pop();
+
+  if (!skillScope) {
+    return { exitCode: 1, stderr: 'No active skill scope to exit.\n' };
+  }
+
+  const skillPhasesDir = skillScope.phases_dir;
+
+  // Verify ALL skill phases are complete (no unchecked items in any phase)
+  const phaseFiles = fs.readdirSync(skillPhasesDir).filter(f => f.endsWith('.md')).sort();
+  for (const f of phaseFiles) {
+    const content = fs.readFileSync(path.join(skillPhasesDir, f), 'utf8');
+    const step = extractCurrentStep(content);
+    if (step) {
+      const match = content.match(/^## Phase:\s*(\w+)/m);
+      const phaseName = match ? match[1] : f;
+      return {
+        exitCode: 1,
+        stderr: `Cannot exit skill. Phase ${phaseName} has ${step.totalSteps - step.stepNum + 1} unchecked items.\n`,
+      };
+    }
+  }
+
+  // Pop scope stack
+  popScope(runDir);
+
+  const msg = `Exited skill scope: ${skillScope.skill} (${skillScope.invocation_id})`;
+  if (options.json) {
+    return { exitCode: 0, stdout: JSON.stringify({ skill: skillScope.skill, invocation_id: skillScope.invocation_id, message: msg }, null, 2) + '\n' };
   }
   return { exitCode: 0, stdout: msg + '\n' };
 }
