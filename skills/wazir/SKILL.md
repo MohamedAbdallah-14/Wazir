@@ -69,6 +69,20 @@ wazir capture ensure
 
 This creates or resumes a pipeline run. Until this runs, you CANNOT write code — the bootstrap gate will block all Write/Edit/Bash calls. Please try 100% compliance with Wazir pipeline and skill usage.
 
+## Sync Task List From Phase Checklist
+
+**Immediately after `wazir capture ensure`**, read the active phase checklist and populate your task list to match it exactly. This ensures your task list IS the pipeline — not a competing instruction set.
+
+1. Read the active phase file from `.wazir/runs/latest/phases/` (the file whose header contains `— ACTIVE`)
+2. Parse every unchecked item (lines matching `- [ ]`)
+3. For each unchecked item, call `TaskCreate` with:
+   - **subject:** The checklist item text (strip the `- [ ]` prefix and any `<!-- ... -->` comments)
+   - **description:** "Pipeline checklist item from the active phase"
+4. Do NOT create tasks for already-checked items (`- [x]`)
+5. Do NOT create your own tasks outside the phase checklist — the checklist is the complete task list
+
+**Why:** The agent naturally follows its own task list. If that list matches the pipeline checklist, pipeline compliance happens automatically. If you create a separate task list, it competes with the pipeline and compliance drops.
+
 # Phase 1: Init
 
 **Before starting:** Check `.wazir/runs/latest/phases/init.md` for your current checklist. Complete all items before proceeding to Phase 2.
