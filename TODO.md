@@ -44,6 +44,9 @@ Options to fix:
 - [ ] Restructure remaining skills: shorter, explicit numbered constraints, no psychology bloat
 - [ ] Measure compliance after prompt changes
 
+## NEXT: Extend enforcement to all structured skills
+Agents skip 80% of skill instructions (self-audit ran Phase 1 only, skipped Phase 2-5). Same failure mode as pre-enforcement /wazir. The bootstrap gate + phase injection + phase-aware blocking only enforce /wazir runs. Need to extend enforcement pattern to any skill with structured phases (self-audit, clarifier, executor, reviewer).
+
 ## Ideas (not yet prioritized)
 - [ ] Build compliance self-audit skill — manual post-session skill for brutal honest self-evaluation, possibly with external reviewer tool
 - [ ] UI for pipeline progress (pixel-agents inspiration, claude-replay) — deferred until enforcement works
