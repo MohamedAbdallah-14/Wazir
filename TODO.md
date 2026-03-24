@@ -21,7 +21,8 @@
 Agents skip 80% of skill instructions. Self-audit ran Phase 1 only, skipped Phase 2-5. The enforcement hooks only work for /wazir pipeline phases. Every skill with structured phases needs the same enforcement pattern. Design in progress with Codex.
 
 ## Next
-- [ ] Implement skill-level enforcement (pending Codex design)
+- [ ] Implement skill-level enforcement — scope stack design at docs/plans/2026-03-24-skill-level-enforcement-design.md
+- [ ] Make sub-skills pipeline-aware — clarifier/executor/reviewer should call `capture ensure` and track phases when invoked standalone (not just via /wazir). Currently they have zero pipeline awareness — no run creation, no phase tracking, no enforcement.
 - [ ] DeCRIM-style prompt restructuring — decomposed constraints, not prose paragraphs
 - [ ] Measure compliance after prompt changes
 - [ ] Build compliance self-audit that actually enforces its own phases
