@@ -9,7 +9,7 @@
 
 ## Results
 
-```
+```text
 Test Failures
 
 Bare-Metal    ████████████████████████████████████░  36 failures

@@ -45,4 +45,4 @@ Wazir produced a more disciplined engineering process:
 - Fewer test failures (83 vs 100)
 - Engineering artifacts preserved for audit
 
-Bare-metal was faster and cheaper but produced lower quality output with no process trail.
+Bare-metal was faster and cheaper but produced lower-quality output with no process trail.

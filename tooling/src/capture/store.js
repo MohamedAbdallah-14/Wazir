@@ -180,6 +180,7 @@ export function readScopeStack(runDir) {
  * @param {Array<Object>} stack - Stack array to write
  */
 export function writeScopeStack(runDir, stack) {
+  fs.mkdirSync(runDir, { recursive: true });
   const stackPath = path.join(runDir, 'scope-stack.yaml');
   fs.writeFileSync(stackPath, stringifyYaml({ stack }));
 }

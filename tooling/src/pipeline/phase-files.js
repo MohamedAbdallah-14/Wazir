@@ -53,8 +53,8 @@ export function createPhaseFiles(runDir, projectRoot) {
 
     // Strip mustache markers — keep all content, assume all workflows enabled.
     // wazir pipeline init will re-render with run-config later.
-    content = content.replace(/\{\{#workflow\.\w+\}\}\n?/g, '');
-    content = content.replace(/\{\{\/workflow\.\w+\}\}\n?/g, '');
+    content = content.replace(/\{\{#workflow\.[\w-]+\}\}\n?/g, '');
+    content = content.replace(/\{\{\/workflow\.[\w-]+\}\}\n?/g, '');
 
     // Set header based on active state
     if (phase === 'init') {

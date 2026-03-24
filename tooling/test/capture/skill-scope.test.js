@@ -1,4 +1,4 @@
-import { describe, test, beforeEach, afterEach } from 'node:test';
+import { describe, test, before, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,6 +8,13 @@ let runCaptureCommand, readScopeStack;
 
 describe('capture: skill scope commands', () => {
   let tmpDir, projectRoot;
+
+  before(async () => {
+    const cmdMod = await import('../../src/capture/command.js');
+    const storeMod = await import('../../src/capture/store.js');
+    runCaptureCommand = cmdMod.runCaptureCommand;
+    readScopeStack = storeMod.readScopeStack;
+  });
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-skill-scope-'));
@@ -49,17 +56,7 @@ describe('capture: skill scope commands', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test('setup: import', async () => {
-    const cmdMod = await import('../../src/capture/command.js');
-    const storeMod = await import('../../src/capture/store.js');
-    runCaptureCommand = cmdMod.runCaptureCommand;
-    readScopeStack = storeMod.readScopeStack;
-    assert.ok(runCaptureCommand);
-    assert.ok(readScopeStack);
-  });
-
   test('ensure --scope skill creates skill invocation and pushes scope', () => {
-    if (!runCaptureCommand) return;
     const result = runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', 'self-audit', '--run', 'run-001'] },
       { cwd: projectRoot },
@@ -87,7 +84,7 @@ describe('capture: skill scope commands', () => {
   });
 
   test('skill-phase transitions between skill phases', () => {
-    if (!runCaptureCommand) return;
+
     // First enter skill scope
     runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', 'self-audit', '--run', 'run-001'] },
@@ -121,7 +118,7 @@ describe('capture: skill scope commands', () => {
   });
 
   test('skill-phase rejects transition with unchecked items', () => {
-    if (!runCaptureCommand) return;
+
     runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', 'self-audit', '--run', 'run-001'] },
       { cwd: projectRoot },
@@ -136,7 +133,7 @@ describe('capture: skill scope commands', () => {
   });
 
   test('skill-exit pops scope stack', () => {
-    if (!runCaptureCommand) return;
+
     runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', 'self-audit', '--run', 'run-001'] },
       { cwd: projectRoot },
@@ -168,7 +165,7 @@ describe('capture: skill scope commands', () => {
   });
 
   test('ensure --scope skill without --skill exits 1 with usage (I-3)', () => {
-    if (!runCaptureCommand) return;
+
     const result = runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--run', 'run-001'] },
       { cwd: projectRoot },
@@ -178,7 +175,7 @@ describe('capture: skill scope commands', () => {
   });
 
   test('ensure --scope skill rejects invalid skill name (I-1)', () => {
-    if (!runCaptureCommand) return;
+
     const result = runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', '../../etc', '--run', 'run-001'] },
       { cwd: projectRoot },
@@ -188,7 +185,7 @@ describe('capture: skill scope commands', () => {
   });
 
   test('skill-exit rejects when phases are incomplete', () => {
-    if (!runCaptureCommand) return;
+
     runCaptureCommand(
       { subcommand: 'ensure', args: ['--scope', 'skill', '--skill', 'self-audit', '--run', 'run-001'] },
       { cwd: projectRoot },

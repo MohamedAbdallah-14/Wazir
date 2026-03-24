@@ -43,6 +43,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Per-phase savings display added to clarifier and executor phase boundaries
 
 ### Fixed
+- Hyphenated workflow markers (e.g., `spec-challenge`) now stripped from phase file templates
+- Skill invocation IDs include random suffix to prevent collisions
+- RunId validated to prevent path traversal in capture commands
+- Skill phase transitions reject when target cannot be activated
+- Scope stack write ensures directory exists
+- Scope stack entries validated before normalization
+- Stop gate fails closed when skill phase file is missing
+- Test YAML path values use JSON.stringify for cross-platform safety
 - SQLite ExperimentalWarning suppressed via lazy dynamic imports in CLI entrypoint
 - `--complete` flag properly parsed in `wazir capture summary`
 - `validateRunCompletion` filters by `workflow_policy` (enabled workflows only), not full manifest list

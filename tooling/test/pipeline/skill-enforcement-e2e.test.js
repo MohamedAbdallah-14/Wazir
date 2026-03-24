@@ -11,7 +11,7 @@
  * 7. Skill exit succeeds when all phases complete
  * 8. Stop gate blocks during skill scope
  */
-import { describe, test, beforeEach, afterEach } from 'node:test';
+import { describe, test, before, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,6 +21,17 @@ let runCaptureCommand, evaluateBootstrapGate, evaluateStopGate, readScopeStack;
 
 describe('skill enforcement E2E: self-audit lifecycle', () => {
   let tmpDir, projectRoot;
+
+  before(async () => {
+    const cmdMod = await import('../../src/capture/command.js');
+    const bootMod = await import('../../src/hooks/bootstrap-gate.js');
+    const stopMod = await import('../../src/hooks/stop-pipeline-gate.js');
+    const storeMod = await import('../../src/capture/store.js');
+    runCaptureCommand = cmdMod.runCaptureCommand;
+    evaluateBootstrapGate = bootMod.evaluateBootstrapGate;
+    evaluateStopGate = stopMod.evaluateStopGate;
+    readScopeStack = storeMod.readScopeStack;
+  });
 
   beforeEach(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wazir-e2e-'));
@@ -54,21 +65,7 @@ describe('skill enforcement E2E: self-audit lifecycle', () => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  test('setup: import', async () => {
-    const cmdMod = await import('../../src/capture/command.js');
-    const bootMod = await import('../../src/hooks/bootstrap-gate.js');
-    const stopMod = await import('../../src/hooks/stop-pipeline-gate.js');
-    const storeMod = await import('../../src/capture/store.js');
-    runCaptureCommand = cmdMod.runCaptureCommand;
-    evaluateBootstrapGate = bootMod.evaluateBootstrapGate;
-    evaluateStopGate = stopMod.evaluateStopGate;
-    readScopeStack = storeMod.readScopeStack;
-    assert.ok(runCaptureCommand);
-    assert.ok(evaluateBootstrapGate);
-  });
-
   test('full self-audit lifecycle with enforcement', () => {
-    if (!runCaptureCommand) return;
     const runDir = path.join(projectRoot, '.wazir', 'runs', 'run-e2e');
 
     // 1. Enter skill scope
