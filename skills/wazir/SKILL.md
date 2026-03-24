@@ -75,11 +75,12 @@ This creates or resumes a pipeline run. Until this runs, you CANNOT write code �
 
 1. Read the active phase file from `.wazir/runs/latest/phases/` (the file whose header contains `— ACTIVE`)
 2. Parse every unchecked item (lines matching `- [ ]`)
-3. For each unchecked item, call `TaskCreate` with:
+3. **Before creating tasks, call TaskList.** If tasks already exist that match the phase checklist items, do not recreate them. If tasks exist that don't match the checklist (stale from a previous session or early agent behavior), they are stale — do not follow them. Create fresh tasks from the current phase checklist instead.
+4. For each unchecked item not already in the task list, call `TaskCreate` with:
    - **subject:** The checklist item text (strip the `- [ ]` prefix and any `<!-- ... -->` comments)
    - **description:** "Pipeline checklist item from the active phase"
-4. Do NOT create tasks for already-checked items (`- [x]`)
-5. Do NOT create your own tasks outside the phase checklist — the checklist is the complete task list
+5. Do NOT create tasks for already-checked items (`- [x]`)
+6. Do NOT create your own tasks outside the phase checklist — the checklist is the complete task list
 
 **Why:** The agent naturally follows its own task list. If that list matches the pipeline checklist, pipeline compliance happens automatically. If you create a separate task list, it competes with the pipeline and compliance drops.
 
@@ -394,6 +395,7 @@ Phase 4: Final Review
   ├── learn
   └── prepare_next
 ```
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 **Event capture uses both levels.** When emitting phase events, include `--parent-phase`:
 ```bash
@@ -401,7 +403,6 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 ```
 
 **Progress markers between workflows:** After each workflow completes, output:
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
 
 **`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"

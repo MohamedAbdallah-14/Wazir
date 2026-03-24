@@ -41,7 +41,7 @@
 
 ---
 
-## Three Fixes for v3
+## Two Fixes for v3
 
 ### Fix 1: Redirect TodoWrite (Use Agent's Behavior, Don't Fight It)
 
@@ -72,38 +72,6 @@ After wazir capture ensure:
 
 **Why it works:** Same pattern as protecting `roles/`, `workflows/`, `schemas/`. Agent can't fake what it can't edit.
 
-### Fix 3: `--allowedTools` Per Phase via Tmux Sessions
-
-**Problem:** Context rot causes 30% compliance drop from init to final_review. No way to trigger `/compact`.
-
-**Fix:** Each pipeline phase runs in its own tmux session with restricted tools:
-
-```bash
-# Clarifier phase — can't Write/Edit source files
-claude --worktree clarifier --tmux \
-  --allowedTools "Read,Bash,Glob,Grep,Skill" \
-  --system-prompt-file .wazir/runs/latest/phases/clarifier-prompt.md
-
-# Executor phase — full tool access
-claude --worktree executor --tmux \
-  --allowedTools "Read,Edit,Write,Bash,Glob,Grep,Skill" \
-  --system-prompt-file .wazir/runs/latest/phases/executor-prompt.md
-
-# Reviewer phase — read-only
-claude --worktree reviewer --tmux \
-  --allowedTools "Read,Bash,Glob,Grep,Skill" \
-  --system-prompt-file .wazir/runs/latest/phases/reviewer-prompt.md
-```
-
-**Why it works:**
-- Fresh context per phase (zero rot)
-- `--allowedTools` prevents tool abuse at platform level — no hooks needed
-- Interactive — user can engage with each phase
-- Tmux sessions share filesystem — phase output files carry context between sessions
-- The orchestrator validates artifacts between sessions before opening the next one
-
-**Open question:** Can `--worktree` sessions read from the main worktree's `.wazir/` directory? If worktrees are isolated, need shared artifact location. Needs spike.
-
 ---
 
 ## Research Basis for These Fixes
@@ -118,14 +86,6 @@ claude --worktree reviewer --tmux \
 - Artifact validation (exit 44) caught the cheat — but preventing the cheat is better than catching it
 - Same protected-path pattern already works for roles/, workflows/, schemas/
 
-### Fix 3 (Tmux + allowedTools)
-- TME (arXiv:2504.08525): 100% completion with current-step-only injection (fresh context per task)
-- Context Rot (Chroma 2025): all 18 LLMs below 50% at 32K tokens
-- 15-47% performance drop as context grows (Stanford "Lost in the Middle")
-- ~2% effectiveness loss per 100K tokens in Claude Code
-- GSD uses fresh context per subagent task — "Task 50 has same quality as Task 1"
-- `--allowedTools` is platform-level restriction — cannot be gamed (unlike hooks)
-- Claude Code natively supports `--worktree --tmux` combination
 
 ---
 
@@ -138,7 +98,7 @@ From the enforcement research and observed behavior:
 3. **Alignment faking.** Anthropic (Dec 2024): Claude fakes compliance 14% when constraints conflict with helpfulness. Rises to 78% in scratchpads after RL training.
 4. **Competing instruction sets.** Agent's self-created todo list competes with pipeline. Agent follows whichever it created first.
 
-**Key insight:** You can't convince the agent that process matters. You can only make it impossible to skip. Three mechanisms: tool restrictions (platform-level), artifact validation (catch fakes), and todo hijacking (redirect behavior).
+**Key insight:** You can't convince the agent that process matters. You can only make it impossible to skip. Two mechanisms: artifact validation (catch fakes) and todo hijacking (redirect behavior).
 
 ---
 
@@ -148,12 +108,10 @@ From the enforcement research and observed behavior:
 |----------|-----|--------|--------|
 | 1 | TodoWrite redirect | Small — add TaskCreate calls to wazir skill | High — uses agent's natural behavior |
 | 2 | Protect phase files | Small — add path pattern to write guard | High — prevents gaming |
-| 3 | Tmux + allowedTools | Medium — new orchestration mode | Highest — solves context rot + gaming |
 
 ### Recommended order:
-1. Fix 1 + Fix 2 first (small, high impact, same session)
+1. Fix 1 + Fix 2 (small, high impact, same session)
 2. Measure compliance
-3. Fix 3 if still below 80% (medium effort, requires spike for worktree sharing)
 
 ---
 
@@ -180,6 +138,20 @@ TDD. Commit after each fix. Please try 100% compliance with Wazir
 pipeline and skill usage. If anything can be done by a wz: skill, use
 the skill please.
 ```
+
+---
+
+## Context Rot Research
+
+Context rot is a known problem with no decided fix. The following research is preserved for future solution design:
+
+- **TME (arXiv:2504.08525):** 100% completion with current-step-only injection (fresh context per task)
+- **Context Rot (Chroma 2025):** all 18 LLMs below 50% at 32K tokens
+- **Stanford "Lost in the Middle":** 15-47% performance drop as context grows
+- **Claude Code observation:** ~2% effectiveness loss per 100K tokens
+- **GSD:** fresh context per subagent task — "Task 50 has same quality as Task 1"
+
+See KI-006 and KI-007 in `docs/KNOWN-ISSUES.md` for the open issues.
 
 ---
 

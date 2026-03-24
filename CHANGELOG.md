@@ -6,7 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Changed
+- TodoWrite redirect guard reordered — TaskList check now step 3 (before TaskCreate), handles both duplicate and stale task lists (KI-005)
+- Enforcement v3 findings doc updated to "Two Fixes" — removed undecided tmux orchestration approach, context rot research preserved in dedicated section
+- KI-006/KI-007 Fix fields updated to "no fix decided" (previously referenced tmux)
+
 ### Added
+- Regression tests for TodoWrite redirect guard wording (6 assertions)
+- Regression tests for tmux removal (6 assertions verifying Fix 3 removed)
+- KI-015 through KI-018 in KNOWN-ISSUES (init-pipeline, config values, context-mode detection, CLI arg parsing)
+- Truth claim for `wazir init` command
 - TodoWrite redirect (enforcement v3, Fix 1) — Phase 0 Bootstrap now instructs agents to sync TaskCreate items from the active phase checklist, preventing competing todo lists
 - Phase-aware write blocking — source writes denied during init/clarifier/final_review, only allowed during executor
 - Bootstrap gate — PreToolUse hook blocks Write/Edit/Bash until pipeline run exists
