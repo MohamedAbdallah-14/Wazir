@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 
 function ensureDirectory(dirPath) {
   fs.mkdirSync(dirPath, { recursive: true });
@@ -153,4 +154,56 @@ export function writeSummary(runPaths, content) {
   ensureRunDirectories(runPaths);
   fs.writeFileSync(runPaths.summaryPath, content);
   return runPaths.summaryPath;
+}
+
+// --- Scope stack operations ---
+
+/**
+ * Read the scope stack from a run directory.
+ * @param {string} runDir - Path to the run directory
+ * @returns {Array<Object>} Stack array (empty if no file)
+ */
+export function readScopeStack(runDir) {
+  const stackPath = path.join(runDir, 'scope-stack.yaml');
+  try {
+    const raw = fs.readFileSync(stackPath, 'utf8');
+    const parsed = parseYaml(raw);
+    return Array.isArray(parsed?.stack) ? parsed.stack : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Write the scope stack to a run directory.
+ * @param {string} runDir - Path to the run directory
+ * @param {Array<Object>} stack - Stack array to write
+ */
+export function writeScopeStack(runDir, stack) {
+  const stackPath = path.join(runDir, 'scope-stack.yaml');
+  fs.writeFileSync(stackPath, stringifyYaml({ stack }));
+}
+
+/**
+ * Push a scope entry onto the stack.
+ * @param {string} runDir - Path to the run directory
+ * @param {Object} entry - Scope entry to push
+ */
+export function pushScope(runDir, entry) {
+  const stack = readScopeStack(runDir);
+  stack.push(entry);
+  writeScopeStack(runDir, stack);
+}
+
+/**
+ * Pop the top scope entry from the stack.
+ * @param {string} runDir - Path to the run directory
+ * @returns {Object|null} Popped entry, or null if stack was empty
+ */
+export function popScope(runDir) {
+  const stack = readScopeStack(runDir);
+  if (stack.length === 0) return null;
+  const popped = stack.pop();
+  writeScopeStack(runDir, stack);
+  return popped;
 }
