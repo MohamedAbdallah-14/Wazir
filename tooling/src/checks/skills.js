@@ -37,6 +37,18 @@ function parseFrontmatter(content) {
   return fields;
 }
 
+function hasEnforcementPhased(content) {
+  // Check if frontmatter contains enforcement.phased: true
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!fmMatch) return false;
+  const fm = fmMatch[1];
+  // Look for enforcement: block followed by phased: true
+  const enfIdx = fm.indexOf('enforcement:');
+  if (enfIdx === -1) return false;
+  const afterEnf = fm.slice(enfIdx);
+  return /phased:\s*true/m.test(afterEnf);
+}
+
 function listSkillDirs(skillsDir) {
   if (!fs.existsSync(skillsDir)) return [];
 
@@ -85,6 +97,24 @@ export function validateSkillsAtProjectRoot(projectRoot) {
         `${dirName}: skill name "${skillName}" conflicts with superpowers:${baseName} — ` +
         'add wz: prefix to resolve the conflict',
       );
+    }
+
+    // Check: enforcement.phased requires matching templates
+    if (hasEnforcementPhased(content)) {
+      const baseName2 = dirName;
+      const templatesPath = path.join(projectRoot, 'templates', 'phases', 'skills', baseName2);
+      if (!fs.existsSync(templatesPath)) {
+        errors.push(
+          `${dirName}: enforcement.phased is true but no templates found at templates/phases/skills/${baseName2}/`,
+        );
+      } else {
+        const tplFiles = fs.readdirSync(templatesPath).filter(f => f.endsWith('.md'));
+        if (tplFiles.length === 0) {
+          errors.push(
+            `${dirName}: enforcement.phased is true but templates directory is empty`,
+          );
+        }
+      }
     }
 
     // Check: CONTEXT.md files are stale — augment tier is not implementable
