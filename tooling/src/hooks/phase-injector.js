@@ -10,6 +10,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { parse as parseYaml } from 'yaml';
 
 const ACTIVE_HEADER = /^## Phase:\s*(\w+)\s*—\s*ACTIVE$/m;
 const CHECKED_ITEM = /^- \[x\]/i;
@@ -120,4 +121,60 @@ export function formatInjection(phase, currentStep, nextStep, stepNum, totalStep
     msg += '\nNEXT: (last step)';
   }
   return JSON.stringify({ systemMessage: msg });
+}
+
+/**
+ * Resolve the active enforcement scope from the scope stack.
+ *
+ * Reads scope-stack.yaml from the run directory. Returns the top of stack
+ * (active enforcement target). Falls back to pipeline phases/ when no stack exists.
+ *
+ * @param {string} runDir - Path to the run directory (e.g., .wazir/runs/run-001)
+ * @returns {{ type: string, phasesDir: string, skill: string|null, invocationId: string|null, stack: Array }}
+ */
+export function resolveActiveScope(runDir) {
+  const stackPath = path.join(runDir, 'scope-stack.yaml');
+  const pipelinePhasesDir = path.join(runDir, 'phases');
+
+  // Default pipeline-only scope
+  const pipelineEntry = { type: 'pipeline', phasesDir: pipelinePhasesDir };
+
+  let stack;
+  try {
+    const raw = fs.readFileSync(stackPath, 'utf8');
+    const parsed = parseYaml(raw);
+    stack = parsed?.stack;
+  } catch {
+    // No scope-stack.yaml — pipeline only
+    stack = null;
+  }
+
+  if (!Array.isArray(stack) || stack.length === 0) {
+    return {
+      type: 'pipeline',
+      phasesDir: pipelinePhasesDir,
+      skill: null,
+      invocationId: null,
+      stack: [pipelineEntry],
+    };
+  }
+
+  // Normalize stack entries
+  const normalizedStack = stack.map(entry => ({
+    type: entry.type,
+    phasesDir: entry.phases_dir,
+    skill: entry.skill ?? null,
+    invocationId: entry.invocation_id ?? null,
+  }));
+
+  // Top of stack = active scope
+  const top = normalizedStack[normalizedStack.length - 1];
+
+  return {
+    type: top.type,
+    phasesDir: top.phasesDir,
+    skill: top.skill,
+    invocationId: top.invocationId,
+    stack: normalizedStack,
+  };
 }
