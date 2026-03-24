@@ -28,3 +28,12 @@ social/
 ideations/
 
 .env
+
+# Benchmark harness (keep results only)
+benchmark/run-benchmark.sh
+benchmark/benchmark-suite.md
+benchmark/challenges/
+benchmark/compare.js
+benchmark/results/bare-metal/
+benchmark/results/wazir/
+benchmark/results/*.log

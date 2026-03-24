@@ -1,6 +1,9 @@
 ---
-name: self-audit
+name: wz:self-audit
 description: Run a self-audit loop in an isolated git worktree — validates, audits, fixes, verifies, and merges back only on green. Safe self-improvement that cannot break the main working tree.
+enforcement:
+  phased: true
+  profile: default
 ---
 <!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
@@ -90,6 +93,33 @@ Manual-required findings that cannot be auto-fixed are escalated:
    - Create a task spec in `.wazir/runs/latest/tasks/` describing the fix
    - Flag in the audit report as **RECURRING — needs dedicated task**
 3. **Critical findings:** Immediately logged. If 2+ critical findings in a single loop, abort the entire audit run.
+
+## Enforcement
+
+This skill uses phased enforcement. Before starting any work, enter the skill scope:
+
+```bash
+wazir capture ensure --scope skill --skill self-audit
+```
+
+This creates a skill invocation with 5 enforced phases. Each phase transition requires completing all checklist items:
+
+```bash
+# After completing validate phase:
+wazir capture skill-phase --phase deep_audit
+
+# After completing deep_audit phase:
+wazir capture skill-phase --phase fix
+
+# After completing fix phase:
+wazir capture skill-phase --phase verify
+
+# After completing verify phase:
+wazir capture skill-phase --phase report
+
+# After completing report phase — exit skill scope:
+wazir capture skill-exit
+```
 
 ## Trigger
 

@@ -14,7 +14,7 @@
  */
 
 import fs from 'node:fs';
-import { findActivePhase, extractCurrentStep } from './phase-injector.js';
+import { findActivePhase, extractCurrentStep, resolveActiveScope } from './phase-injector.js';
 
 const COMPLETION_SIGNALS = [
   'task complete',
@@ -61,6 +61,34 @@ function writeBlockCount(phasesDir, currentPhase, count) {
 }
 
 /**
+ * Auto-repair multiple ACTIVE phases by picking the latest in phase order.
+ * Returns the latest active phase object, or null if repair fails.
+ *
+ * @param {string} phasesDir
+ * @param {string[]} phaseOrder
+ * @returns {{ phase: string, content: string } | null}
+ */
+function autoRepairMultipleActive(phasesDir, phaseOrder) {
+  const files = fs.readdirSync(phasesDir).filter(f => f.endsWith('.md') && !f.includes('.log.'));
+  const activePhases = [];
+  for (const file of files) {
+    const content = fs.readFileSync(`${phasesDir}/${file}`, 'utf8');
+    const match = content.match(/^## Phase: (\w+) — ACTIVE/m);
+    if (match) {
+      activePhases.push({ phase: match[1], content });
+    }
+  }
+  if (activePhases.length === 0) return null;
+  // Pick the latest phase by order
+  activePhases.sort((a, b) => {
+    const ai = phaseOrder.indexOf(a.phase);
+    const bi = phaseOrder.indexOf(b.phase);
+    return (bi === -1 ? 999 : bi) - (ai === -1 ? 999 : ai);
+  });
+  return activePhases[0]; // latest in phase order
+}
+
+/**
  * Evaluate whether to block the agent from stopping.
  *
  * @param {string} runDir - Path to the run directory (containing phases/)
@@ -84,28 +112,45 @@ export function evaluateStopGate(runDir, agentMessage = '') {
   }
 
   // 2. Find active phase
-  const active = findActivePhase(phasesDir);
+  let active = findActivePhase(phasesDir);
   if (!active) {
-    // Phases dir exists but no ACTIVE header — fail-closed (malformed state)
+    // No ACTIVE phase found — approve to prevent deadlock (KI-003).
+    // Blocking here creates an infinite loop: agent can't stop, can't fix state.
     return {
-      decision: 'block',
-      reason: 'Phase files exist but no ACTIVE phase found — blocking (fail-closed).',
-      systemMessage: 'Pipeline state appears malformed. No ACTIVE phase found but phase files exist.',
+      decision: 'approve',
+      reason: 'No ACTIVE phase found — approving to prevent deadlock (KI-003).',
     };
   }
 
-  // 2b. Handle malformed state (multiple ACTIVE phases)
+  // 2b. Auto-repair malformed state (multiple ACTIVE phases) — pick latest by phase order
   if (active.malformed) {
-    return {
-      decision: 'block',
-      reason: active.reason,
-      systemMessage: `Pipeline state malformed: ${active.reason}`,
-    };
+    const PHASE_ORDER = ['init', 'clarifier', 'executor', 'final_review'];
+    const repaired = autoRepairMultipleActive(phasesDir, PHASE_ORDER);
+    if (!repaired) {
+      return {
+        decision: 'approve',
+        reason: 'Could not auto-repair malformed phase state — approving to prevent deadlock.',
+      };
+    }
+    active = repaired;
   }
 
-  // 3. Check for unchecked items
+  // 3. Check for unchecked items in pipeline phase
   const step = extractCurrentStep(active.content);
-  if (!step) {
+
+  // 3b. Check scope stack for skill-level unchecked items
+  const scope = resolveActiveScope(runDir);
+  let skillStep = null;
+  let skillPhase = null;
+  if (scope.type === 'skill') {
+    const skillActive = findActivePhase(scope.phasesDir);
+    if (skillActive) {
+      skillStep = extractCurrentStep(skillActive.content);
+      skillPhase = skillActive.phase;
+    }
+  }
+
+  if (!step && !skillStep) {
     writeBlockCount(phasesDir, active.phase, 0); // Reset counter on approve
     return { decision: 'approve', reason: 'All items checked — phase complete.' };
   }
@@ -131,6 +176,17 @@ export function evaluateStopGate(runDir, agentMessage = '') {
 
   // All conditions met — block
   writeBlockCount(phasesDir, active.phase, blockCount + 1);
+
+  // Prefer skill scope message if skill has unchecked items
+  if (skillStep) {
+    const skillUnchecked = skillStep.totalSteps - skillStep.stepNum + 1;
+    return {
+      decision: 'block',
+      reason: `Cannot stop. Skill ${scope.skill} phase ${skillPhase} has ${skillUnchecked} unchecked items. Current: ${skillStep.current}`,
+      systemMessage: `You have unchecked skill items in ${scope.skill} phase ${skillPhase}. Complete them before finishing.`,
+    };
+  }
+
   const uncheckedCount = step.totalSteps - step.stepNum + 1;
   return {
     decision: 'block',
