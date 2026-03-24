@@ -214,6 +214,12 @@
   subject: wazir validate skills
   verifier: command_registry
   required: true
+- id: command-pipeline-init
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir pipeline init
+  verifier: command_registry
+  required: true
 - id: generated-claude-package
   file: docs/reference/host-exports.md
   claim_type: generated_file

@@ -36,6 +36,8 @@ export const SUPPORTED_COMMAND_SUBJECTS = new Set([
   'wazir capture summary',
   'wazir capture usage',
   'wazir capture loop-check',
+  'wazir pipeline',
+  'wazir pipeline init',
   'wazir init',
   'wazir config',
   'wazir config set',
