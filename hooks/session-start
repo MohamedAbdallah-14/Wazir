@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { findActivePhase, extractCurrentStep } from '../tooling/src/hooks/phase-injector.js';
+import { findActivePhase, extractCurrentStep, resolveActiveScope } from '../tooling/src/hooks/phase-injector.js';
 
 const hooksDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = dirname(hooksDir);
@@ -125,6 +125,21 @@ function injectPipelineStatus() {
 
     let output = `<system-reminder>\n`;
     output += `PIPELINE STATUS: Phase ${active.phase} — ACTIVE (step ${step.stepNum} of ${step.totalSteps})\n`;
+
+    // Scope stack breadcrumb
+    const latestRunDir = join(projectRoot, '.wazir', 'runs', 'latest');
+    const scope = resolveActiveScope(latestRunDir);
+    if (scope.type === 'skill') {
+      const skillActive = findActivePhase(scope.phasesDir);
+      const skillStep = skillActive ? extractCurrentStep(skillActive.content) : null;
+      const skillPhaseName = skillActive?.phase || 'unknown';
+      const skillStepInfo = skillStep ? ` (step ${skillStep.stepNum} of ${skillStep.totalSteps})` : '';
+      output += `SKILL SCOPE: Pipeline: ${active.phase} > Skill: ${scope.skill} > Phase: ${skillPhaseName}${skillStepInfo}\n`;
+      if (skillStep) {
+        output += `SKILL CURRENT: ${skillStep.current}\n`;
+      }
+    }
+
     if (checkedCount > 0) {
       output += `COMPLETED: steps 1-${checkedCount}\n`;
     }

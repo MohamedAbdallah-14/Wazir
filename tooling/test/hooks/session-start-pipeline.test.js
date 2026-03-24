@@ -65,6 +65,27 @@ describe('session-start pipeline injection', () => {
     assert.ok(result.stdout.includes('COMPLETED:'), 'Should include COMPLETED summary');
   });
 
+  test('includes skill scope breadcrumb when skill is active', () => {
+    // Add skill scope to the run
+    const phasesDir = path.join(tmpRunDir, 'phases');
+    // Switch to executor phase (skill scopes are used during execution)
+    fs.writeFileSync(path.join(phasesDir, 'clarifier.md'), '## Phase: clarifier — COMPLETED\n- [x] done\n');
+    fs.writeFileSync(path.join(phasesDir, 'executor.md'), '## Phase: executor — ACTIVE\n- [ ] implement\n');
+
+    // Create skill scope
+    const skillPhasesDir = path.join(tmpRunDir, 'skills', 'sa-001', 'phases');
+    fs.mkdirSync(skillPhasesDir, { recursive: true });
+    fs.writeFileSync(path.join(skillPhasesDir, '01-validate.md'), '## Phase: validate — ACTIVE\nsource_write_policy: deny\n- [ ] Run validators\n- [ ] Capture results\n');
+
+    const stackYaml = `stack:\n  - type: pipeline\n    phases_dir: "${phasesDir}"\n  - type: skill\n    skill: self-audit\n    invocation_id: sa-001\n    phases_dir: "${skillPhasesDir}"\n`;
+    fs.writeFileSync(path.join(tmpRunDir, 'scope-stack.yaml'), stackYaml);
+
+    const result = runSessionStart();
+    assert.strictEqual(result.exitCode, 0);
+    assert.ok(result.stdout.includes('self-audit'), `Should include skill name. Got:\n${result.stdout.slice(0, 800)}`);
+    assert.ok(result.stdout.includes('validate'), 'Should include skill phase name');
+  });
+
   test('still outputs skill bootstrap and CLI guidance', () => {
     const result = runSessionStart();
     assert.ok(result.stdout.includes('EXTREMELY_IMPORTANT') || result.stdout.includes('using-skills'),
