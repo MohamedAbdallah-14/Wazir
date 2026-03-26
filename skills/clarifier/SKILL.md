@@ -21,7 +21,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 
 Run the Clarifier phase — everything from reading input to having an approved execution plan.
 
-**Pacing rule:** This skill has mandatory user checkpoints between sub-workflows. Do NOT skip checkpoints. Do NOT combine sub-workflows. Complete each fully, present output, and wait for explicit user approval before advancing.
+**Pacing rule:** This skill has checkpoints between sub-workflows. Checkpoint behavior depends on `interaction_mode` (see Interaction Mode Behavior below). In `interactive` mode, all checkpoints pause. In `guided` mode, only Clarify and Design pause. In `auto` mode, no checkpoints pause — the gating agent handles decisions. Do NOT combine sub-workflows regardless of mode. Complete each fully before advancing.
 
 Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All reviewer invocations use explicit `--mode`.
 
@@ -33,12 +33,32 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 2. Check `.wazir/input/briefing.md` exists. If not, ask the user what they want to build and save it there.
 3. Scan `input/` (project-level) and `.wazir/input/` (state-level) for additional input files. Present what's found.
 4. Read `depth` from `run-config.yaml`. Read `multi_tool` from `.wazir/state/config.json`.
-5. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
-6. Create a run directory if one doesn't exist:
+5. Read `interaction_mode` from `run-config.yaml` (values: `auto`, `guided`, `interactive`; default: `guided`).
+6. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
+7. Create a run directory if one doesn't exist:
    ```bash
    mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
    ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
    ```
+
+---
+
+## Interaction Mode Behavior
+
+Checkpoints are conditional on `interaction_mode`:
+
+| Sub-Workflow | Auto | Guided | Interactive |
+|--------------|------|--------|-------------|
+| SW1: Research | skip | skip | **PAUSE** — present research findings |
+| SW2: Clarify | gating agent answers | **PAUSE** | **PAUSE** — pair-program the clarification |
+| SW3: Spec Harden | skip | skip | **PAUSE** — walk through spec changes |
+| SW3a: Visual Design | skip | skip | **PAUSE** — heavy collaboration (if enabled) |
+| SW4: Brainstorm | gating agent picks | **PAUSE** | **PAUSE** — co-design approach |
+| SW5: Plan | skip | skip | **PAUSE** — walk through plan |
+
+**Auto**: gating agent (external reviewer) handles Clarify/Design decisions. Escalates to human only on loop cap exceeded or "not doable."
+**Guided**: 2 interaction points (Clarify + Design) + boundary gates between pipeline parts.
+**Interactive**: pair-programmer — stops between sub-phases, discusses findings, co-designs decisions.
 
 ---
 
@@ -89,6 +109,10 @@ Save result to `.wazir/runs/latest/clarified/research-brief.md`.
 
 ### Checkpoint: Research Review
 
+**Mode gate:** This checkpoint pauses only in `interactive` mode. In `auto` and `guided` modes, research flows directly to the next sub-workflow.
+
+**If `interaction_mode == interactive`:**
+
 > **Research complete. Here's what I found:**
 >
 > [Summary of codebase state, relevant architecture, external context]
@@ -101,6 +125,10 @@ Ask the user via AskUserQuestion:
   3. "Wrong direction — let me clarify the intent"
 
 Wait for the user's selection before continuing.
+
+**If `interaction_mode == auto` or `guided`:** Log research summary to reasoning file and continue.
+
+**All modes:** If research reveals the request is impossible, contradictory, or fundamentally wrong approach — present evidence and stop before proceeding to questions. This is not a checkpoint; it's a guard. In `auto` mode, escalate to the gating agent. In `guided`/`interactive`, present to the user.
 
 ---
 
@@ -180,6 +208,10 @@ Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presen
 
 ### Checkpoint: Clarification Review
 
+**Mode gate:** This checkpoint pauses in `guided` and `interactive` modes. In `auto` mode, the gating agent evaluates the clarification.
+
+**If `interaction_mode == interactive` or `guided`:**
+
 > **Here's the clarified scope:**
 >
 > [Full clarification]
@@ -192,6 +224,8 @@ Ask the user via AskUserQuestion:
   3. "Missing important context — let me add information"
 
 Wait for the user's selection before continuing. Route feedback: plan corrections → `user-feedback.md`, new requirements → `briefing.md`.
+
+**If `interaction_mode == auto`:** Submit clarification artifact to gating agent. If gating agent approves, continue. If gating agent requests changes, loop. If gating agent escalates, present to user.
 
 ---
 
@@ -240,6 +274,10 @@ If detected, set `workflow_policy.author.enabled = true` in the run config and n
 
 ### Checkpoint: Hardened Spec Review
 
+**Mode gate:** This checkpoint pauses only in `interactive` mode. In `auto` and `guided` modes, the hardened spec flows directly to the next sub-workflow.
+
+**If `interaction_mode == interactive`:**
+
 > **Spec hardened. Changes made:**
 >
 > [List of gaps found and how they were tightened]
@@ -252,6 +290,8 @@ Ask the user via AskUserQuestion:
   3. "Found more gaps — let me add"
 
 Wait for the user's selection before continuing.
+
+**If `interaction_mode == auto` or `guided`:** Log spec hardening summary to reasoning file and continue.
 
 ---
 
@@ -273,6 +313,10 @@ Invoke the `brainstorming` skill (`wz:brainstorming`):
 
 ### Checkpoint: Design Approval
 
+**Mode gate:** This checkpoint pauses in `guided` and `interactive` modes. In `auto` mode, the gating agent selects the approach.
+
+**If `interaction_mode == interactive` or `guided`:**
+
 Ask the user via AskUserQuestion:
 - **Question:** "Which design approach should we implement?"
 - **Options:**
@@ -282,6 +326,8 @@ Ask the user via AskUserQuestion:
   4. "Modify an approach — let me specify changes"
 
 Wait for the user's selection before continuing. This is the most important checkpoint.
+
+**If `interaction_mode == auto`:** Submit all approaches with trade-offs to gating agent. Gating agent selects one or escalates to user.
 
 Save approved design to `.wazir/runs/latest/clarified/design.md`.
 
@@ -327,6 +373,10 @@ Delegate to `wz:writing-plans`:
 
 ### Checkpoint: Plan Review
 
+**Mode gate:** This checkpoint pauses only in `interactive` mode. In `auto` and `guided` modes, the plan flows to the scope coverage gate and then to execution.
+
+**If `interaction_mode == interactive`:**
+
 > **Implementation plan: [N] tasks**
 >
 > | # | Task | Complexity | Dependencies | Description |
@@ -341,6 +391,8 @@ Ask the user via AskUserQuestion:
   4. "Too granular / too coarse"
 
 Wait for the user's selection before continuing.
+
+**If `interaction_mode == auto` or `guided`:** Log plan summary to reasoning file. Proceed to scope coverage gate.
 
 ---
 
