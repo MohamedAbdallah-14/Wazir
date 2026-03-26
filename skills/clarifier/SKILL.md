@@ -37,7 +37,7 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 6. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
 7. Create a run directory if one doesn't exist:
    ```bash
-   mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
+   mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified,reasoning}
    ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
    ```
 
@@ -209,6 +209,8 @@ During clarification, determine whether the project needs visual design artifact
 
 Set `workflow_policy.visual_design.enabled` and `workflow_policy.visual_design.mode` in the run config based on the answer.
 
+**If option 3 (design from references) selected:** Save user-provided design references (Figma links, screenshots, sketches) to `.wazir/runs/latest/clarified/visual-design/references/`. These are passed as inputs to the specify and design phases. No visual design sub-phase runs — the pipeline works from the provided references directly.
+
 ### Clarification Production
 
 Read the briefing, research brief, user answers to questions, and codebase context. Produce:
@@ -308,6 +310,12 @@ If detected, set `workflow_policy.author.enabled = true` in the run config.
 4. DESIGN (architectural brainstorming)
 
 The designer role expects content-author artifacts as input. Content gaps discovered during execution are 10-100x more expensive to fix.
+
+If `workflow_policy.author.enabled == true`:
+
+> **Content-author workflow starting.** Producing: [list detected content types]. This runs autonomously with its own review loop — no approval needed.
+
+Delegate to the author workflow (`workflows/author.md`). Wait for completion before proceeding to visual design or architectural design.
 
 > **Content needs detected.** The content-author workflow will now run autonomously to produce: [list detected content types]. No approval needed — review loop ensures quality.
 
