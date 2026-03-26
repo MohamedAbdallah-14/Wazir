@@ -555,3 +555,56 @@ Every phase exit produces a report saved to `.wazir/runs/latest/reviews/<phase>-
 5. **Usage** — token usage from `wazir capture usage` (runs before report generation)
 6. **Context Savings** — context-mode stats if available, omit section if not
 7. **Time Spent** — wall-clock elapsed time from phase start to end — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.
+
+---
+
+## Subtask Execution Loop (Pipeline Mode)
+
+The subtask execution loop replaces the N-pass review loop for in-pipeline execution. It is NOT a variant of the N-pass loop — it is a separate pattern with different structure, different roles, and different termination conditions.
+
+**When to use which:**
+- **N-pass loop**: non-execution reviews (spec-challenge, plan-review, clarification-review, design-review, research-review) and standalone `task-review` invocations outside a pipeline run.
+- **Subtask execution loop**: in-pipeline execution only. The orchestrator (`workflows/execute.md`) dispatches this loop per subtask.
+
+### The Loop
+
+    Step 1: Executor          — TDD, implement, micro-commit, self-review
+    Step 2: Reviewer/Verifier — two-stage review (spec → quality) + verification + proof
+    Step 3: Executor          — fix findings (if any)
+    Step 4: Reviewer/Verifier — second round (if step 2 had findings)
+    Step 5: Executor          — fix findings (if any)
+    Step 6: Cross-Model R/V   — cross-model review + verification (concurrent)
+    Step 7: Executor          — fix cross-model + verification findings (if any)
+
+### Skip Logic
+
+- Step 2 clean (zero findings) → skip steps 3-4 → advance to step 6 (step 5 is implicitly skipped — no step 4 findings to fix)
+- Step 4 clean → skip step 5 → advance to step 6
+- Step 6 clean → skip step 7 → subtask complete
+
+### Spawn Counts
+
+- Best case: 2 spawns (executor → R/V clean → done)
+- Typical: 4-5 spawns
+- Worst case: 7 spawns per attempt
+
+### Residuals
+
+After step 7, if issues remain: unresolved findings are written to `residuals-<subtask-id>.md` (see `templates/artifacts/residuals.md`). CRITICAL residuals trigger Level 2 escalation. Non-critical residuals are collected for the completion gate.
+
+### Level 2 Escalation
+
+Triggered when: subtask loop exhausted with CRITICAL residuals, or subagent reports FAILED/NEEDS_CONTEXT/BLOCKED.
+
+- Tier 1: Replan — failure evidence + residuals to fresh planner. Max 1.
+- After Tier 1: Escalate to user with evidence.
+
+Total worst case per subtask: 7 loop spawns + 1 replan + 7 replanned loop spawns = 15 invocations.
+
+### Baseline SHA
+
+The orchestrator captures `PRE_TASK_SHA` before dispatching step 1. All Reviewer/Verifier passes scope their diff to `--base $PRE_TASK_SHA`.
+
+### Finding Attribution
+
+All findings carry source tags: `[Internal]`, `[Codex]`, `[Gemini]`, `[Both]`. The Cross-Model R/V in step 6 merges findings from the cross-model tool with its own, preserving attribution.
