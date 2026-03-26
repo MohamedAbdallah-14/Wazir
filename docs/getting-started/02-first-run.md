@@ -91,7 +91,7 @@ The 7 steps above map to 14 internal phases:
 | User Stage | Internal Phases | Roles |
 |------------|----------------|-------|
 | **Clarify** | clarify → discover → specify → spec-challenge | clarifier, researcher, specifier, reviewer |
-| **Execute** | author → design → design-review → plan → plan-review → execute → verify | content-author, designer, planner, executor, verifier |
+| **Execute** | author → design → architectural-design-review → plan → plan-review → execute → verify | content-author, designer, planner, executor, verifier |
 | **Review** | review | reviewer |
 | **Learn** | learn → prepare-next | learner |
 

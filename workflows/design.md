@@ -31,7 +31,7 @@ On entering this phase, run:
 
 ## Approval Gate
 
-- explicit human approval required before design-review
+- explicit human approval required before visual-design-review
 
 ## Review Loop
 
