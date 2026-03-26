@@ -52,8 +52,9 @@ describe('model-router', () => {
 
     test('multi-model disabled returns inherit', () => {
       const disabledConfigs = [
-        { model_mode: 'claude-only' },
+        { model_mode: 'single' },
         { model_mode: 'multi-tool' },
+        { model_mode: 'claude-only' }, // legacy value — degrades to "not multi-model"
         {},
       ];
       for (const config of disabledConfigs) {
@@ -126,7 +127,7 @@ describe('model-router', () => {
     });
 
     test('returns false for other modes', () => {
-      assert.strictEqual(isMultiModelEnabled({ model_mode: 'claude-only' }), false);
+      assert.strictEqual(isMultiModelEnabled({ model_mode: 'single' }), false);
       assert.strictEqual(isMultiModelEnabled({ model_mode: 'multi-tool' }), false);
       assert.strictEqual(isMultiModelEnabled({}), false);
     });

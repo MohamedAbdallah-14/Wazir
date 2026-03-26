@@ -59,9 +59,33 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 
 ---
 
+# Pre-Bootstrap: CLI Check (MANDATORY BEFORE PHASE 0)
+
+**Before bootstrap**, verify the Wazir CLI is installed:
+
+```bash
+which wazir
+```
+
+**If not installed**, present:
+
+> **The Wazir CLI is not installed. It's required for event capture, validation, and indexing.**
+
+Ask the user via AskUserQuestion:
+- **Question:** "The Wazir CLI is not installed. How would you like to install it?"
+- **Options:**
+  1. "npm install -g @wazir-dev/cli" *(Recommended)*
+  2. "npm link from the Wazir project root"
+
+Wait for the user's selection before continuing. **STOP here if CLI is not installed — never enter the pipeline.**
+
+The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
+
+---
+
 # Phase 0: Bootstrap (MANDATORY FIRST STEP)
 
-**Before ANYTHING else**, run this command:
+**After CLI check passes**, run this command:
 
 ```bash
 wazir capture ensure
@@ -127,25 +151,18 @@ Recognized modifiers:
 
 ## Step 2: Check Prerequisites
 
-### CLI Check
+### Config Check
 
-Run `which wazir` to check if the CLI is installed.
+Check if `.wazir/state/config.json` exists and has `config_version: 2`.
 
-**If not installed**, present:
+- **If missing or v1 (no `config_version` or `config_version !== 2`):** Invoke the `init-pipeline` skill. It handles dependency checks, asks 3-4 questions, and writes config.
+- **If exists and v2:** Show one-line config summary and proceed:
+  ```
+  Config: <model_mode summary> | <interaction_mode> | Reconfigure: /wazir init
+  ```
+  Model mode summary formats: `single`, `multi-model (Haiku/Sonnet/Opus)`, `multi-tool (Opus + Codex gpt-5.4)`
 
-> **The Wazir CLI is not installed. It's required for event capture, validation, and indexing.**
-
-Ask the user via AskUserQuestion:
-- **Question:** "The Wazir CLI is not installed. How would you like to install it?"
-- **Options:**
-  1. "npm install -g @wazir-dev/cli" *(Recommended)*
-  2. "npm link from the Wazir project root"
-
-Wait for the user's selection before continuing.
-
-The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
-
-**If installed**, run `wazir doctor --json` to verify repo health. Stop if unhealthy.
+Run `wazir doctor --json` to verify repo health. Stop if unhealthy.
 
 ### Branch Check
 
@@ -173,13 +190,6 @@ else
   wazir index refresh
 fi
 ```
-
-### Pipeline Init Check
-
-Check if `.wazir/state/config.json` exists.
-
-- **If missing** — invoke the `init-pipeline` skill.
-- **If exists** — continue.
 
 ## Step 3: Create Run Directory
 
@@ -219,7 +229,12 @@ Wait for the user's selection before continuing.
 
 ## Step 4: Build Run Config
 
-**No questions asked.** Depth, intent, and mode are all inferred or defaulted.
+**No questions asked.** Depth, intent, and interaction mode are inferred or read from project config.
+
+**Interaction mode wiring:** Read `interaction_mode` from `.wazir/state/config.json` as the project default. Inline modifiers override:
+```
+interaction_mode = inline_modifier ?? project_config.interaction_mode ?? 'guided'
+```
 
 ### Intent Inference
 
@@ -250,7 +265,7 @@ parsed_intent: feature
 entry_point: "/wazir"
 
 depth: standard
-interaction_mode: guided  # auto | guided | interactive
+interaction_mode: guided  # from inline modifier ?? project config ?? 'guided'
 
 # Workflow policy — individual workflows within each phase
 workflow_policy:
@@ -334,7 +349,7 @@ The `interaction_mode` field in run-config controls how the pipeline interacts w
 
 ## `auto` mode constraints
 
-- **Codex REQUIRED** — refuse to start auto mode if `multi_tool.codex` is not configured in `.wazir/state/config.json`. Error: "Auto mode requires an external reviewer (Codex). Configure it first or use guided mode."
+- **External reviewer REQUIRED** — refuse to start auto mode if no external reviewer is configured (requires multi-tool mode with Codex or Gemini in `.wazir/state/config.json`). Error: "Auto mode requires an external reviewer (multi-tool mode with Codex or Gemini). Configure it first or use guided mode."
 - **On escalate:** STOP immediately, write the escalation reason to `.wazir/runs/<id>/escalations/`, and wait for user input
 - **Wall-clock limit:** default 4 hours. If exceeded, stop with escalation.
 - **Never auto-commits to main** — always work on feature branch

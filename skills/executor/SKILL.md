@@ -52,7 +52,7 @@ Required artifacts:
 ## Prerequisites
 
 1. Read the execution plan from `.wazir/runs/latest/clarified/execution-plan.md`.
-2. Read `.wazir/state/config.json` for depth settings.
+2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 
 ## Pre-Execution Validation
 

@@ -10,6 +10,7 @@ import {
   inferIntent,
   parseDepthModifier,
   autoInit,
+  isConfigCurrent,
 } from '../../src/init/auto-detect.js';
 
 describe('detectProjectStack', () => {
@@ -151,27 +152,84 @@ describe('autoInit', () => {
     assert.ok(fs.existsSync(path.join(tmpDir, '.wazir', 'runs')));
   });
 
-  it('writes sensible defaults', () => {
+  it('writes v2 config with correct defaults', () => {
     autoInit(tmpDir);
     const config = JSON.parse(
       fs.readFileSync(path.join(tmpDir, '.wazir', 'state', 'config.json'), 'utf8'),
     );
-    assert.equal(config.model_mode, 'claude-only');
-    assert.equal(config.default_depth, 'standard');
-    assert.equal(config.default_intent, 'feature');
-    assert.equal(config.auto_initialized, true);
+    assert.equal(config.config_version, 2);
+    assert.equal(config.model_mode, 'single');
+    assert.equal(config.interaction_mode, 'guided');
+    assert.equal(typeof config.initialized_at, 'string');
+    assert.ok(config.detected.host);
+    assert.ok(config.detected.stack);
+    assert.equal(typeof config.detected.git, 'boolean');
+    // v1 fields must not exist
+    assert.equal(config.default_depth, undefined);
+    assert.equal(config.default_intent, undefined);
+    assert.equal(config.auto_initialized, undefined);
+    assert.equal(config.detected_host, undefined);
+    assert.equal(config.detected_stack, undefined);
   });
 
   it('returns existing config if already initialized', () => {
     autoInit(tmpDir);
     const result = autoInit(tmpDir);
     assert.equal(result.alreadyInitialized, true);
+    assert.equal(result.needsMigration, false);
     assert.deepEqual(result.filesCreated, []);
+  });
+
+  it('detects v1 config needing migration', () => {
+    const wazirDir = path.join(tmpDir, '.wazir', 'state');
+    fs.mkdirSync(wazirDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(wazirDir, 'config.json'),
+      JSON.stringify({ model_mode: 'claude-only', default_depth: 'standard' }),
+    );
+    const result = autoInit(tmpDir);
+    assert.equal(result.alreadyInitialized, true);
+    assert.equal(result.needsMigration, true);
+  });
+
+  it('force reinit overwrites v1 with v2 config containing zero v1 fields', () => {
+    const wazirDir = path.join(tmpDir, '.wazir', 'state');
+    fs.mkdirSync(wazirDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(wazirDir, 'config.json'),
+      JSON.stringify({ model_mode: 'claude-only', review_tool: 'codex', codex_model: 'gpt-5.4', auto_initialized: true }),
+    );
+    const result = autoInit(tmpDir, { force: true });
+    assert.equal(result.alreadyInitialized, false);
+    assert.equal(result.config.config_version, 2);
+    assert.equal(result.config.model_mode, 'single');
+    assert.equal(result.config.review_tool, undefined);
+    assert.equal(result.config.codex_model, undefined);
+    assert.equal(result.config.auto_initialized, undefined);
   });
 
   it('detects project stack', () => {
     const result = autoInit(tmpDir);
     assert.equal(result.stack.language, 'javascript');
+  });
+});
+
+describe('isConfigCurrent', () => {
+  it('returns true for v2 config', () => {
+    assert.equal(isConfigCurrent({ config_version: 2 }), true);
+  });
+
+  it('returns false for v1 config (no config_version)', () => {
+    assert.equal(isConfigCurrent({ model_mode: 'claude-only' }), false);
+  });
+
+  it('returns false for null/undefined', () => {
+    assert.equal(isConfigCurrent(null), false);
+    assert.equal(isConfigCurrent(undefined), false);
+  });
+
+  it('returns false for wrong version', () => {
+    assert.equal(isConfigCurrent({ config_version: 1 }), false);
   });
 });
 

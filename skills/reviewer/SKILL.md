@@ -84,17 +84,17 @@ If any file is missing:
 
 1. Check `.wazir/runs/latest/artifacts/` has completed task artifacts. If not, tell the user to run `/wazir:executor` first.
 2. Read the approved spec, plan, and design from `.wazir/runs/latest/clarified/`.
-3. Read `.wazir/state/config.json` for depth and multi_tool settings.
+3. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 
 ### `task-review` mode
 1. Uncommitted changes exist for the current task, or a `--base` SHA is provided for committed changes.
-2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 3. **Commit discipline check:** If uncommitted changes span work from multiple tasks (e.g., files from task N and task N+1 are both modified), REJECT immediately: "REJECTED: Multiple tasks in single commit. Split into per-task commits before review." This is a blocking finding — no other dimensions are evaluated until resolved.
 4. **Security sensitivity check:** Run `detectSecurityPatterns` from `tooling/src/checks/security-sensitivity.js` against the diff. If `triggered === true`, add the 6 security review dimensions (injection, auth bypass, data exposure, CSRF/SSRF, XSS, secrets leakage) to the standard 5 task-execution dimensions for this review pass. Security findings use severity levels: critical (exploitable), high (likely exploitable), medium (defense-in-depth gap), low (best-practice deviation).
 
 ### `spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
-2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 3. **`plan-review` additional dimension — Input Coverage:**
    - Read the original input/briefing from `.wazir/input/briefing.md` and any `input/*.md` files
    - Count distinct items/requirements in the input
