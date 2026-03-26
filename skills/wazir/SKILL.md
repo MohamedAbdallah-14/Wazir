@@ -55,7 +55,7 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 | **Init** | Setup, prereqs, run directory, input scan | `wz:wazir` (inline) | `run-config.yaml` |
 | **Clarifier** | Research, clarify, specify, brainstorm, plan | `wz:clarifier` | Approved spec + design + plan |
 | **Executor** | Implement, verify | `wz:executor` | Code + verification proof |
-| **Final Review** | Review vs original input, learn, prepare next | `wz:reviewer` | Verdict + learnings + handoff |
+| **Final Review** | Integration verification, concern resolution, 2+1 pass review, learn, prepare next | `wz:reviewer` | Verdict + learnings + handoff |
 
 ---
 
@@ -405,9 +405,11 @@ Phase 3: Executor
   ├── execute (per-task) ← task-review loop per task
   └── verify
 
-Phase 4: Final Review
-  ├── review (final) ← scored review
-  ├── learn
+Phase 4: Final Review (Completion Pipeline)
+  ├── integration-verify ← full suite on merged main
+  ├── concern-resolve ← fresh agent, sycophancy guard
+  ├── review (final) ← 2+1 pass compliance audit
+  ├── learn ← adoption rates, quality delta, user corrections
   └── prepare_next
 ```
 <!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
@@ -593,36 +595,68 @@ wazir capture event --run <run-id> --event phase_enter --phase final_review --st
 
 This phase validates the implementation against the **ORIGINAL INPUT** (not the task specs — the executor's per-task reviewer already covered that).
 
-### 4a: Review (reviewer role in final mode)
+### 4a: Integration Verification
+
+Full verification suite on merged main before any review:
+1. Run plan-defined integration criteria from the execution plan
+2. Run standard suite: tests, type checking, lint, build, deterministic analysis
+3. Verify all declared external side effects were completed or compensated
+
+If integration fails: identify culprit via sequential merge record. Targeted fix executor receives failing output + acceptance criteria.
+
+### 4b: Concern Resolution
+
+A fresh agent (NOT the executor or any producing agent) evaluates:
+1. Concern registry — all DONE_WITH_CONCERNS entries from execution
+2. Residuals — all `residuals-<subtask-id>.md` files
+3. Batch-boundary disposition — concerns from final batch + cross-subtask patterns
+
+**Sycophancy guard**: generating agent MUST NOT rebut concerns. Route contested concerns to human.
+
+### 4c: Review (reviewer role in final mode)
 
 Invoke `wz:reviewer --mode final`.
-7-dimension scored review comparing implementation against the original user input.
-Score 0-70. Verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+2+1 pass compliance audit comparing implementation against the original user input:
+- Pass 1: Internal expertise-loaded review (7 dims, scored 0-70)
+- Targeted fixes between passes (batched by severity tier)
+- Pass 2: Cross-model review (fresh session, deterministic inputs only)
+- Pass 3: Reconciliation (conditional — only if passes 1-2 have conflicting CRITICAL/HIGH)
 
-### 4b: Learn (learner role)
+**Exit criteria**: single unresolved CRITICAL blocks SHIP regardless of score.
+Score verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+Final sign-off (after all actions): SHIP / SHIP WITH CAVEATS / DO NOT SHIP.
+
+### 4d: Learn (learner role)
 
 Extract durable learnings from the completed run:
-- Scan all review findings (internal + Codex)
-- Propose learnings to `memory/learnings/proposed/`
-- Findings that recur across 2+ runs → auto-proposed as learnings
+- Scan all review findings (all passes, internal + cross-model)
+- Process user corrections as highest-priority signal
+- Track finding adoption rates (per pass, per severity, per source)
+- Calculate quality delta (per-dimension first-pass vs final-state)
+- Propose learnings to `memory/learnings/proposed/` with impact scoring
 - Learnings require explicit scope tags (roles, stacks, concerns)
 
-### 4c: Prepare Next (planner role)
+### 4e: Prepare Next (planner role)
 
 Prepare context and handoff for the next run:
-- Write handoff document
+- Write `execution-summary.md` (complete) or `handover-batch-N.md` (incomplete)
+- Include: concerns and resolutions, residuals disposition, quality delta, finding adoption rates
+- Record SHIP / SHIP WITH CAVEATS / DO NOT SHIP recommendation
 - Compress/archive unneeded files
-- Record what's left to do
 
 **After completing this phase, output to the user:**
 
-> **Final Review Phase complete.**
+> **Final Review Phase complete (Completion Pipeline).**
 >
-> **Found:** [N] findings across 7 dimensions, [N] blocking issues, [N] warnings, [N] learnings proposed for future runs
+> **Integration verification:** [PASS/FAIL] — [N] tests, [N] type errors, [N] lint errors
+> **Concern resolution:** [N] concerns evaluated, [N] residuals resolved, [N] escalated
+> **Final review (2+1 passes):** [N] findings — [N] CRITICAL, [N] HIGH, [N] MEDIUM, [N] LOW. Score: [score]/70.
+> **Pass 3 reconciliation:** [ran/skipped] — [reason]
+> **Learnings:** [N] proposed (adoption rate: [X]%, quality delta: [Y] points average)
 >
-> **Without this phase:** Implementation drift from the original request would ship undetected, untested paths would hide production bugs, and recurring mistakes would never get captured as learnings
+> **Without this phase:** Implementation drift would ship undetected, concerns would accumulate without resolution, cross-subtask integration bugs would hide, and recurring mistakes would never get captured
 >
-> **Changed because of this work:** [List of findings fixed, score achieved, learnings extracted, handoff prepared]
+> **Changed because of this work:** [List of findings fixed per pass, score improvement, learnings extracted, handoff prepared]
 
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
@@ -650,52 +684,58 @@ Both must pass before PR. These are not warnings.
 
 ## Step 6: Present Results
 
-After the reviewer completes, present verdict with numbered options:
+Completion is **autonomous** — the pipeline presents its sign-off and proceeds. User interaction happens only for two exceptions:
 
-### If PASS (score 56+):
+### Autonomous Sign-Off
 
-> **Result: PASS (score/70)**
+Present the completion pipeline results:
 
-Ask the user via AskUserQuestion:
-- **Question:** "Pipeline passed. What would you like to do next?"
-- **Options:**
-  1. "Create a PR" *(Recommended)*
-  2. "Merge directly"
-  3. "Review the changes first"
-
-Wait for the user's selection before continuing.
-
-### If NEEDS MINOR FIXES (score 42-55):
-
-> **Result: NEEDS MINOR FIXES (score/70)**
-
-Ask the user via AskUserQuestion:
-- **Question:** "Minor issues found. How should we handle them?"
-- **Options:**
-  1. "Auto-fix and re-review" *(Recommended)*
-  2. "Fix manually"
-  3. "Accept as-is"
-
-Wait for the user's selection before continuing.
-
-### If NEEDS REWORK (score 28-41):
-
-> **Result: NEEDS REWORK (score/70)**
-
-Ask the user via AskUserQuestion:
-- **Question:** "Significant issues found. How should we proceed?"
-- **Options:**
-  1. "Re-run affected tasks" *(Recommended)*
-  2. "Review findings in detail"
-  3. "Abandon this run"
-
-Wait for the user's selection before continuing.
-
-### If FAIL (score 0-27):
-
-> **Result: FAIL (score/70)**
+> **Completion Pipeline Results**
 >
-> Something fundamental went wrong. Review the findings above.
+> **Integration verification:** [PASS/FAIL]
+> **Concern resolution:** [N] concerns, [N] residuals
+> **Final review (2+1 passes):** Score [score]/70 — [N] CRITICAL, [N] HIGH, [N] MEDIUM, [N] LOW
+> **Sign-off:** [SHIP / SHIP WITH CAVEATS / DO NOT SHIP]
+>
+> **Learnings:** [N] proposed. **Handoff:** `.wazir/runs/<run-id>/execution-summary.md`
+
+If SHIP or SHIP WITH CAVEATS: proceed to create PR automatically.
+
+If DO NOT SHIP: present findings and stop.
+
+### Exception 1: Drift Escalation
+
+If any CRITICAL or HIGH drift finding exists (implementation doesn't match what user asked for):
+
+> **Drift detected — user decision required.**
+>
+> [List drift findings with evidence]
+
+Ask the user via AskUserQuestion:
+- **Question:** "Implementation drift detected. How should we proceed?"
+- **Options:**
+  1. "Accept the drift"
+  2. "Fix and re-review"
+  3. "Abort the run"
+
+### Exception 2: Unresolvable Concern
+
+If a concern maps to a spec requirement but the resolution is unacceptable (requires spec/design change):
+
+> **Unresolvable concern — user decision required.**
+>
+> [Concern details, spec requirement it maps to, why resolution failed]
+
+Ask the user via AskUserQuestion:
+- **Question:** "This concern requires a spec change to resolve. How should we proceed?"
+- **Options:**
+  1. "Accept as-is with caveat"
+  2. "Modify spec and re-run affected tasks"
+  3. "Abort the run"
+
+### CRITICAL Precedence
+
+Even if score is 56+, a single unresolved CRITICAL finding overrides to DO NOT SHIP. Present the CRITICAL finding(s) and stop.
 
 ### Run Summary
 

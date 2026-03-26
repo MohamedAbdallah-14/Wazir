@@ -28,55 +28,99 @@ Create a next-run handoff that captures the run outcome and sets up the next ses
 
 ## When to Run
 
-One of:
+This skill corresponds to completion pipeline Stage 8 (Prepare Next Session) in `docs/vision/pipeline-complete.md`.
 
-1. **Full completion** — All 4 phases are done, review is accepted, learnings are proposed. Prepare the next feature's starting point.
-2. **Partial completion** — The session is ending before the pipeline finishes. Prepare a mid-pipeline handoff so the next session can resume.
-3. **Slice boundary** — The approved plan is being executed in multiple slices. Prepare the handoff between slices.
+One of two modes:
+
+1. **Run Complete** — All completion stages passed, sign-off is SHIP or SHIP WITH CAVEATS. Produce `execution-summary.md`.
+2. **Run Incomplete** — Session ending before pipeline finishes, or slice boundary. Produce `handover-batch-N.md`.
 
 ## Step 1: Gather Run State
 
 Read from the current run directory:
 
 - `run-config.yaml` — run identity, intent, depth
-- `reviews/review.md` — final review verdict and score (if complete)
-- `reviews/` — all review pass logs
+- `completion/final-review/` — all pass reports (pass-1-internal.md, pass-2-cross-model.md, pass-3-reconciliation.md if exists)
+- `completion/final-review/finding-adoption.md` — which findings led to code changes
+- `completion/concerns/` — concern resolution output
+- `completion/integration/` — integration verification results
+- `reviews/` — all per-task review pass logs
 - `artifacts/` — task completion evidence
 - `clarified/` — spec, design, plan artifacts
+- `user-input-log.ndjson` — user corrections (for learning proposals section)
 - Git log since branch creation: `git log --oneline main..HEAD`
 
-## Step 2: Write Handoff
+## Step 2: Write Output
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
-Write to `.wazir/runs/<run-id>/handoff.md` using this structure:
+### Mode 1: Run Complete → `execution-summary.md`
+
+Write to `.wazir/runs/<run-id>/execution-summary.md`:
 
 ```markdown
-# Handoff — <run-id>
+# Execution Summary — <run-id>
 
-**Status:** [Completed | Partial | Slice N of M]
+**Status:** Complete
 **Branch:** <branch-name>
 **Date:** YYYY-MM-DD
+**Sign-off:** SHIP / SHIP WITH CAVEATS / DO NOT SHIP
 
-## What Was Done
-[List of completed tasks with commit hashes]
+## What Was Built
+[Linked to spec requirements, status per requirement]
+
+## Verification Summary
+[Tests: N pass / N fail. Type errors: N. Lint errors: N. Coverage: N%]
+
+## Concerns and Resolutions
+[Final disposition of each concern from completion Stage 2]
+
+## Final Review Findings
+[Per pass: Pass 1 (internal) — N findings. Pass 2 (cross-model) — N findings. Pass 3 (reconciliation) — ran/skipped.]
+[Finding adoption rate: X% of findings led to code changes]
+
+## Residuals
+[Residuals from execution and their final disposition]
+
+## Learning Proposals
+[Count by impact (HIGH/MEDIUM/LOW), pointer to memory/learnings/proposed/]
+
+## Quality Delta
+[Per-dimension first-pass vs final-state scores]
+
+## Cost and Timing
+[Token usage, wall-clock time per phase]
 
 ## Commits
 [git log --oneline of all commits in this run]
+```
 
-## Test Results
-[Test count, pass/fail, validator status]
+### Mode 2: Run Incomplete → `handover-batch-N.md`
 
-## Review Score
-[Verdict, score, key findings if applicable]
+Write to `.wazir/runs/<run-id>/handover-batch-N.md`:
 
-## What's Next
-[Pending items, deferred work, follow-up tasks]
+```markdown
+# Handover — <run-id> Batch N
 
-## Open Bugs
-[Any known issues discovered during this run]
+**Status:** Incomplete
+**Branch:** <branch-name>
+**Date:** YYYY-MM-DD
 
-## Learnings From This Run
-[Key insights — what worked, what didn't]
+## Subtask Status
+[Completed / in-progress / remaining subtask IDs with status and lifecycle state]
+
+## Accumulated Concerns
+[DONE_WITH_CONCERNS entries pending resolution]
+
+## Blocked Subtasks
+[Subtask IDs with reasons and lifecycle state (abandoned, upstream_failed, waiting_on_user)]
+
+## Partial Learnings
+[Learnings discovered during this batch]
+
+## Environment State
+[Active branches, worktrees, provisioned runtime isolation]
+
+## Resume Prompt
+[~500 tokens, self-contained, references files for depth]
 ```
 
 ## Step 3: Run Summary
