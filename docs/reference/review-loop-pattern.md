@@ -70,7 +70,7 @@ review_loop(artifact_path, original_input_path, phase, dimensions[], depth, conf
 
   # options.mode      -- explicit review mode (required)
   # options.task_id   -- task identifier for task-scoped reviews (optional)
-  # original_input_path -- path to .wazir/input/briefing.md (ground truth for all reviews)
+  # original_input_path -- .wazir/input/briefing.md + any input/*.md files (ground truth for all reviews)
 
   # Standalone detection
   run_mode = detect_run_mode()  # "pipeline" or "standalone"
@@ -438,7 +438,7 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
 Use this template with `codex exec` for non-code artifacts piped via stdin:
 
 ```bash
-(cat <artifact_path>; echo "---ORIGINAL INPUT---"; cat .wazir/input/briefing.md) | codex exec -c model="$CODEX_MODEL" \
+(cat <artifact_path>; echo "---ORIGINAL INPUT---"; cat .wazir/input/briefing.md; for f in input/*.md; do [ -f "$f" ] && cat "$f"; done) | codex exec -c model="$CODEX_MODEL" \
   "You are reviewing a [ARTIFACT_TYPE] for the Wazir engineering OS.
 Focus on [DIMENSION]: [dimension description].
 The content after ---ORIGINAL INPUT--- is the user's original briefing — check for input alignment.
