@@ -66,10 +66,11 @@ else:
 ## Review Loop Pseudocode
 
 ```
-review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
+review_loop(artifact_path, original_input_path, phase, dimensions[], depth, config, options={}):
 
   # options.mode      -- explicit review mode (required)
   # options.task_id   -- task identifier for task-scoped reviews (optional)
+  # original_input_path -- path to .wazir/input/briefing.md (ground truth for all reviews)
 
   # Standalone detection
   run_mode = detect_run_mode()  # "pipeline" or "standalone"
@@ -108,7 +109,7 @@ review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
 
     # --- Primary review (reviewer role, not producer) ---
     # Mode is always explicit -- passed by caller via options.mode
-    findings = self_review(artifact_path, focus=dimension, mode=options.mode)
+    findings = self_review(artifact_path, original_input_path, focus=dimension, mode=options.mode)
 
     # --- Secondary review (Codex, if available) ---
     if codex_available:
@@ -399,14 +400,14 @@ The reviewer skill operates in different modes depending on the phase. **Mode is
 
 | Mode | Invoked during | Prerequisites | Dimensions | Output |
 |------|---------------|---------------|------------|--------|
-| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
-| `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Findings with severity, no score |
-| `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec | 6 architectural design-review dims | Findings with severity (blocking/advisory) |
-| `visual-design-review` | After visual design (Phase 4a, conditional) | Visual design artifact, approved spec, accessibility guidelines | 5 visual design-review dims | Findings with severity (blocking/advisory) |
-| `plan-review` | After planning | Draft plan, approved spec, design artifact | 7 plan dims | Findings with severity, no score |
-| `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA) | 5 task-execution dims | Pass/fail per task, no score |
-| `research-review` | During discover | Research artifact | 5 research dims | Findings with severity, no score |
-| `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Findings with severity, no score |
+| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/`, original input | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
+| `spec-challenge` | After specify | Draft spec artifact, original input | 5 spec/clarification dims | Findings with severity, no score |
+| `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec, original input | 6 architectural design-review dims | Findings with severity (blocking/advisory) |
+| `visual-design-review` | After visual design (Phase 4a, conditional) | Visual design artifact, approved spec, accessibility guidelines, original input | 5 visual design-review dims | Findings with severity (blocking/advisory) |
+| `plan-review` | After planning | Draft plan, approved spec, design artifact, original input | 7 plan dims | Findings with severity, no score |
+| `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA), original input | 5 task-execution dims | Pass/fail per task, no score |
+| `research-review` | During discover | Research artifact, original input | 5 research dims | Findings with severity, no score |
+| `clarification-review` | During clarify | Clarification artifact, original input | 5 spec/clarification dims | Findings with severity, no score |
 
 If `--mode` is not provided, the reviewer asks the user which review to run. Auto-detection based on artifact availability is NOT used -- it causes ambiguity in resumed/multi-phase runs where stale artifacts from prior phases exist.
 

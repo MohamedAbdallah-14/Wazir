@@ -47,14 +47,14 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 
 | Mode | Invoked during | Prerequisites | Dimensions | Output |
 |------|---------------|---------------|------------|--------|
-| `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
-| `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Pass/fix loop, no score |
+| `final` | After execution + verification | Completed task artifacts, approved spec/plan/design, original input | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
+| `spec-challenge` | After specify | Draft spec artifact, original input | 5 spec/clarification dims | Pass/fix loop, no score |
 | `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec, original input | 6 architectural design-review dims | Pass/fix loop, no score |
 | `visual-design-review` | After visual design approval (Phase 4a) | Visual design artifact, approved spec, original input | 5 visual design-review dims | Pass/fix loop, no score |
-| `plan-review` | After planning | Draft plan artifact | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
-| `task-review` | During execution, per task | Uncommitted changes or `--base` SHA | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
-| `research-review` | During discover | Research artifact | 5 research dims | Pass/fix loop, no score |
-| `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Pass/fix loop, no score |
+| `plan-review` | After planning | Draft plan artifact, original input | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
+| `task-review` | During execution, per task | Uncommitted changes or `--base` SHA, original input | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
+| `research-review` | During discover | Research artifact, original input | 5 research dims | Pass/fix loop, no score |
+| `clarification-review` | During clarify | Clarification artifact, original input | 5 spec/clarification dims | Pass/fix loop, no score |
 
 Each mode follows the review loop pattern in `docs/reference/review-loop-pattern.md`. Pass counts are fixed by depth (quick=3, standard=5, deep=7). No extension.
 
@@ -96,8 +96,9 @@ If any file is missing:
 
 ### `spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
-2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
-3. **`plan-review` additional dimension — Input Coverage:**
+2. Read the original user input from `.wazir/input/briefing.md` and any `input/*.md` files. This is required for ALL review modes — it serves as the ground truth reference per Vision Principle 16.
+3. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
+4. **`plan-review` additional dimension — Input Coverage:**
    - Read the original input/briefing from `.wazir/input/briefing.md` and any `input/*.md` files
    - Count distinct items/requirements in the input
    - Count tasks in the execution plan

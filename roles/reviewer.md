@@ -6,9 +6,11 @@ Perform adversarial review to find correctness, scope, wiring, verification, and
 
 ## Inputs
 
-- changed files
-- approved spec and plan
-- verification evidence
+- original user input (`.wazir/input/briefing.md` + any `input/*.md` files) — ground truth for every review mode
+- changed files (for task-review and final modes)
+- approved spec and plan (for task-review and final modes)
+- verification evidence (for final mode)
+- phase-specific artifact (for all other modes)
 
 ## Allowed Tools
 
