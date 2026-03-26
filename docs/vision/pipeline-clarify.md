@@ -40,7 +40,7 @@ All run simultaneously. Each writes full findings to disk, returns summary. Orch
 
 ## Phase 2: CLARIFY (User Interaction #1)
 
-Deep understanding of all available info. Collect all questions. Ask the user in one shot. Business questions only — technical questions go to another agent. Surface uncertainties explicitly: "here's what I'm uncertain about and here's my best guess."
+Deep understanding of all available info. Collect all questions. Ask the user in one shot. Only ask questions whose answers change the project's scope, architecture, or acceptance criteria — don't ask implementation-detail questions that research already answers. Surface uncertainties explicitly: "here's what I'm uncertain about and here's my best guess."
 
 Can say "not doable" if research reveals the request is impossible, contradictory, or the wrong approach.
 

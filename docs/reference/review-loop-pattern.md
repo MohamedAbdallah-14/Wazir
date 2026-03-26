@@ -404,7 +404,7 @@ The reviewer skill operates in different modes depending on the phase. **Mode is
 | `spec-challenge` | After specify | Draft spec artifact, original input | 5 spec/clarification dims | Findings with severity, no score |
 | `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec, original input | 6 architectural design-review dims | Findings with severity (blocking/advisory) |
 | `visual-design-review` | After visual design (Phase 4a, conditional) | Visual design artifact, approved spec, accessibility guidelines, original input | 5 visual design-review dims | Findings with severity (blocking/advisory) |
-| `plan-review` | After planning | Draft plan, approved spec, design artifact, original input | 7 plan dims | Findings with severity, no score |
+| `plan-review` | After planning | Draft plan, approved spec, design artifact, original input | 8 plan dims | Findings with severity, no score |
 | `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA), original input | 5 task-execution dims | Pass/fail per task, no score |
 | `research-review` | During discover | Research artifact, original input | 5 research dims | Findings with severity, no score |
 | `clarification-review` | During clarify | Clarification artifact, original input | 5 spec/clarification dims | Findings with severity, no score |

@@ -31,11 +31,11 @@ On entering this phase, run:
 
 ## Approval Gate
 
-- explicit human approval required before design-review
+- explicit human approval required before visual-design-review
 
 ## Review Loop
 
-After user approval, design artifact is reviewed via the design-review workflow (`workflows/design-review.md`) using the review loop pattern with the canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The reviewer is invoked with `--mode design-review`. Design does not flow to planning until all review passes complete.
+After user approval, visual design artifact is reviewed via the design-review workflow (`workflows/design-review.md`) using the review loop pattern with the visual design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The reviewer is invoked with `--mode visual-design-review`. Design does not flow to planning until all review passes complete.
 
 ## Phase exit
 
