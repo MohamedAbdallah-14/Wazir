@@ -9,7 +9,7 @@ Run deterministic checks and produce proof bundles for claims about correctness,
 ### Type-Aware Verification
 Detect project type (web, API, CLI, library) and run type-appropriate verification:
 - **web:** `npm run build` + library checks
-- **api:** library checks (test, tsc, eslint, prettier)
+- **api:** endpoint checks + library checks (test, tsc, eslint, prettier)
 - **cli:** `<bin> --help` + library checks
 - **library:** `npm test`, `tsc --noEmit`, `eslint .`, `prettier --check .`
 

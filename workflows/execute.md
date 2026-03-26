@@ -51,7 +51,7 @@ For each subtask, run the 7-step subtask execution loop per `docs/reference/revi
 
 ### Status Routing
 
-After each subagent returns, route on status:
+After the subtask loop completes (all 7 steps exhausted or clean exit), route on the subtask's final status. This table does NOT apply to individual step outputs within the loop — step-to-step routing is handled by the subtask execution loop in `docs/reference/review-loop-pattern.md`.
 
 | Status | Action |
 |--------|--------|
@@ -76,7 +76,9 @@ Tracked per subtask, set by the orchestrator (not by agents):
 
 ### Parallel Execution
 
-DAG determines parallelism (Kahn's algorithm). Concurrency ceiling: 4 worktrees. No cross-talk.
+DAG determines parallelism (Kahn's algorithm). Concurrency ceiling: 4 worktrees.
+
+Worktrees isolate files, not ports, databases, or services. For subtasks requiring runtime resources (dev servers, database connections, bound ports), the subtask spec must declare these requirements during planning. The orchestrator provisions runtime isolation (e.g., per-worktree containers, database branches) based on declarations. Most coding subtasks need only file isolation; runtime isolation is the exception.
 
 Sequential merge: one worktree at a time, fast integration check after each. Full integration suite after every ~4 merges.
 
