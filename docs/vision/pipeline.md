@@ -10,7 +10,7 @@ A pipeline inside Claude (and other hosts) that enforces agents to work scientif
 
 AI agents degrade on long tasks. Context rot, overconfidence, instruction-following decay, sycophancy — none of this shows on small tasks, but the deeper the session the greater the effect. Users compound this by providing vague input and assuming the agent knows best practices, prior art, and domain context. It doesn't.
 
-The pipeline solves both sides: it forces rigorous process on the agent (research, clarify, specify, review, design, review, plan, review, execute, review, verify, final review, learn) and it forces rigorous input extraction from the user (exactly two interaction points, business questions only).
+The pipeline solves both sides: it forces rigorous process on the agent (research, clarify, specify, review, design, review, plan, review, execute, review, verify, final review, learn) and it forces rigorous input extraction from the user (two inherent interaction points in guided mode, business questions only).
 
 ## Research Basis
 
@@ -171,12 +171,22 @@ Research basis: hybrid LLM + traditional-tool approach is strictly superior to L
 
 ### User Interaction Model
 
-The user interacts at exactly **two** points during a pipeline run:
+The pipeline has **two inherent interaction points** where information flows between user and pipeline:
 
 1. **Clarify** — scope, constraints, requirements. Business questions only.
 2. **Design** — pick a direction from 2-3 presented options with opinionated recommendation.
 
-Everything else is autonomous. The user can optionally review final artifacts.
+Three interaction modes control how these points (and additional checkpoints) are handled:
+
+| Mode | Behavior | Best for |
+|------|----------|----------|
+| **Auto** | Zero human stops. External reviewer (Codex/Gemini) acts as gating agent for all decisions. Escalates to human only on cap exceeded or "not doable." | Overnight runs, clear specs. Requires multi-tool mode. |
+| **Guided** | Pauses at the 2 interaction points (Clarify questions, Design choice). Boundary gates between pre-execution → execution and execution → completion ("continue or wait?"). Everything else autonomous. | Most work. The default. |
+| **Interactive** | Stops between every sub-phase. Pair-programmer tone — discusses findings, co-designs, helps the user think through clarification and plan. | Ambiguous requirements, new domains, visual design collaboration. |
+
+**Boundary gates** (guided and interactive): after pre-execution completes and after execution completes, the pipeline pauses with "continue or wait?" — not an information exchange, just a go/no-go for the user to review artifacts or take a break.
+
+The user can optionally review final artifacts in any mode.
 
 ### Project Initialization
 
@@ -190,7 +200,7 @@ Init is project infrastructure setup — it runs before any pipeline run, like `
 2. **Dependency health check** (automatic, no questions): context-mode MCP availability, `wazir doctor` health. Missing context-mode warns but does not block.
 3. **Model mode** (question): single model, multi-model (route tasks by tier), or multi-tool (current model + external CLI tools for cross-model review). No recommended default — depends on user's setup.
 4. **Multi-tool configuration** (conditional question): which external tools (Codex/Gemini/both), which models. Privacy notice: multi-tool sends code to external providers. Missing tools fall back to single model.
-5. **Interaction mode** (question): auto (no checkpoints, requires external reviewer), guided (pause at phase boundaries), or interactive (co-design, check approach before coding). Stored as project default, overridable per-run via inline modifiers.
+5. **Interaction mode** (question): auto (zero human stops, external reviewer as gating agent, requires multi-tool), guided (pause at 2 interaction points + boundary gates between pipeline parts), or interactive (stops between every sub-phase, pair-programmer collaboration). Stored as project default, overridable per-run via inline modifiers.
 6. **Auto-detect and report**: host, stack, project — no questions.
 7. **Write config**: `config_version: 2` schema. No credentials — only tool names and model choices.
 
@@ -218,7 +228,7 @@ The pipeline has three parts, each in its own file. This root document contains 
 
 | Part | File | Scope |
 |------|------|-------|
-| **I. Pre-Execution** | [`pipeline-clarify.md`](pipeline-clarify.md) | 8 phases: Discover → Clarify → Specify → Review → Design → Review → Plan → Review. Two user interactions. Review mechanism. |
+| **I. Pre-Execution** | [`pipeline-clarify.md`](pipeline-clarify.md) | 8 phases: Discover → Clarify → Specify → Review → Design → Review → Plan → Review. Three interaction modes (auto/guided/interactive). Review mechanism. |
 | **II. Execution** | [`pipeline-execute.md`](pipeline-execute.md) | Subtask pipeline (Execute → Review → Verify → Done), status protocol, parallel execution, failure handling, batch handover. |
 | **III. Completion** | [`pipeline-complete.md`](pipeline-complete.md) | Integration verification, concern resolution, 4-pass final review, learning system, session handover. |
 | **Init** | [`pipeline-init.md`](pipeline-init.md) | Project initialization: dependency checks, model mode, interaction mode, config schema. |
@@ -296,7 +306,7 @@ Per-subtask worktrees also contain `analysis-findings.json` (deterministic analy
 
 | Decision | Rationale | Override Condition |
 |----------|-----------|-------------------|
-| 2 user interaction points only | Business questions to user, technical to agents | Never — interaction model is load-bearing |
+| 2 inherent interaction points (Clarify, Design) | Business questions to user, technical to agents. Auto proxies both to gating agent, guided pauses at both, interactive adds sub-phase checkpoints. | Never — interaction model is load-bearing |
 | Fresh agents, never same-session | 39% degradation, unfixable context poisoning | Never — research is unambiguous |
 | Files not SQLite for state | Single-threaded orchestrator, no concurrent writers | Orchestrator becomes multi-process |
 | 4 final review passes | 75% in rounds 1-2, cross-model for blind spots, >4 diminishing | Learning data showing 5th pass consistently catches missed category |

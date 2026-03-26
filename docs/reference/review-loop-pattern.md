@@ -283,7 +283,20 @@ codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <su
 4. **Assumptions** -- hidden assumptions explicit
 5. **Scope creep** -- nothing beyond briefing
 
-### Design-Review Dimensions (5)
+### Architectural Design-Review Dimensions (6)
+
+Used for Phase 5 DESIGN (implementation approach selection). Review mode: `architectural-design-review`.
+
+1. **Feasibility** -- can this approach be built with the current stack and constraints?
+2. **Spec alignment** -- does the design address every requirement from the spec?
+3. **Completeness** -- are all components, interfaces, and data flows accounted for?
+4. **Trade-off documentation** -- are trade-offs between approaches explicit and honest?
+5. **YAGNI** -- does the design avoid over-engineering beyond what the spec requires?
+6. **Security/performance** -- are security and performance implications of the chosen approach identified?
+
+### Visual Design-Review Dimensions (5)
+
+Used for Phase 4a VISUAL DESIGN (collaborative visual design with pencil MCP or equivalent). Review mode: `visual-design-review`. Only runs when visual design sub-phase is active.
 
 Matches canonical `workflows/design-review.md`:
 
@@ -332,11 +345,11 @@ The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. 
 
 ## Per-Depth Coverage Contract
 
-| Depth | Research | Spec | Design-Review | Plan | Task Execution | Final Review |
-|-------|----------|------|---------------|------|----------------|--------------|
-| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
-| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
-| Deep | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-7, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
+| Depth | Research | Spec | Arch. Design-Review | Visual Design-Review | Plan | Task Execution | Final Review |
+|-------|----------|------|---------------------|---------------------|------|----------------|--------------|
+| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
+| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
+| Deep | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-8, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
 
 Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 7 dimensions -- it is a gate, not a loop.
 
@@ -388,7 +401,8 @@ The reviewer skill operates in different modes depending on the phase. **Mode is
 |------|---------------|---------------|------------|--------|
 | `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
 | `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Findings with severity, no score |
-| `design-review` | After design approval | Design artifact, approved spec, accessibility guidelines | 5 design-review dims (canonical) | Findings with severity (blocking/advisory) |
+| `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec | 6 architectural design-review dims | Findings with severity (blocking/advisory) |
+| `visual-design-review` | After visual design (Phase 4a, conditional) | Visual design artifact, approved spec, accessibility guidelines | 5 visual design-review dims | Findings with severity (blocking/advisory) |
 | `plan-review` | After planning | Draft plan, approved spec, design artifact | 7 plan dims | Findings with severity, no score |
 | `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA) | 5 task-execution dims | Pass/fail per task, no score |
 | `research-review` | During discover | Research artifact | 5 research dims | Findings with severity, no score |
@@ -401,7 +415,8 @@ Each caller is responsible for passing the correct mode:
 - Clarifier passes `--mode clarification-review` after Phase 1A
 - Discover workflow passes `--mode research-review` after research
 - Specifier flow passes `--mode spec-challenge` after specify
-- Brainstorming passes `--mode design-review` after user approval
+- Brainstorming passes `--mode architectural-design-review` after user approval
+- Visual design workflow passes `--mode visual-design-review` after Phase 4a (if active)
 - Writing-plans passes `--mode plan-review` after planning
 - Executor passes `--mode task-review` for each task
 - `/wazir` runner passes `--mode final` for the final review gate
@@ -499,7 +514,8 @@ These are the fixed rubrics — no ad-hoc dimension selection:
 |-------|---------------------|
 | research-review | Coverage, Source quality, Relevance, Gaps identified, Actionability |
 | clarification-review / spec-challenge | Completeness, Testability, Ambiguity, Assumptions, Scope creep |
-| design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
+| architectural-design-review | Feasibility, Spec alignment, Completeness, Trade-off documentation, YAGNI, Security/performance |
+| visual-design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
 | plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy, Input coverage |
 | task-review | Correctness, Tests, Wiring, Drift, Quality |
 | final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
