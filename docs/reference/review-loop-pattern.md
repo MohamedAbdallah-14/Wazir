@@ -316,7 +316,7 @@ Matches canonical `workflows/design-review.md` (visual-design-review dimensions)
 5. **Edge cases** -- error paths covered
 6. **Security** -- auth, injection, data exposure
 7. **Integration** -- tasks connect end-to-end
-8. **Input Coverage** -- every distinct item in the original input maps to at least one task. If `tasks < input items`, HIGH finding listing missing items
+8. **Input Coverage** -- every distinct item in the original input maps to at least one task. If any input item has no mapped task, HIGH finding listing unmapped items (item-level traceability, not count comparison)
 
 ### Task Execution Dimensions (5)
 
@@ -389,7 +389,7 @@ workflow_policy:
 
 - `learn` extracts durable learnings from review findings -- recurring findings become accepted learnings.
 - `prepare_next` prepares context and handoff for the next run.
-- `author` has a human approval gate, not an iterative review loop.
+- `author` runs autonomously with its own review loop — no human approval gate. Activated by content-author detection after spec review.
 - `run_audit` is an on-demand standalone audit, not part of the main pipeline flow.
 
 ---
@@ -438,9 +438,10 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
 Use this template with `codex exec` for non-code artifacts piped via stdin:
 
 ```bash
-cat <artifact_path> | codex exec -c model="$CODEX_MODEL" \
+(cat <artifact_path>; echo "---ORIGINAL INPUT---"; cat .wazir/input/briefing.md) | codex exec -c model="$CODEX_MODEL" \
   "You are reviewing a [ARTIFACT_TYPE] for the Wazir engineering OS.
 Focus on [DIMENSION]: [dimension description].
+The content after ---ORIGINAL INPUT--- is the user's original briefing — check for input alignment.
 Rules: cite specific sections, be actionable, say CLEAN if no issues.
 Do NOT load or invoke any skills. Do NOT read the codebase.
 Review ONLY the content provided via stdin."
