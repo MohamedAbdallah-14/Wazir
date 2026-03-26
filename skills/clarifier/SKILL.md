@@ -60,6 +60,12 @@ Checkpoints are conditional on `interaction_mode`:
 **Guided**: 2 interaction points (Clarify + Design) + boundary gates between pipeline parts.
 **Interactive**: pair-programmer — stops between sub-phases, discusses findings, co-designs decisions.
 
+**Interactive mode compaction:** Between phases, the orchestrator suggests the user compact context. The main session accumulates discussion across checkpoints; compaction between phases prevents context rot from degrading later phases. After each checkpoint where the user approves, suggest:
+
+> Context is growing from our discussion. To keep later phases sharp, consider compacting now (`/compact`). This preserves decisions but frees working memory.
+
+This is a suggestion, not a gate. The user can skip compaction.
+
 ---
 
 ## Context-Mode Usage
