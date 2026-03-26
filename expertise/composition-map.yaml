@@ -16,6 +16,21 @@
 #
 # All paths are relative to expertise/
 
+# Subagent prompt type resolution (used by the Composer):
+#
+# Executor prompt:
+#   always.executor + stacks.<detected>.executor + concerns.<declared>.executor + auto.all-stacks.all-roles
+#   Composer adds: TDD instructions, hard limits, self-review checklist, escalation permission, code org guidance
+#
+# Reviewer/Verifier prompt:
+#   always.reviewer + always.verifier + reviewer_modes.task-review + stacks.<detected>.antipatterns + auto.all-stacks.all-roles
+#   Composer adds: two-stage review instructions, security dim injection rules, commit discipline check,
+#   finding attribution rules, type-aware verification commands, agent behavior check rules
+#
+# Cross-Model R/V prompt:
+#   Same as Reviewer/Verifier + cross-model tool invocation from multi_tool.tools config (Codex, Gemini, etc.)
+#   Composer adds: source attribution rules ([Internal], [Codex], [Gemini], [Both]), merge strategy
+
 always:
   executor:
     - antipatterns/process/ai-coding-antipatterns.md
