@@ -28,7 +28,7 @@ The agent audits its own work in an isolated git worktree. Validates, finds stru
 
 ## 7. Review Loops
 
-Multi-pass adversarial review at every pipeline checkpoint — not a single rubber-stamp at the end. Research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions. Findings are resolved before advancing. The reviewer is an adversary, not a cheerleader.
+Multi-pass adversarial review at every pipeline checkpoint — not a single rubber-stamp at the end. Research-review, clarification-review, spec-challenge, architectural-design-review, visual-design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions. Findings are resolved before advancing. The reviewer is an adversary, not a cheerleader.
 
 ## 8. Continuous Learning
 

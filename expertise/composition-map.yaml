@@ -45,7 +45,7 @@ reviewer_modes:
   spec-challenge:
     - digests/reviewer/architectural-thinking-digest.md
     - digests/reviewer/ddd-digest.md
-  design-review:
+  design-review:  # covers architectural-design-review + visual-design-review
     - digests/reviewer/architectural-thinking-digest.md
     - digests/reviewer/coupling-cohesion-digest.md
   plan-review:

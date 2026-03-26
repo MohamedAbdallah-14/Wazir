@@ -74,7 +74,7 @@ See [Indexing and Recall](indexing-and-recall.md) for full command details and e
 
 The design phase runs after specification and before planning. The `designer` role uses open-pencil MCP tools to produce visual designs from the approved spec. Outputs include a `.fig` design file, exported Tailwind JSX/HTML+CSS scaffolds, design tokens JSON, and screenshot PNGs.
 
-The `design-review` workflow validates designs against the spec before planning begins. The existing `review` workflow also checks design-vs-implementation alignment after execution.
+The design-review workflow (architectural-design-review and visual-design-review modes) validates designs against the spec before planning begins. The existing `review` workflow also checks design-vs-implementation alignment after execution.
 
 open-pencil is integrated as an optional adapter (`open_pencil`) — it is not required for core Wazir functionality.
 

@@ -276,7 +276,7 @@ workflow_policy:
   spec-challenge: { enabled: true, loop_cap: 10 }
   author:         { enabled: false, loop_cap: 10 }
   design:         { enabled: true, loop_cap: 10 }
-  design-review:  { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }  # covers architectural-design-review + visual-design-review
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
   # Executor phase workflows
@@ -398,7 +398,7 @@ Phase 2: Clarifier
   ├── clarify ← clarification-review loop
   ├── specify ← spec-challenge loop
   ├── author (adaptive) ← approval gate
-  ├── design ← design-review loop
+  ├── design ← architectural-design-review loop
   └── plan ← plan-review loop
 
 Phase 3: Executor
@@ -446,7 +446,7 @@ Invoke the `wz:clarifier` skill. It handles all sub-workflows internally:
 2. **Research** (discover workflow) — codebase + external research
 3. **Clarify** (clarify workflow) — scope, constraints, assumptions
 4. **Spec Harden** (specify + spec-challenge workflows) — measurable spec
-5. **Brainstorm** (design + design-review workflows) — design approaches
+5. **Brainstorm** (architectural design + architectural-design-review) — design approaches
 6. **Plan** (plan + plan-review workflows) — execution plan
 
 Each sub-workflow has its own review loop. User checkpoints between major steps.

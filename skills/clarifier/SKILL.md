@@ -359,11 +359,11 @@ Present visual designs to the user for approval before proceeding to architectur
 
 ---
 
-## Sub-Workflow 4: Brainstorm (design + design-review workflows)
+## Sub-Workflow 4: Brainstorm (architectural design + architectural-design-review)
 
 **Before starting this phase, output to the user:**
 
-> **Brainstorming** — About to propose 2-3 design approaches with explicit trade-offs, then run design-review on the approved choice.
+> **Brainstorming** — About to propose 2-3 design approaches with explicit trade-offs, then run architectural-design-review on the approved choice.
 >
 > **Why this matters:** Without exploring alternatives, the first approach that comes to mind gets built — even if a simpler, more maintainable, or more performant option exists. This is where architectural mistakes get caught cheaply instead of discovered during implementation.
 >
@@ -399,11 +399,11 @@ Save approved design to `.wazir/runs/latest/clarified/design.md`.
 
 > **Brainstorming complete.**
 >
-> **Found:** [N] approaches evaluated, [N] trade-offs documented, [N] design-review findings resolved
+> **Found:** [N] approaches evaluated, [N] trade-offs documented, [N] architectural-design-review findings resolved
 >
 > **Without this phase:** The first viable approach would be built without considering alternatives — potentially choosing a complex solution when a simple one exists, or an approach that conflicts with existing patterns
 >
-> **Changed because of this work:** [Selected approach and why, rejected alternatives and why, design-review adjustments made]
+> **Changed because of this work:** [Selected approach and why, rejected alternatives and why, architectural-design-review adjustments made]
 
 After approval: design-review loop with `--mode architectural-design-review` (6 architectural dimensions: feasibility, spec alignment, completeness, trade-off documentation, YAGNI, security/performance). See `docs/reference/review-loop-pattern.md` for the full dimension set.
 

@@ -27,8 +27,9 @@ This is the lookup reference for canonical roles, workflows, and their contracts
 | `spec-challenge` | `specify` | Adversarial spec review |
 | `author` | `spec-challenge` | Content authoring |
 | `design` | `author` | Visual design from approved spec |
-| `design-review` | `design` | Validate designs against spec, accessibility, visual consistency |
-| `plan` | `design-review` | Create implementation plan |
+| `architectural-design-review` | `brainstorm` | Validate architectural design: feasibility, spec alignment, completeness, trade-offs, YAGNI, security/performance |
+| `visual-design-review` | `design` | Validate visual designs: spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity |
+| `plan` | `architectural-design-review` | Create implementation plan |
 | `plan-review` | `plan` | Adversarial plan review |
 | `execute` | `plan-review` | Implement the plan |
 | `verify` | `execute` | QA hard gate |

@@ -299,7 +299,7 @@ Used for Phase 5 DESIGN (implementation approach selection). Review mode: `archi
 
 Used for Phase 4a VISUAL DESIGN (collaborative visual design with pencil MCP or equivalent). Review mode: `visual-design-review`. Only runs when visual design sub-phase is active.
 
-Matches canonical `workflows/design-review.md`:
+Matches canonical `workflows/design-review.md` (visual-design-review dimensions):
 
 1. **Spec coverage** -- does the design address every acceptance criterion with a visual component?
 2. **Design-spec consistency** -- does the design introduce anything not in the spec? (scope creep check)
@@ -369,7 +369,7 @@ workflow_policy:
   spec-challenge: { enabled: true, loop_cap: 10 }
   author:         { enabled: false, loop_cap: 10 }
   design:         { enabled: true, loop_cap: 10 }
-  design-review:  { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }  # covers architectural-design-review + visual-design-review
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
   # Executor phase workflows

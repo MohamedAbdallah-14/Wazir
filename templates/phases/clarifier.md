@@ -20,7 +20,7 @@
 - [ ] Get user approval on design choice
 {{/workflow.design}}
 {{#workflow.design-review}}
-- [ ] Run design-review loop
+- [ ] Run architectural-design-review loop
 {{/workflow.design-review}}
 {{#workflow.plan}}
 - [ ] Use `Skill(wz:writing-plans)` — produce execution plan
