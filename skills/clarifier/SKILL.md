@@ -181,6 +181,28 @@ Based on research, I have [N] questions before proceeding:
 
 Ask via AskUserQuestion with the full batch. Wait for answers. If answers introduce new ambiguity, ask a follow-up batch (max 3 batches total).
 
+### Visual Design Triage (after question batching)
+
+During clarification, determine whether the project needs visual design artifacts.
+
+**Design tool detection:** Before asking, check if pencil MCP or equivalent design tools are available. Option 2 (collaborative) is only offered if design tools are detected.
+
+**Mode gate:** In `auto` mode, this question goes to the gating agent. In `guided` and `interactive` modes, ask the user.
+
+**Question:** "Does this project need visual design?"
+**Options:**
+1. **No visual design** — no UI work (API, CLI, backend, library). Proceed directly to clarification production.
+2. **Collaborative visual design** — co-design with pencil MCP or equivalent tools. Triggers the VISUAL DESIGN sub-phase (Phase 4a). Requires interactive mode. *(Only shown if design tools detected.)*
+3. **Design from references** — you provide existing designs (Figma links, screenshots, sketches) as input. Pipeline works from those without a visual design sub-phase.
+
+**If the user selects option 2 but `interaction_mode` is not `interactive`:**
+
+> Collaborative visual design requires interactive mode. Switch to interactive, or pick another option.
+
+**In `auto` mode:** Gating agent evaluates — defaults to option 1 (no visual design) unless input explicitly references UI/visual work.
+
+Set `workflow_policy.visual_design.enabled` and `workflow_policy.visual_design.mode` in the run config based on the answer.
+
 ### Clarification Production
 
 Read the briefing, research brief, user answers to questions, and codebase context. Produce:
