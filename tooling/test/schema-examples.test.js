@@ -25,6 +25,7 @@ const EXAMPLE_CASES = [
   ['templates/examples/docs-claim.example.json', 'schemas/docs-claim.schema.json', 'json'],
   ['templates/examples/author.example.json', 'schemas/author-artifact.schema.json', 'json'],
   ['templates/examples/phase-report.example.json', 'schemas/phase-report.schema.json', 'json'],
+  ['templates/examples/analysis-findings.example.json', 'schemas/analysis-findings.schema.json', 'json'],
 ];
 
 function loadExample(examplePath, kind) {

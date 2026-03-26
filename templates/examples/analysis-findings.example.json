@@ -1,0 +1,27 @@
+{
+  "subtask_id": "BE-3.1",
+  "findings": [
+    {
+      "id": "BE-3.1-1",
+      "category": "lint",
+      "severity": "medium",
+      "file": "src/auth/middleware.js",
+      "line": 42,
+      "rule": "no-unused-vars",
+      "message": "Variable 'token' is declared but never used",
+      "is_new": true
+    },
+    {
+      "id": "BE-3.1-2",
+      "category": "security",
+      "severity": "high",
+      "file": "src/auth/middleware.js",
+      "line": 58,
+      "rule": "no-dynamic-require",
+      "message": "Avoid dynamic require — potential injection vector",
+      "is_new": true
+    }
+  ],
+  "baseline_count": 12,
+  "new_count": 2
+}
