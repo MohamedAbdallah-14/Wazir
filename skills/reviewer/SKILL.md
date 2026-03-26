@@ -93,6 +93,7 @@ If any file is missing:
 2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 3. **Commit discipline check:** If uncommitted changes span work from multiple tasks (e.g., files from task N and task N+1 are both modified), REJECT immediately: "REJECTED: Multiple tasks in single commit. Split into per-task commits before review." This is a blocking finding — no other dimensions are evaluated until resolved.
 4. **Security sensitivity check:** Run `detectSecurityPatterns` from `tooling/src/checks/security-sensitivity.js` against the diff. If `triggered === true`, add the 6 security review dimensions (injection, auth bypass, data exposure, CSRF/SSRF, XSS, secrets leakage) to the standard 5 task-execution dimensions for this review pass. Security findings use severity levels: critical (exploitable), high (likely exploitable), medium (defense-in-depth gap), low (best-practice deviation).
+5. **Pipeline vs standalone:** In-pipeline execution, `task-review` is handled by the subtask execution loop's Reviewer/Verifier steps — the orchestrator dispatches the loop, not this skill. This skill's `task-review` mode is for standalone/non-pipeline invocations only (e.g., manual review of uncommitted changes outside a pipeline run). See `docs/reference/review-loop-pattern.md` "Subtask Execution Loop" section.
 
 ### `spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
@@ -160,6 +161,8 @@ The review process has two tiers. Internal review catches ~80% of issues quickly
 Internal review passes are logged to `.wazir/runs/latest/reviews/<mode>-internal-pass-<N>.md`.
 
 ### Tier 2: External Review (Fresh Eyes on Clean Code)
+
+Codex is one implementation of cross-model review. If `gemini` or other tools are in `multi_tool.tools`, follow the same pattern. The principle is "different model family for blind spot diversity," not a specific vendor.
 
 Only runs AFTER Tier 1 produces a clean pass (no blocking findings).
 
