@@ -398,25 +398,28 @@ Wait for the user's selection before continuing.
 
 ### Scope Coverage Gate (Hard Gate)
 
-Before presenting the plan to the user, verify ALL input items are covered:
+Mechanical gate, separate from the review loop. Before the plan exits pre-execution:
 
-1. Count distinct items/deliverables in the input briefing (`.wazir/input/briefing.md` + any `input/*.md` files)
-2. Count tasks in the execution plan
-3. **If `tasks_in_plan < items_in_input`:** STOP and present:
+1. List every distinct item/deliverable in the original input (`.wazir/input/briefing.md` + any `input/*.md` files)
+2. For each input item, verify at least one task in the plan maps to it
+3. **If any input item has no mapped task → BLOCK:**
 
-> **Scope reduction detected.** The input contains [N] items but the plan only covers [M].
+> **Scope coverage failure.** The following input items have no mapped task in the plan:
 >
-> Missing items: [list]
+> | Input Item | Status |
+> |-----------|--------|
+> | [item description] | **UNMAPPED** |
+> | ... | ... |
 
 Ask the user via AskUserQuestion:
-- **Question:** "The plan is missing [N-M] items from your input. How should we proceed?"
+- **Question:** "[N] input items are not covered by any task. How should we proceed?"
 - **Options:**
   1. "Add missing items to the plan" *(Recommended)*
   2. "Approve reduced scope — I confirm these items can be dropped"
 
-**The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.**
+This is **item-level traceability**, not a count comparison. A vertical-slice task covering 3 input items is valid. 10 tasks that miss 2 input items is not. The check is: every input item is accounted for, not that task count >= item count.
 
-Invariant: `items_in_plan >= items_in_input` unless user explicitly approves reduction.
+**The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.** The review loop's "100% rule" checklist item catches coverage issues during review; this gate catches them mechanically at the exit.
 
 ---
 

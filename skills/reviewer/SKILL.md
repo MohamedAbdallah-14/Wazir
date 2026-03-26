@@ -100,12 +100,11 @@ If any file is missing:
 3. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 4. **`plan-review` additional dimension — Input Coverage:**
    - Read the original input/briefing from `.wazir/input/briefing.md` and any `input/*.md` files
-   - Count distinct items/requirements in the input
-   - Count tasks in the execution plan
-   - If `tasks_in_plan < items_in_input` → **HIGH** finding: "Plan covers [N] of [M] input items. Missing: [list of uncovered items]"
-   - If `tasks_in_plan >= items_in_input` → dimension passes
-   - One task MAY cover multiple input items if justified in the task description
-   - This is the review-level enforcement of the "no scope reduction" rule
+   - List every distinct item/requirement in the original input
+   - For each input item, check whether at least one task maps to it
+   - If any input item has no mapped task → **HIGH** finding: "Input item '[item]' has no mapped task in the plan"
+   - One task MAY cover multiple input items (vertical-slice) if justified in the task description
+   - This is item-level traceability, not a count comparison — aligns with the scope coverage hard gate
 
 ## Review Process (`final` mode)
 
