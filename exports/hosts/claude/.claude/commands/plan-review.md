@@ -41,7 +41,7 @@ On completing this phase, run:
 
 Follows the review loop pattern in `docs/reference/review-loop-pattern.md` with 8 plan dimensions (including Input Coverage). The planner role resolves findings. Pass count determined by depth. No extension.
 
-**Input Coverage dimension:** The reviewer reads the original input/briefing, counts distinct items, and compares against tasks in the plan. If `tasks_in_plan < items_in_input`, this is a HIGH finding listing the missing items. This prevents silent scope reduction where 21 input items become 5 tasks.
+**Input Coverage dimension:** The reviewer reads the original input/briefing, lists every distinct item, and verifies each maps to at least one task in the plan. If any input item has no mapped task, this is a HIGH finding listing the unmapped items. This is item-level traceability, not a count comparison — a vertical-slice task covering 3 input items is valid. This prevents silent scope reduction.
 
 ## Failure Conditions
 

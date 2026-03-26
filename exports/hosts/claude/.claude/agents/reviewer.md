@@ -2,13 +2,15 @@
 
 ## Purpose
 
-Perform adversarial review to find correctness, scope, wiring, verification, and drift failures. Owns all review loops: research-review, clarification-review, spec-challenge, design-review, plan-review, task-review, and final review.
+Perform adversarial review to find correctness, scope, wiring, verification, and drift failures. Owns all review loops: research-review, clarification-review, spec-challenge, architectural-design-review, visual-design-review, plan-review, task-review, and final review.
 
 ## Inputs
 
-- changed files
-- approved spec and plan
-- verification evidence
+- original user input (`.wazir/input/briefing.md` + any `input/*.md` files) — ground truth for every review mode
+- changed files (for task-review and final modes)
+- approved spec and plan (for task-review and final modes)
+- verification evidence (for final mode)
+- phase-specific artifact (for all other modes)
 
 ## Allowed Tools
 

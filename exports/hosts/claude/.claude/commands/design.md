@@ -22,16 +22,16 @@ On entering this phase, run:
 
 ## Outputs
 
-- design artifact (`.fig` + exported code + tokens + screenshots)
+- design artifact (`.fig` + tokens + screenshots, optionally exported code scaffolds as reference)
 
 ## Skip Conditions
 
 - project has no visual design needs
-- open-pencil MCP server is not available (proceed to planning with text-only design specs)
+- open-pencil MCP server is not available (proceed to architectural design with text-only design specs)
 
 ## Approval Gate
 
-- explicit human approval required before visual-design-review
+- explicit human approval required before design-review
 
 ## Review Loop
 
@@ -45,4 +45,4 @@ On completing this phase, run:
 ## Failure Conditions
 
 - design does not address spec requirements
-- missing exported code scaffolds or tokens
+- missing design tokens
