@@ -124,7 +124,7 @@ A deterministic function (not an LLM) that reads a subtask.md and `expertise/com
 
 - **Executor prompt**: subtask spec + expertise modules (always.executor + stack + concerns) + TDD instructions + constraints + hard limits + file pointers for context retrieval. The executor receives everything it needs to implement without exploring — the Composer front-loads context.
 - **Reviewer/Verifier prompt**: expertise modules (always.reviewer + always.verifier + reviewer_modes.task-review + stack antipatterns) + review dimensions + acceptance criteria + verification commands + the diff to review + `analysis-findings.json` from the executor's scan. One prompt serves both review and verification.
-- **Codex-Reviewer/Verifier prompt**: same as Reviewer/Verifier + Codex invocation instructions (model config, review scope, dimension focus) + merge strategy for combining Codex output with own findings. Instructs the subagent to run Codex and verification concurrently.
+- **Cross-Model Reviewer/Verifier prompt**: same as Reviewer/Verifier + cross-model tool invocation instructions (which tool from `multi_tool.tools` config, model config, review scope, dimension focus) + merge strategy for combining cross-model output with own findings + source attribution rules (`[Internal]`, `[Codex]`, `[Gemini]`, `[Both]`). Instructs the subagent to run the cross-model tool and verification concurrently.
 
 Each prompt type is a complete, self-contained brief. The subagent needs nothing beyond what the Composer provides — no codebase exploration, no context gathering. This is what keeps subagent sessions short and under the 35-minute degradation cliff.
 
@@ -162,6 +162,9 @@ The vision describes desired architecture. This section specifies what mechanica
 **Process Gates** (what MUST happen before proceeding):
 4. Pipeline state MUST be created by a mechanical gate (hook/bootstrap), not by the agent — the gate's existence proves the pipeline is running
 5. Every phase gate MUST have a mechanical check: artifact exists + schema valid + state updated. No phase advances on agent self-report alone
+
+**Path Protection** (what agents MUST NOT modify):
+6. Pipeline-critical paths (roles, workflows, skills, schemas, expertise definitions, manifest) MUST be protected from agent modification during execution. Protection is both declarative (path list) and verified at runtime (diff check against protected paths after each agent completes). An agent that modifies a protected path has its changes rejected — the enforcement is structural, not advisory.
 
 Known limitations: hooks fail-open on crash (the orchestrator must handle hook failure as a blocking error, not silently proceed). Semantic evasion via Bash exists (agent encodes commands as strings). Hooks cannot modify tool input, only block tool calls. Documented so implementers design around them.
 
@@ -224,11 +227,17 @@ Full specification: `docs/vision/pipeline-init.md`
 
 ### State Management
 
-Files for everything. No database. The access pattern (single-threaded orchestrator, one writer per file, sequential stages per subtask, parallel subtasks in separate worktrees) eliminates concurrent write problems.
+Two layers: files for agent communication, SQLite for orchestrator projections.
 
-**Research note**: execution research recommends SQLite over files. This pipeline departs from that recommendation because Wazir's access pattern has no concurrent writers. SQLite adds complexity without solving a real problem given this architecture. If the orchestrator ever becomes multi-process, revisit.
+**Files** remain the communication bus. Agents write artifacts (code, specs, findings.md, proof.json, status.json) to disk. Downstream agents and the orchestrator read these files. This preserves human-readability, git-trackability, and Principle 6 (file system is the communication bus). Agents never touch SQLite.
 
-Append-only event log records every state transition. If the state file is lost, replay events to reconstruct. Event sourcing — the log is the authority, the state file is a materialized view.
+**SQLite (WAL mode)** is the orchestrator's queryable projection layer. The orchestrator reads agent output files, then projects structured data into SQLite for cross-run queries that files are bad at: finding hashes and recurrence detection, event log projections, concern tracking state, learning system data (adoption rates, quality deltas). Only the orchestrator and CLI tooling (`wazir capture`, `wazir report`) read/write SQLite.
+
+The single-writer invariant still holds — one orchestrator process, sequential writes. SQLite adds crash-safe atomicity that file writes lack (state-management.md documents 3 production bugs from file-based state: truncation mid-write, JSON parse errors, advisory locking not enforced by OS).
+
+Append-only event log records every state transition to `events.jsonl` (file, append-only, human-readable). SQLite event projections enable efficient querying without replaying the full log. If the SQLite projection is lost, replay `events.jsonl` to reconstruct. Event sourcing — the log file is the authority, SQLite is a materialized view.
+
+Research basis: every production DAG engine (Airflow, Temporal, LangGraph) converges on database-backed state. Claude Code GitHub issues #29217, #18998, #20992 document file-based state corruption. SQLite WAL production proof: 400+ pipeline items, 24/7 operation (state-management.md).
 
 ---
 
@@ -240,7 +249,7 @@ The pipeline has three parts, each in its own file. This root document contains 
 |------|------|-------|
 | **I. Pre-Execution** | [`pipeline-clarify.md`](pipeline-clarify.md) | 8 phases: Discover → Clarify → Specify → Review → Design → Review → Plan → Review. Three interaction modes (auto/guided/interactive). Review mechanism. |
 | **II. Execution** | [`pipeline-execute.md`](pipeline-execute.md) | Subtask pipeline (Execute → Review → Verify → Done), status protocol, parallel execution, failure handling, batch handover. |
-| **III. Completion** | [`pipeline-complete.md`](pipeline-complete.md) | Integration verification, concern resolution, 4-pass final review, learning system, session handover. |
+| **III. Completion** | [`pipeline-complete.md`](pipeline-complete.md) | Integration verification, concern resolution (with residuals), 2+1 final review, learning system (quality delta, adoption rates), session handover. |
 | **Init** | [`pipeline-init.md`](pipeline-init.md) | Project initialization: dependency checks, model mode, interaction mode, config schema. |
 
 ---
@@ -265,10 +274,11 @@ The pipeline has three parts, each in its own file. This root document contains 
 │   │   ├── deferred.md
 │   │   └── systemic.md
 │   ├── final-review/
-│   │   ├── pass-1-drift.md
-│   │   ├── pass-2-audit.md
-│   │   ├── pass-3-cross-model.md
-│   │   └── pass-4-signoff.md
+│   │   ├── pass-1-internal.md
+│   │   ├── pass-2-cross-model.md
+│   │   ├── pass-3-reconciliation.md  (conditional — only if passes 1-2 conflict)
+│   │   ├── residuals-disposition.md
+│   │   └── finding-adoption.md
 │   └── learnings/
 │       ├── review-patterns.md
 │       ├── planning-gaps.md
@@ -301,7 +311,7 @@ Per-subtask worktrees also contain `analysis-findings.json` (deterministic analy
 14. **Constrained decoding for all structured output.** Zero tolerance for format errors.
 15. **Concerns are checked at batch boundaries, not just at the end.** Early signals prevent cascading failures.
 16. **The original user input is the only ground truth.** Drift is measured from the source.
-17. **Final review is the hardest gate.** 4 passes: 2 internal + 2 cross-model. No shortcuts.
+17. **Final review is the hardest gate.** 2 passes (internal + cross-model) with conditional 3rd for reconciliation. No shortcuts.
 18. **Cross-model review is structural, not optional.** 64.5% blind spot demands it.
 19. **Concerns are innocent until proven acceptable.** Burden of proof is on the resolution.
 20. **Learning feeds back into expertise.** Every run generates prioritized proposals. The flywheel is core.
@@ -318,10 +328,10 @@ Per-subtask worktrees also contain `analysis-findings.json` (deterministic analy
 |----------|-----------|-------------------|
 | 2 inherent interaction points (Clarify, Design) | Business questions to user, technical to agents. Auto proxies both to gating agent, guided pauses at both, interactive adds sub-phase checkpoints. | Never — interaction model is load-bearing |
 | Fresh agents, never same-session | 39% degradation, unfixable context poisoning | Never — research is unambiguous |
-| Files not SQLite for state | Single-threaded orchestrator, no concurrent writers | Orchestrator becomes multi-process |
-| 4 final review passes | 75% in rounds 1-2, cross-model for blind spots, >4 diminishing | Learning data showing 5th pass consistently catches missed category |
+| Files for agent communication, SQLite for orchestrator projections | Files: human-readable, git-trackable, agents read/write naturally. SQLite: crash-safe, queryable for cross-run analytics (finding recurrence, adoption rates, concern tracking). Agents never touch SQLite. | Never — clean layer separation. Files are the bus, SQLite is the view. |
+| 2 final review passes + conditional 3rd | Rounds 1-2 capture 75% of improvement (Yang et al.). Reviewer count converges to 2 (Rigby & Bird). Sequential passes compound failure probability (95%/step × 4 = 81.5%). Execution pipeline already runs cross-model review per subtask. 3rd pass only for conflicting CRITICAL/HIGH between passes 1-2. | Learning data showing Pass 3 reconciliation triggers on >50% of runs — then consider making it mandatory |
 | Internal passes before cross-model | Fix cheap issues before burning highest-tier tokens | Never — cost-optimal by definition |
-| Targeted fixes not full re-execution | Scoped context prevents pollution | Learning data showing >30% regression rate |
+| Targeted fixes batched by severity tier | All CRITICAL findings to one fix executor, all HIGH to another. Prevents "Death of a Thousand Round Trips" anti-pattern (Tatham: drip-feeding one issue at a time is the worst pattern). Each executor gets scoped context for its severity tier. | Learning data showing batched fixes have >30% regression rate — then reduce batch size |
 | Learning proposes, never auto-applies | Expertise changes affect all future runs | Never — human-in-the-loop is safety invariant |
 | Concerns resolved before final review | Final review sees resolved state, not raw accumulation | Never — ordering is load-bearing |
 | Concurrency ceiling of 4 | 10-20% conflict rate, 26x bug rate, DORA research | Production data showing 5+ works reliably |
