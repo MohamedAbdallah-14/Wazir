@@ -291,8 +291,19 @@ After spec hardening, scan the spec for content needs. Auto-enable the `author` 
 - Documentation content, user guides, API docs
 - Email templates, notification text
 
-If detected, set `workflow_policy.author.enabled = true` in the run config and note:
-> **Content needs detected.** The content-author workflow will run after design approval to produce: [list detected content types].
+If detected, set `workflow_policy.author.enabled = true` in the run config.
+
+**Content-author runs autonomously** with its own review loop — no human approval gate. It produces content artifacts (microcopy, i18n keys, terminology, seed data) that downstream phases need.
+
+**Ordering when content-author is detected:**
+1. REVIEW(spec) completes
+2. Content-author workflow runs (autonomous, review loop)
+3. VISUAL DESIGN runs (if enabled and `interaction_mode == interactive`)
+4. DESIGN (architectural brainstorming)
+
+The designer role expects content-author artifacts as input. Content gaps discovered during execution are 10-100x more expensive to fix.
+
+> **Content needs detected.** The content-author workflow will now run autonomously to produce: [list detected content types]. No approval needed — review loop ensures quality.
 
 ### Checkpoint: Hardened Spec Review
 
@@ -314,6 +325,31 @@ Ask the user via AskUserQuestion:
 Wait for the user's selection before continuing.
 
 **If `interaction_mode == auto` or `guided`:** Log spec hardening summary to reasoning file and continue.
+
+---
+
+## Sub-Workflow 3a: Visual Design (conditional, interactive-only)
+
+**Condition:** Only runs if `workflow_policy.visual_design.enabled == true` AND `workflow_policy.visual_design.mode == "collaborative"` AND `interaction_mode == interactive`.
+
+If conditions are met, delegate to the design workflow (`workflows/design.md`):
+
+1. The **designer role** produces visual design artifacts using pencil MCP or equivalent tools.
+2. This is the most interaction-heavy part of the pipeline — heavy user collaboration.
+3. After user approves the visual designs, invoke `wz:reviewer --mode visual-design-review`.
+4. Loop runs for `pass_counts[depth]` passes.
+
+**Produces:** design files, design tokens (colors, spacing, typography), screenshot references. Optionally exports code scaffolds as reference — these are convenience exports, not architecture decisions. Phase 5 determines the implementation stack.
+
+Save result to `.wazir/runs/latest/clarified/visual-design/`.
+
+### Checkpoint: Visual Design Review
+
+**Mode gate:** This sub-workflow only runs in `interactive` mode, so this checkpoint always pauses.
+
+Present visual designs to the user for approval before proceeding to architectural design.
+
+**If conditions are NOT met:** Skip directly to Sub-Workflow 4 (Brainstorm).
 
 ---
 
