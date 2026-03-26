@@ -336,7 +336,7 @@ Used for `workflows/review.md` scored gate:
 2. **Completeness** -- are all acceptance criteria met?
 3. **Wiring** -- are all paths connected end-to-end?
 4. **Verification** -- is there evidence (tests, type checks) for each claim?
-5. **Drift** -- does the implementation match the approved plan?
+5. **Drift** -- does the implementation match what the user originally asked for? (ground truth = original input, not approved plan — Vision Principle 16)
 6. **Quality** -- code style, naming, error handling, security
 7. **Documentation** -- changelog entries, commit messages, comments
 
@@ -348,11 +348,57 @@ The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. 
 
 | Depth | Research | Spec | Arch. Design-Review | Visual Design-Review | Plan | Task Execution | Final Review |
 |-------|----------|------|---------------------|---------------------|------|----------------|--------------|
-| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
-| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
-| Deep | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-8, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
+| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 2+1 passes |
+| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 2+1 passes |
+| Deep | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-8, 7 passes | dims 1-5, 7 passes | always 7 dims, 2+1 passes |
 
-Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 7 dimensions -- it is a gate, not a loop.
+Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review uses a different structure: 2 mandatory passes (Pass 1 internal + Pass 2 cross-model) with a conditional 3rd pass for reconciliation when Passes 1 and 2 have conflicting CRITICAL or HIGH findings. All 3 passes cover all 7 dimensions. This is not a fix loop — it is a multi-perspective compliance audit. See docs/vision/pipeline-complete.md Stages 3-6 for the full structure.
+
+---
+
+## Completion Pipeline: Final Review Structure
+
+The final review follows a different structure from all other review modes. While other modes use the standard review loop (fix-and-re-review for N passes), the final review is a **multi-perspective compliance audit** with targeted fixes between passes.
+
+### Structure: 2 + Conditional 3rd Pass
+
+| Pass | Agent | Inputs | Purpose |
+|------|-------|--------|---------|
+| **Pass 1: Internal** | Expertise-loaded (Composer: `always.reviewer` + `reviewer_modes.final` + stack antipatterns) | All inputs including concern resolution output | Dual comparison: implementation vs plan (bidirectional) + implementation vs original input (telephone game check) |
+| **Targeted Fixes** | Fix executors batched by severity tier | CRITICAL findings → one executor, HIGH → another | Batching prevents "Death of a Thousand Round Trips" anti-pattern |
+| **Pass 2: Cross-Model** | Different model family, fresh session | Deterministic inputs + concern resolution output (no Pass 1 LLM findings) | Independent review. Facts help, opinions contaminate. |
+| **Pass 3: Reconciliation** | Fresh agent (conditional) | Both pass outputs | Runs ONLY if Passes 1-2 have conflicting CRITICAL/HIGH findings |
+
+### Finding Severity (Final Review Specific)
+
+Final review uses a 4-level severity scale (not the blocking/warning/note scale used in other modes):
+
+| Severity | Meaning | Response |
+|----------|---------|----------|
+| CRITICAL | Implementation contradicts spec or original input | Targeted fix or escalate to user |
+| HIGH | Significant drift or integration gap | Targeted fix |
+| MEDIUM | Minor drift or quality gap | Document, fix if cheap (≤10 lines) |
+| LOW | Style or convention divergence | Document for learning only |
+
+### Exit Criteria
+
+**Precedence rule**: a single unresolved CRITICAL finding prevents SHIP regardless of score. Blocking findings take precedence over score thresholds.
+
+- All CRITICAL findings resolved (including CRITICAL residuals from execution)
+- All HIGH findings resolved or explicitly accepted by user
+- MEDIUM/LOW documented in learning system
+- Every spec requirement has implementation evidence
+- Cross-model reviewer has no unresolved CRITICAL/HIGH
+- Sign-off: SHIP / SHIP WITH CAVEATS / DO NOT SHIP
+
+### Prerequisites (Before Final Review)
+
+Final review requires two completion stages to run first:
+
+1. **Integration Verification** (Vision Stage 1): full test/lint/typecheck/build on merged main + plan-defined integration criteria + side effects verification
+2. **Concern Resolution** (Vision Stage 2): fresh agent evaluates concern registry + residuals + batch-boundary disposition. Sycophancy guard: generating agent MUST NOT rebut concerns.
+
+See `docs/vision/pipeline-complete.md` for full stage definitions.
 
 ---
 
@@ -604,6 +650,10 @@ Total worst case per subtask: 7 loop spawns + 1 replan + 7 replanned loop spawns
 ### Baseline SHA
 
 The orchestrator captures `PRE_TASK_SHA` before dispatching step 1. All Reviewer/Verifier passes scope their diff to `--base $PRE_TASK_SHA`.
+
+### Cross-Model Fallback
+
+If the cross-model tool is unavailable in step 6 (CLI not installed, API error), the subagent falls back to standard Reviewer/Verifier behavior. Unavailability is logged but does not block the pipeline. The next subtask still attempts the cross-model tool (transient failures may recover).
 
 ### Finding Attribution
 

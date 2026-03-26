@@ -34,7 +34,7 @@
       "additionalProperties": true
     }
   },
-  "additionalProperties": true,
+  "additionalProperties": false,
   "if": {
     "properties": { "status": { "const": "FAILED" } }
   },

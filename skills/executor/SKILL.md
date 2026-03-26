@@ -5,6 +5,10 @@ description: Orchestrator entry point — gate prerequisites, set interaction mo
 
 # Executor
 
+## Session Boundary (Hard Gate)
+
+The execute phase MUST start in a fresh session. The clarify phase produces a handover artifact; the execute session consumes it. Do NOT reopen a clarify session to continue into execution — that reintroduces context rot accumulated during research, clarification, specification, design, and planning. If this skill is invoked in a session that ran clarify phases, STOP and instruct the user to start a new session with the handover artifact.
+
 ## Model Annotation
 
 When multi-model mode is enabled, the orchestrator uses Opus for dispatch decisions. Subagent model selection is handled by the Composer.

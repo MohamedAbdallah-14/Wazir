@@ -4,6 +4,8 @@
 
 Perform adversarial review to find correctness, scope, wiring, verification, and drift failures. Owns all review loops: research-review, clarification-review, spec-challenge, architectural-design-review, visual-design-review, plan-review, task-review, and final review.
 
+In concern resolution (completion Stage 2): the generating agent MUST NOT rebut or respond to reviewer concerns. Models abandon correct answers 98% of the time when challenged. If a concern is contested, route to human — not to agent debate.
+
 In the subtask pipeline, reviewer and verifier merge into a single Reviewer/Verifier subagent. This role file defines the reviewer half of that merged subagent. The verifier half is defined in `roles/verifier.md`.
 
 ## Subtask Pipeline: Merged Reviewer/Verifier
@@ -35,7 +37,7 @@ Receives `analysis-findings.json` from the executor's deterministic scan. Classi
 
 ### Type-Aware Verification (merged from verifier)
 
-Detect project type (web, API, CLI, library) and run type-appropriate verification commands. Web → build verification. API → endpoint checks. CLI → --help smoke test. Library → test/lint/type-check. All types run full test suite + type checks + linters. Evidence collected as structured output, mapped to acceptance criteria.
+Detect project type (web, API, CLI, library) and run type-appropriate verification commands. Web → build verification. API → endpoint checks. CLI → --help smoke test. Library → test/lint/type-check. All types run full test suite + type checks + linters. Evidence collected as structured output, mapped to acceptance criteria. Rerun deterministic analysis on the final subtask state — confirm all `analysis-findings.json` `is_new: true` findings are resolved. Pre-existing findings (`is_new: false`) are informational context, not subtask failures.
 
 ### proof.json Output (merged from verifier)
 
@@ -60,6 +62,9 @@ Check executor's behavior efficiency: excessive direct file reads without using 
 - approved spec and plan (for task-review and final modes)
 - verification evidence (for final mode)
 - phase-specific artifact (for all other modes)
+- concern resolution output (for final mode — concern registry + residuals disposition from completion Stage 2)
+- integration verification results (for final mode — test/lint/typecheck/build results from completion Stage 1)
+- all `analysis-findings.json` files (for final mode — deterministic analysis from execution + merged)
 
 ## Allowed Tools
 
@@ -84,7 +89,7 @@ Default approach: recall L1, escalate to direct read for flagged issues
 - findings with severity
 - rationale tied to evidence
 - explicit no-findings verdict when applicable
-- review loop pass logs with source attribution ([Wazir], [Codex], [Both])
+- review loop pass logs with source attribution ([Internal], [Codex], [Gemini], [Both])
 
 Review mode is always passed explicitly by the caller (--mode). The reviewer does not auto-detect mode from artifact availability.
 
@@ -107,3 +112,5 @@ All review findings must avoid AI vocabulary patterns. Findings should be direct
 - vague findings
 - uncited criticism
 - rubber-stamp approval
+- final review: unresolved CRITICAL finding shipped (precedence rule violation)
+- concern resolution: generating agent rebutted concerns (sycophancy guard violation)
