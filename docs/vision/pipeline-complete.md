@@ -164,10 +164,11 @@ One document answering: what did you build, does it work, what should I know?
 ### Mode 2: Run Incomplete
 
 Produces `handover-batch-N.md`:
-- Completed/in-progress/remaining subtask IDs with status
-- Accumulated concerns pending resolution
-- Partial learnings
-- Environment state (branches, worktrees)
+- Completed/in-progress/remaining subtask IDs with status and lifecycle state
+- Accumulated concerns from DONE_WITH_CONCERNS subtasks pending resolution
+- Blocked subtasks with reasons and current lifecycle state (`abandoned`, `upstream_failed`, `waiting_on_user`)
+- Partial learnings discovered during this batch
+- Environment state (active branches, worktrees, provisioned runtime isolation)
 - Resume prompt (~500 tokens, self-contained, references files for depth)
 
 ### User Interaction During Completion

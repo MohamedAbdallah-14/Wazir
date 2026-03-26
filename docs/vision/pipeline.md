@@ -123,10 +123,12 @@ A deterministic function (not an LLM) that reads a subtask.md and `expertise/com
 **Prompt assembly rules:**
 - ~150-200 instruction budget (beyond that, linear decay for frontier models, exponential for smaller)
 - Critical instructions at START and END (Lost in the Middle is architectural)
+- Prompt repetition: critical constraints and acceptance criteria duplicated at START, END, and immediately before the task specification. Zero-cost technique: 47/70 benchmark wins, 0 losses (Leviathan et al., Google Research, Dec 2025). The Composer duplicates the constraint block — this is mechanical, not LLM-decided.
 - Positive instructions dominate ("always do X" beats "don't do Y")
 - Operational identity, not expert persona ("coding agent" beats "world-class engineer")
 - Three agentic pillars: persistence + tool-use + planning (~20% SWE-bench improvement)
 - Expertise modules ARE the domain knowledge — Wazir's moat
+- Within-session tool output management: observation masking as default. Old tool outputs are trimmed to placeholders, action/reasoning history is preserved. The Composer configures `max_tool_output_tokens` per agent based on model tier. Outputs exceeding this are truncated with a pointer to the full output on disk. The born-work-die model mitigates most context bloat, but tool-heavy agents (executors, verifiers) can fill their effective window within a single session. Research basis: JetBrains Dec 2025 — observation masking beats LLM summarization in 4/5 settings (+2.6% solve rate, 52% cheaper).
 
 ### Codebase Intelligence
 
@@ -325,6 +327,8 @@ Per-subtask worktrees also contain `analysis-findings.json` (deterministic analy
 | Interactive-first init, never assume config | Users have different model setups, tool availability, and interaction preferences. Zero-config biases toward defaults the user never chose. | Learning data showing >90% of users accept defaults unchanged |
 | Init is project setup, not a run interaction point | Vision's 2 interaction points (Clarify, Design) are per-run. Init is infrastructure like `git init`. | Never — architectural distinction |
 | Branch and index checks per-run, not init-only | Users switch branches and indexes go stale between runs. These are runtime invariants. | Never — per-run checks are load-bearing |
+| Heavy scaffolding over minimal | mini-SWE-agent (100 lines) achieves 74% SWE-bench; minimal scaffolding trends upward as models improve. Wazir targets complex multi-file tasks where scaffolding value is highest. | Learning data showing >90% success on Wazir-class tasks without pipeline phases |
+| Executor combines reasoning + editing | Architect/Editor split achieves 85% accuracy, Morph apply model 98% at 10,500 tok/s. Current single-executor is simpler; review/verify stages catch edit failures. | Learning data showing >20% of failures are formatting/edit-application errors — then split via Composer model routing |
 
 ---
 
