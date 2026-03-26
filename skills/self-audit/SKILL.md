@@ -195,6 +195,7 @@ Beyond CLI checks, inspect for:
 
 6. **Skill structure**
    - Each skill dir under `skills/` has a well-formed `SKILL.md` with frontmatter
+<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
    - Skills referenced in documentation actually exist
 
 7. **Code Quality**
@@ -209,7 +210,6 @@ Beyond CLI checks, inspect for:
 
 9. **Expertise Coverage**
    - Read `expertise/composition-map.yaml`
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
    - For every module path referenced, check that the file exists under `expertise/`
    - Missing files are findings
 
