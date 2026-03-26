@@ -341,7 +341,7 @@ Save approved design to `.wazir/runs/latest/clarified/design.md`.
 >
 > **Changed because of this work:** [Selected approach and why, rejected alternatives and why, design-review adjustments made]
 
-After approval: design-review loop with `--mode design-review` (5 canonical dimensions: spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity).
+After approval: design-review loop with `--mode architectural-design-review` (6 architectural dimensions: feasibility, spec alignment, completeness, trade-off documentation, YAGNI, security/performance). See `docs/reference/review-loop-pattern.md` for the full dimension set.
 
 ---
 

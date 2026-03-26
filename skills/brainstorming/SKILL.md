@@ -45,7 +45,7 @@ Rules:
    Wait for the user's selection before continuing.
 
 5. Write the approved design to `.wazir/runs/latest/clarified/design.md` (if inside a pipeline run) or `docs/plans/YYYY-MM-DD-<topic>-design.md` (if standalone).
-6. After user approves the design concept, the reviewer role runs the design-review loop with `--mode design-review` using canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. The designer resolves any findings. If the design-review loop completes all passes clean, hand off to `wz:writing-plans`. Planning does not start until design-review is complete.
+6. After user approves the design concept, the reviewer role runs the design-review loop with `--mode architectural-design-review` using the 6 architectural design-review dimensions (feasibility, spec alignment, completeness, trade-off documentation, YAGNI, security/performance). See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. The designer resolves any findings. If the design-review loop completes all passes clean, hand off to `wz:writing-plans`. Planning does not start until design-review is complete.
 
 Required outputs:
 

@@ -302,7 +302,7 @@ Map intent + depth to applicable workflows. The system decides — the user does
 |-------|-----------|-------|
 | **Core** (always run) | `clarify`, `execute`, `verify`, `review` | Never skipped |
 | **Adaptive** (run when evidence says so) | `discover`, `design`, `author`, `specify` | Skipped for bugfix/docs/spike at quick depth |
-| **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `design-review` | Loop cap controls iteration depth |
+| **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `architectural-design-review`, `visual-design-review` | Loop cap controls iteration depth |
 | **Post-run** (always run) | `learn`, `prepare_next` | Part of Final Review phase |
 
 Log skip decisions with reasons in `workflow_policy`.

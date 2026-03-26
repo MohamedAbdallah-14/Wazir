@@ -11,7 +11,8 @@ When multi-model mode is enabled:
 - **Sonnet** for internal review passes (internal-review)
 - **Opus** for final review mode (final-review)
 - **Opus** for spec-challenge mode (spec-harden)
-- **Opus** for design-review mode (design)
+- **Opus** for architectural-design-review mode (design)
+- **Opus** for visual-design-review mode (visual design)
 
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
@@ -28,7 +29,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 
 Run the Final Review phase — or any review mode invoked by other phases.
 
-The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
+The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, architectural-design-review, visual-design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
 
 **Key principle for `final` mode:** Compare implementation against the **ORIGINAL INPUT** (briefing + input files), NOT the task specs. The executor's per-task reviewer already validated against task specs — that concern is covered. The final reviewer catches drift: does what we built match what the user actually asked for?
 
@@ -48,7 +49,8 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 |------|---------------|---------------|------------|--------|
 | `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
 | `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Pass/fix loop, no score |
-| `design-review` | After design approval | Design artifact, approved spec | 5 design-review dims (canonical) | Pass/fix loop, no score |
+| `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec, original input | 6 architectural design-review dims | Pass/fix loop, no score |
+| `visual-design-review` | After visual design approval (Phase 4a) | Visual design artifact, approved spec, original input | 5 visual design-review dims | Pass/fix loop, no score |
 | `plan-review` | After planning | Draft plan artifact | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
 | `task-review` | During execution, per task | Uncommitted changes or `--base` SHA | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
 | `research-review` | During discover | Research artifact | 5 research dims | Pass/fix loop, no score |
@@ -92,7 +94,7 @@ If any file is missing:
 3. **Commit discipline check:** If uncommitted changes span work from multiple tasks (e.g., files from task N and task N+1 are both modified), REJECT immediately: "REJECTED: Multiple tasks in single commit. Split into per-task commits before review." This is a blocking finding — no other dimensions are evaluated until resolved.
 4. **Security sensitivity check:** Run `detectSecurityPatterns` from `tooling/src/checks/security-sensitivity.js` against the diff. If `triggered === true`, add the 6 security review dimensions (injection, auth bypass, data exposure, CSRF/SSRF, XSS, secrets leakage) to the standard 5 task-execution dimensions for this review pass. Security findings use severity levels: critical (exploitable), high (likely exploitable), medium (defense-in-depth gap), low (best-practice deviation).
 
-### `spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes
+### `spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
 2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 3. **`plan-review` additional dimension — Input Coverage:**
@@ -194,7 +196,7 @@ If `codex` is in `multi_tool.tools`:
 **Code review scoping by mode:**
 - Use `--uncommitted` when reviewing uncommitted changes (`task-review` mode).
 - Use `--base <sha>` when reviewing committed changes.
-- Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes).
+- Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes).
 - See `docs/reference/review-loop-pattern.md` for code review scoping rules.
 
 #### Gemini Review
