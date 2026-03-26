@@ -64,7 +64,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 ## When Open-Pencil is Unavailable
 
 If the open-pencil MCP server is not running or Bun is not installed, the design phase cannot produce `.fig` artifacts. In this case:
-- Skip this phase and proceed to planning with text-only design specifications.
+- Skip this phase and proceed to architectural design with text-only design specifications.
 - Document the design intent in prose within the spec artifact instead.
 - The visual-design-review workflow should also be skipped.
 
