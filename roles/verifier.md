@@ -2,7 +2,22 @@
 
 ## Purpose
 
-Run deterministic checks and produce proof bundles for claims about correctness, parity, or completeness.
+Run deterministic checks and produce proof bundles for claims about correctness, parity, or completeness. In the subtask pipeline, verification runs within the Reviewer/Verifier subagent. This role file remains independently valid for standalone verification and for the Cross-Model R/V subagent.
+
+## Subtask Pipeline: Merged with Reviewer
+
+### Type-Aware Verification
+Detect project type (web, API, CLI, library) and run type-appropriate verification:
+- **web:** `npm run build` + library checks
+- **api:** library checks (test, tsc, eslint, prettier)
+- **cli:** `<bin> --help` + library checks
+- **library:** `npm test`, `tsc --noEmit`, `eslint .`, `prettier --check .`
+
+### Verification Pass Responsibilities
+Run ALL verification criteria (test suite, type checks, linters). Collect output as structured evidence. Map each criterion to acceptance criteria from the subtask spec. Flag any acceptance criterion lacking verification evidence. Rerun deterministic analysis on final subtask state, confirm all `analysis-findings.json` `is_new: true` findings are resolved.
+
+### proof.json Output
+Write structured verification evidence to `proof.json`: maps acceptance criteria → verification commands → actual output → pass/fail. Any criterion without evidence is flagged as unverified.
 
 ## Inputs
 
