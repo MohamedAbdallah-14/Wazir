@@ -108,7 +108,7 @@ The orchestrator routes on summaries. Downstream subagents read full artifacts f
 
 ### The Composer
 
-A deterministic function (not an LLM) that reads a subtask.md and `expertise/composition-map.yaml` and produces an agent configuration.
+A deterministic function (not an LLM) that reads a subtask.md and `expertise/composition-map.yaml` and produces agent configurations for all roles in the subtask pipeline.
 
 1. Reads subtask.md — extracts model tier, tools, expertise declarations, context files, constraints
 2. Resolves expertise modules via layered lookup:
@@ -118,7 +118,15 @@ A deterministic function (not an LLM) that reads a subtask.md and `expertise/com
    - `concerns.<declared-concerns>` — task-specific modules
 3. Maps model tier to host-specific model ID via config table
 4. Assembles prompt from structured XML sections with context budgeting
-5. Returns complete agent config ready for dispatch
+5. Returns complete agent configs ready for dispatch
+
+**The Composer produces three prompt types per subtask:**
+
+- **Executor prompt**: subtask spec + expertise modules (always.executor + stack + concerns) + TDD instructions + constraints + hard limits + file pointers for context retrieval. The executor receives everything it needs to implement without exploring — the Composer front-loads context.
+- **Reviewer/Verifier prompt**: expertise modules (always.reviewer + always.verifier + reviewer_modes.task-review + stack antipatterns) + review dimensions + acceptance criteria + verification commands + the diff to review + `analysis-findings.json` from the executor's scan. One prompt serves both review and verification.
+- **Codex-Reviewer/Verifier prompt**: same as Reviewer/Verifier + Codex invocation instructions (model config, review scope, dimension focus) + merge strategy for combining Codex output with own findings. Instructs the subagent to run Codex and verification concurrently.
+
+Each prompt type is a complete, self-contained brief. The subagent needs nothing beyond what the Composer provides — no codebase exploration, no context gathering. This is what keeps subagent sessions short and under the 35-minute degradation cliff.
 
 **Prompt assembly rules:**
 - ~150-200 instruction budget (beyond that, linear decay for frontier models, exponential for smaller)

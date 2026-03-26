@@ -4,13 +4,47 @@
 
 The plan produces a DAG of subtask files. This phase turns them into working code.
 
+**Session boundary**: the execute phase starts in a fresh session. The clarify phase produces a handover artifact; the execute session consumes it. This prevents context rot accumulated during research, clarification, specification, design, and planning from degrading execution quality.
+
 ## The Subtask Pipeline
 
-Each subtask runs through a fixed sequential pipeline. Every stage is a separate agent with fresh context.
+Each subtask runs through a fixed pipeline of subagent spawns. Every subagent gets fresh context (empty conversation + Composer-built prompt). The orchestrator (parent session) dispatches subagents, reads their outputs, and routes to the next step.
 
-### Stage 1: Execute
+Three subagent roles, each with a Composer-built prompt:
 
-The executor reads subtask.md, implements changes, micro-commits after each logical step (a test file written, a function implemented, a module wired up — the granularity test: if the next step fails, can I roll back to this commit?), runs verification criteria, writes output and status, dies.
+- **Executor**: implements code via TDD, micro-commits, writes output to disk
+- **Reviewer/Verifier**: reviews the diff against task dimensions AND runs deterministic verification (tests, types, lint, proof collection) in a single pass. Produces structured findings + verification evidence.
+- **Codex-Reviewer/Verifier**: same as Reviewer/Verifier but additionally fires `codex review` via Bash (cross-model, different family) concurrently with verification. Merges Codex findings + verification results into one output. Eliminates 64.5% self-correction blind spot.
+
+### The Subtask Loop
+
+```
+Step 1: Executor          — TDD, implement, micro-commit
+Step 2: Reviewer/Verifier — review dimensions + verification + proof
+Step 3: Executor          — fix findings (if any)
+Step 4: Reviewer/Verifier — second round (if step 2 had findings)
+Step 5: Executor          — fix findings (if any)
+Step 6: Codex-R/V         — cross-model review + verification (concurrent)
+Step 7: Executor          — fix Codex + verification findings (if any)
+```
+
+**Best case: 2 spawns** (executor → reviewer/verifier clean → done).
+**Typical: 4-5 spawns.**
+**Worst case: 7 spawns.**
+
+After step 7, if issues remain: unresolved findings from step 6's output are written to `residuals-<subtask-id>.md`. No further retries. Residuals are collected and addressed in a cleanup pass after the batch, or escalated if CRITICAL. The final review phase (completion gate) sees all residuals.
+
+Steps are skipped when unnecessary: if the Reviewer/Verifier in step 2 produces zero findings, steps 3-4 are skipped and the pipeline advances to step 6 (Codex-R/V). If step 6 produces zero findings, step 7 is skipped. The orchestrator reads each subagent's output and decides the next step.
+
+Research basis for the loop structure:
+- Rounds 1-2 capture 75% of review improvement (Yang et al. EMNLP 2025) — two Reviewer/Verifier rounds
+- Cross-model review eliminates 64.5% blind spot (Tsui 2025) — Codex pass
+- Fresh context per subagent prevents context rot (39% multi-turn degradation, Laban et al.)
+- Bounded retries prevent cost explosion (anti-pattern #1: infinite loop, 150x cost)
+
+### Executor Subagent
+
+The executor reads its Composer-built prompt (subtask spec + expertise modules + constraints), implements changes via TDD, micro-commits after each logical step (the granularity test: if the next step fails, can I roll back to this commit?), writes output and status to disk, and returns a summary to the orchestrator.
 
 **Patch strategy**: agents write code via tool calls (structured edit tools), not raw diffs. Content-based anchoring (reference surrounding code, not line numbers). Linter gating on every edit (syntax validation before persisting). Layered fallback (edit tool → full-file write). For large files (300+), subtask planning prefers narrowly-scoped changes.
 
@@ -35,45 +69,41 @@ The executor reads subtask.md, implements changes, micro-commits after each logi
 }
 ```
 
-**Delta semantics**: the scan compares against a baseline snapshot taken before the subtask started. `is_new: true` marks findings introduced by this subtask. `is_new: false` marks pre-existing findings. Reviewers classify only `is_new: true` findings — pre-existing findings are informational context, not subtask failures. Without this distinction, reviewers drown in baseline repo noise.
+**Delta semantics**: the scan compares against a baseline snapshot taken before the subtask started. `is_new: true` marks findings introduced by this subtask. `is_new: false` marks pre-existing findings. Reviewers classify only `is_new: true` findings — pre-existing findings are informational context, not subtask failures.
 
 **Secrets gating on every commit**: pattern matching + entropy analysis. Detected secrets block the commit and trigger a fresh fix executor. Not LLM-based. Part of the micro-commit checkpoint flow: lint → static analysis → secrets scan → commit. Research basis: 39 million secrets leaked on GitHub in 2024. AI coding assistants show 40% higher secret leakage rate. Average credential breach cost: $4.88M.
 
 **Hard limits**: max_steps (prevents infinite loops), max_cost (prevents runaway spending), max_wall_clock (wall-clock timeout per agent — detects blocking I/O, hung subprocesses, and infinite loops that max_steps cannot catch), max_output_tokens (4K instruction cliff — subtasks requiring more output are decomposed further in planning, or the executor writes incrementally via tool calls).
 
+**External side effects invariant**: subtasks MUST NOT perform undeclared external side effects (database migrations, API calls, service deployments). All non-git side effects are declared in the subtask spec during planning. The orchestrator uses these declarations for: (1) provisioning compensation/rollback strategies before execution begins, (2) requiring idempotency keys (`{subtask_id}:{step}`) on declared side effects so retries are safe, (3) scoping blast radius on abandonment. Git commits are naturally idempotent and excluded from this requirement.
+
+**Test-writing tradeoff**: research shows separate test agents get 91.5% vs 61% — a 30-point gap (AgentCoder, GPT-4). The root cause is the oracle problem: LLMs generate test oracles based on actual behavior rather than expected behavior (54.56% accuracy — coin flip). This pipeline has executors writing tests via TDD, compensated by: subtask provides EARS acceptance criteria as test specification (addressing the oracle problem by providing expected behavior as ground truth), Reviewer/Verifier independently validates test quality and catches tautological tests via mutation score analysis. If the learning system shows persistent test quality problems, escalate to a dedicated test-writing stage. The specific threshold belongs in verifier policy, not here.
+
+### Reviewer/Verifier Subagent
+
+A single subagent that performs both review and verification. Loaded with expertise: `always.reviewer` + `always.verifier` + `reviewer_modes.task-review` + stack antipatterns + auto modules + `quality/evidence-based-verification.md`.
+
+**Review pass**: evaluates the diff against task-execution dimensions (correctness, tests, wiring, drift, quality). Receives `analysis-findings.json` from the executor's deterministic scan — classifies each `is_new: true` finding as true positive, false positive, or needs-investigation.
+
+**Verification pass**: runs ALL verification criteria (test suite, type checks, linters), collects output as evidence, maps to acceptance criteria, flags any criterion lacking evidence. Catches tautological tests (93% coverage / 58% mutation score gap). Reruns deterministic analysis on the final subtask state, confirms all `analysis-findings.json` findings are resolved.
+
+**Supply chain verification** (conditional — only when the subtask modifies dependency manifests): verify all new packages exist in the official registry, check for known CVEs, verify lockfile changes correspond to manifest changes, flag packages younger than 14 days. Results included in `proof.json`. Research basis: AI agents hallucinate package names at 5.2-21.7% rates. Supply chain attacks grew 156% YoY. OWASP 2025 ranks supply chain #3.
+
+Writes structured findings + `proof.json` to disk. Returns summary to orchestrator.
+
+### Codex-Reviewer/Verifier Subagent
+
+Same as Reviewer/Verifier but additionally invokes `codex review` via Bash for cross-model review. Runs Codex and verification concurrently — Codex takes time, verification takes time, running them in parallel within the subagent wastes no wall-clock.
+
+Merges Codex findings + own review findings + verification results into one structured output. Cross-model diversity (~9% accuracy gain, Lu et al.) catches errors that same-model review misses. This is the pipeline's primary defense against the 64.5% self-correction blind spot.
+
+If Codex is unavailable (CLI not installed, API error), the subagent falls back to standard Reviewer/Verifier behavior. Codex unavailability is logged but does not block the pipeline.
+
+### Subtask Complete
+
+Subtask complete when the last Reviewer/Verifier or Codex-R/V subagent returns with zero findings and verification passed. Worktree ready for merge. Orchestrator unblocks dependents.
+
 **Constrained decoding required for status.json**: 100% structural compliance vs 40-74.5% without. The host's structured output mechanism enforces the schema at generation time.
-
-**External side effects invariant**: subtasks MUST NOT perform undeclared external side effects (database migrations, API calls, service deployments). All non-git side effects are declared in the subtask spec during planning. The orchestrator uses these declarations for: (1) provisioning compensation/rollback strategies before execution begins, (2) requiring idempotency keys (`{subtask_id}:{step}`) on declared side effects so retries are safe, (3) scoping blast radius on abandonment. Git commits are naturally idempotent and excluded from this requirement. This is consistent with "the plan IS the intelligence" — side effect management is a planning concern, not a runtime discovery.
-
-If verification fails → fresh fix executor with error output. Max 3 fix attempts.
-
-### Stage 2: Review
-
-Reviewer (fresh context) loaded with expertise: `always.reviewer` + `reviewer_modes.task-review` + stack antipatterns + auto modules.
-
-2-3 passes within one session: output vs acceptance criteria, output vs antipatterns, finding verification. Writes structured findings. Reviewer also receives `analysis-findings.json` from the deterministic scan — classifies each finding as true positive, false positive, or needs-investigation.
-
-Cross-model pass if second model family available (~9% accuracy gain, eliminates 64.5% blind spot).
-
-If findings → fresh fix executor. Max 2 review rounds (rounds 1-2 capture 75% of improvement). Persistent CRITICAL after round 2 likely indicates a planning gap — escalate.
-
-**Test-writing tradeoff**: research shows separate test agents get 91.5% vs 61% — a 30-point gap (AgentCoder, GPT-4). The root cause is the oracle problem: LLMs generate test oracles based on actual behavior rather than expected behavior (54.56% accuracy — coin flip). This pipeline has executors writing tests via TDD, compensated by: subtask provides EARS acceptance criteria as test specification (addressing the oracle problem by providing expected behavior as ground truth), verifier (Stage 3) independently validates test quality and catches tautological tests via mutation score analysis. If the learning system shows persistent test quality problems (e.g., mutation scores consistently lagging coverage), escalate to a dedicated test-writing stage. The specific threshold belongs in verifier policy, not here.
-
-### Stage 3: Verify
-
-Verifier (fresh context) loaded with `always.verifier` + `quality/evidence-based-verification.md`.
-
-Not the reviewer. The reviewer checks quality. The verifier generates proof.
-
-Runs ALL verification criteria, collects output as evidence, maps to acceptance criteria, flags any criterion lacking evidence. Catches tautological tests (93% coverage / 58% mutation score gap).
-
-Verifier reruns deterministic analysis on the final subtask state, confirms all `analysis-findings.json` findings are resolved, and includes deterministic results in `proof.json` as verification evidence.
-
-**Supply chain verification** (conditional — only when the subtask modifies dependency manifests): verify all new packages exist in the official registry, check for known CVEs, verify lockfile changes correspond to manifest changes, flag packages younger than 14 days. Results included in `proof.json`. Supply chain validation is independent proof generation — it belongs in Verify, not Execute, because the stage that introduces dependencies should not also validate them. Research basis: AI agents hallucinate package names at 5.2-21.7% rates. Supply chain attacks grew 156% YoY. OWASP 2025 ranks supply chain #3.
-
-### Stage 4: Done
-
-Subtask complete. Worktree ready for merge. Orchestrator unblocks dependents.
 
 ## Status Protocol (Constrained Decoding Required)
 
@@ -124,27 +154,30 @@ The DAG determines parallelism. Kahn's algorithm: all subtasks with zero unmet d
 
 ### Two Levels of Recovery
 
-**Level 1: Stage-level fix loops (within a subtask pipeline)**
-- Executor stage: verification fails → fresh fix executor, max 3 attempts
-- Review stage: findings exist → fresh fix executor, max 2 review rounds
+**Level 1: Subtask loop (bounded at 7 subagent spawns)**
+
+The subtask loop (steps 1-7) handles all within-subtask recovery. Each executor spawn gets fresh context with the previous findings. The loop is bounded — after step 7, unresolved findings go to residuals. No infinite retries.
+
+Cross-model review (Codex in step 6) is built into the loop, not a separate escalation tier. The 64.5% blind spot is addressed in every subtask, not only on failure.
 
 **Level 2: Subtask-level escalation (orchestrator handles)**
 
-When the subtask pipeline exhausts stage-level loops and reports FAILED:
+When a subtask loop completes with unresolved CRITICAL residuals, or when a subagent reports FAILED/NEEDS_CONTEXT/BLOCKED:
 
-- **Tier 1: Different model** — cross-model, entire subtask pipeline reruns. Max 1.
-- **Tier 2: Replan** — failure evidence to fresh planner, revised subtask. Max 1.
-- **After Tier 2: Escalate to user** with evidence.
+- **Tier 1: Replan** — failure evidence + residuals to fresh planner, revised subtask. Max 1.
+- **After Tier 1: Escalate to user** with evidence.
 
-For NEEDS_CONTEXT: skip to Tier 2 (replanning). Retrying an underspecified brief won't help.
+For NEEDS_CONTEXT: replan immediately. Retrying an underspecified brief won't help.
 
-Total worst-case: 1 original + 3 executor fixes + 2 review rounds + 1 cross-model + 1 replan = 8 invocations. Bounded and justified.
+Total worst-case per subtask: 7 loop spawns + 1 replan + 7 replanned loop spawns = 15 invocations. Bounded and justified. Cross-model review is already embedded in the loop (step 6), so there is no separate cross-model escalation tier — that would be redundant.
+
+**Residuals**: unresolved findings after step 7 are written to `residuals-<subtask-id>.md` with full context (finding, severity, file, line, what was attempted). Residuals with severity < CRITICAL do not block the subtask — they are collected and presented at the completion gate (final review phase). CRITICAL residuals trigger Level 2 escalation.
 
 **Cascade**: subtask A fails, dependent B blocked. A recovers → B unblocks. A abandoned → all transitive dependents move to `upstream_failed`.
 
-A subtask is abandoned when: (1) Tier 2 replan exhausted and user declines further attempts, or (2) user explicitly stops the subtask. There is no automatic abandonment — a human decision is always required because abandonment is irreversible within a run.
+A subtask is abandoned when: (1) Tier 1 replan exhausted and user declines further attempts, or (2) user explicitly stops the subtask. There is no automatic abandonment — a human decision is always required because abandonment is irreversible within a run.
 
-**Cost controls**: max_steps, max_cost, max_wall_clock, max_retries per agent. Tier escalation tries cheap before expensive.
+**Cost controls**: max_steps, max_cost, max_wall_clock per subagent. The 7-spawn loop cap prevents cost explosion at the subtask level. The orchestrator tracks total cost across all subtasks and can pause if budget thresholds are exceeded.
 
 ## Batch Execution and Session Handover
 
