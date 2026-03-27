@@ -17,6 +17,7 @@ The `wazir` CLI is minimal on purpose. It exists to validate and export the host
 | `wazir validate docs-drift` | implemented | Detects when source files (roles, workflows, skills, hooks) change without corresponding documentation updates. Advisory by default; `--strict` exits non-zero on drift. |
 | `wazir validate skills` | implemented | Validates skill frontmatter and checks for name conflicts with superpowers skills (requires `wz:` prefix). Rejects any `CONTEXT.md` files (augment tier concluded not implementable in R2). |
 | `wazir validate artifacts` | reserved | Exits `2` until artifact-template and example validation expands. |
+| `wazir export` | implemented | Prints export subcommand usage. |
 | `wazir export build` | implemented | Generates host packages under `exports/hosts/*` from canonical sources. |
 | `wazir export --check` | implemented | Verifies generated host packages still match current canonical source hashes. |
 | `wazir index build` | implemented | Builds a local SQLite-backed index under the configured state root. |
