@@ -32,7 +32,7 @@ This skill corresponds to completion pipeline Stage 8 (Prepare Next Session) in 
 
 One of two modes:
 
-1. **Run Complete** — All completion stages passed, sign-off is SHIP or SHIP WITH CAVEATS. Produce `execution-summary.md`.
+1. **Run Complete** — All completion stages finished (any sign-off: SHIP, SHIP WITH CAVEATS, or DO NOT SHIP). Produce `execution-summary.md`. The summary includes the sign-off recommendation — DO NOT SHIP runs still get a summary documenting what was found and why.
 2. **Run Incomplete** — Session ending before pipeline finishes, or slice boundary. Produce `handover-batch-N.md`.
 
 ## Step 1: Gather Run State

@@ -117,11 +117,11 @@ If any file is missing:
 
 **The final review is not another code review — it is a compliance audit with fix authority.**
 
-The full completion pipeline runs three stages. The reviewer skill orchestrates all three.
+The completion pipeline runs three stages. The orchestrator (wazir skill) dispatches Stages 1-2 as separate sub-phases (4a, 4b) before invoking this skill. The reviewer skill owns Stage 3 (the review passes). Stages 1-2 are documented here for context — the reviewer consumes their outputs but does not orchestrate them.
 
-### Integration Verification (Vision Stage 1)
+### Integration Verification (Vision Stage 1 — orchestrator-owned, sub-phase 4a)
 
-Before any review pass, run the full verification suite on merged main:
+The orchestrator runs the full verification suite on merged main before invoking the reviewer:
 
 1. **Plan-defined integration criteria**: run the exact commands specified in `.wazir/runs/latest/clarified/execution-plan.md` under "Integration verification criteria"
 2. **Standard suite**: test suite, type checking, lint, build, and full deterministic analysis scan
@@ -131,7 +131,7 @@ If integration fails: identify the culprit via sequential merge record (re-run c
 
 Save results to `.wazir/runs/latest/completion/integration/`.
 
-### Concern Resolution (Vision Stage 2)
+### Concern Resolution (Vision Stage 2 — orchestrator-owned, sub-phase 4b)
 
 A fresh agent — one that did NOT produce any of the artifacts being evaluated — reads:
 
@@ -361,6 +361,8 @@ Read `interaction_mode` from run-config:
 - **`auto`:** No user checkpoints. Present verdict and let gating agent decide. On escalation, write reason and STOP.
 - **`guided`:** Standard behavior — present verdict, ask user how to proceed.
 - **`interactive`:** Discuss findings with user: "I found a potential auth bypass in `src/auth.js:42` — here's why I rated it high severity. Do you agree, or is there context I'm missing?" Show detailed reasoning for each dimension score.
+
+**Exception for `final` mode:** In final mode, completion is autonomous regardless of `interaction_mode`. The only user interaction is the two exceptions defined in "User Interaction During Completion" (drift escalation, unresolvable concern). The mode rules above apply to non-final review modes only.
 <!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 ## CLI/Context-Mode Enforcement
@@ -583,33 +585,28 @@ Pipeline pauses, presents evidence, waits. User's decision is final. All other c
 
 **After completing this phase, output to the user:**
 
-> **Final Review complete.**
+> **Final Review Phase complete (Completion Pipeline).**
 >
-> **Found:** [N] findings across 7 dimensions — [N] blocking, [N] warnings, [N] notes. Score: [score]/70 ([VERDICT]).
+> **Integration verification:** [PASS/FAIL] — [N] tests, [N] type errors, [N] lint errors
+> **Concern resolution:** [N] concerns evaluated, [N] residuals resolved, [N] escalated
+> **Final review (2+1 passes):** [N] findings — [N] CRITICAL, [N] HIGH, [N] MEDIUM, [N] LOW. Score: [score]/70.
+> **Pass 3 reconciliation:** [ran/skipped] — [reason]
+> **Learnings:** [N] proposed (adoption rate: [X]%, quality delta: [Y] points average)
 >
-> **Without this phase:** [N] blocking issues would have shipped — including [specific examples: e.g., "missing error handler on /api/users endpoint", "auth middleware not wired to 3 routes", "CHANGELOG missing entry for breaking API change"]
+> **Without this phase:** Implementation drift would ship undetected, concerns would accumulate without resolution, cross-subtask integration bugs would hide, and recurring mistakes would never get captured
 >
-> **Changed because of this work:** [List of issues caught and fixed during review passes, score improvement from first to final pass]
+> **Changed because of this work:** [List of findings fixed per pass, score improvement, learnings extracted]
 
-Present the verdict and offer next steps:
+**Autonomous sign-off** — completion does NOT ask the user what to do. Present the sign-off and proceed:
 
-> **Review complete: [VERDICT] ([score]/70)**
->
-> [Score breakdown and findings summary]
->
-> **Learnings proposed:** [count] (see `memory/learnings/proposed/`)
-> **Handoff:** `.wazir/runs/<run-id>/handoff.md`
+> **Sign-off:** [SHIP / SHIP WITH CAVEATS / DO NOT SHIP]
+> **Handoff:** `.wazir/runs/<run-id>/execution-summary.md`
 
-Ask the user via AskUserQuestion:
-- **Question:** "How would you like to proceed with the review results?"
-- **Options:**
-  1. "Create a PR" *(Recommended if PASS)*
-  2. "Auto-fix and re-review" *(Recommended if MINOR FIXES)*
-  3. "Review findings in detail"
-  4. "I'll open a new session to create the PR" — if this session has accumulated significant context from the review, a fresh session for PR creation ensures clean context.
+If SHIP or SHIP WITH CAVEATS: proceed to create PR automatically.
+If DO NOT SHIP: present findings and stop.
 
-Wait for the user's selection before continuing.
+User interaction occurs ONLY for the two exceptions defined in "User Interaction During Completion" above (drift escalation, unresolvable concern). All other completion stages run without user prompts.
 
-**If the run is incomplete** (batch boundary, not all subtasks done): produce `handover-batch-N.md` per `templates/artifacts/batch-handover.md` and hard stop. The next batch MUST resume in a fresh session consuming the handover artifact.
+**If the run is incomplete** (batch boundary, not all subtasks done): produce `handover-batch-N.md` and hard stop. The next batch MUST resume in a fresh session consuming the handover artifact.
 
 <!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
