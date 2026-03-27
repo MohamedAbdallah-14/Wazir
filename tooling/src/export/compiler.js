@@ -461,7 +461,7 @@ export function buildHostExports(projectRoot) {
       const skillFile = path.join(skillsDir, dir, 'SKILL.md');
       if (fs.existsSync(skillFile)) {
         const content = fs.readFileSync(skillFile, 'utf8');
-        const updated = injectReminders(content);
+        const updated = injectReminders(content, `${dir}/SKILL.md`);
         if (updated !== content) {
           fs.writeFileSync(skillFile, updated, 'utf8');
         }
