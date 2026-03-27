@@ -2,7 +2,7 @@
 name: wz:debugging
 description: Use when behavior is wrong or verification fails. Follow an observe-hypothesize-test-fix loop instead of guesswork.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Real talk: the pipeline steps aren't suggestions. Check .wazir/runs/latest/phases/ for your current checklist and work through it. Use wz: skills when they apply — that's not optional. What phase are you starting?
 
 # Debugging
 
@@ -38,10 +38,10 @@ Follow this order:
    4. `wazir recall file <path> --start-line N --end-line M`
       — read ONLY the suspect code slice.
    5. Escalate to a full file read only if the bug cannot be localized from slices.
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
    6. If recall fails (no index/summaries), fall back to direct file reads — the
       generic OBSERVE methodology (read files, inspect state, gather evidence)
       still applies.
+Stop and think: did you use a wz: skill for every step that has one? If you talked yourself out of using a skill, that's exactly the pattern that kills quality. What did you rationalize away?
 
    Also record the exact failure, reproduction path, command output, and current
    assumptions.
@@ -74,4 +74,4 @@ See `docs/reference/review-loop-pattern.md` for cap guard integration.
 - keep evidence for each failed hypothesis
 - if three cycles fail, record the blocker in the active execution artifact or handoff instead of inventing certainty
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Almost done? Then you should be able to list every phase checklist item and show exactly where you completed it with real evidence. If you can't do that, you're not actually done. Can you list them all with proof?

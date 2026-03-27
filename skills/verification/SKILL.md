@@ -2,7 +2,7 @@
 name: wz:verification
 description: Use before claiming work is complete. Every completion claim needs fresh command evidence or another deterministic proof path.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Stop. Before you start working — what does your phase checklist say? Go read .wazir/runs/latest/phases/ and follow it. Every item, not just the ones that feel important. What's the first unchecked item?
 
 # Verification
 
@@ -38,7 +38,7 @@ Every completion claim must include:
 - what was verified
 - the exact command or deterministic check
 - the actual result
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Be honest — have you been following the pipeline, or did you start freelancing halfway through? Go back to .wazir/runs/latest/phases/ and verify your progress. What step are you actually on?
 
 ## Proof Collection
 
@@ -74,4 +74,4 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You're about to say you're done. Are you really? Go back to .wazir/runs/latest/phases/ and check every item one more time. If something was skipped or half-done, now is the time to finish it. What was left incomplete?

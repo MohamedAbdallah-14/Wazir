@@ -288,9 +288,9 @@ Invoke `wz:humanize` on the hardened spec (domain: technical-docs). Fix any high
 > **Spec Hardening complete.**
 >
 > **Found:** [N] acceptance criteria tightened, [N] edge cases added, [N] error handling requirements specified, [N] spec-challenge findings resolved
+Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 >
 > **Without this phase:** Acceptance criteria would be subjective, review would have no concrete standard to measure against, and "done" would mean whatever the implementer decided
-Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 >
 > **Changed because of this work:** [List of hardening changes — e.g., "added 404 handling spec for missing resources", "specified max payload size of 5MB", "added rate limit requirement of 100 req/min"]
 

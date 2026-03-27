@@ -72,12 +72,12 @@ Pause and escalate to user when:
 When escalating, present: subtask ID, status, what was attempted, evidence.
 
 ## Reasoning Output
-Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 
 Throughout the executor phase, produce reasoning at two layers:
 
 **Conversation (Layer 1):** Before each subtask dispatch, state which subtask and why (dependency order). After each subtask completes, state the status and routing decision.
 
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 **File (Layer 2):** Write `.wazir/runs/<id>/reasoning/phase-executor-reasoning.md` with structured entries per orchestration decision:
 - **Trigger** — what prompted the decision (e.g., "subtask BE-3.1 reported DONE_WITH_CONCERNS")
 - **Decision** — what the orchestrator did (e.g., "merged worktree, accumulated concern, dispatched next")

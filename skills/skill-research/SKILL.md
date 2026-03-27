@@ -2,7 +2,7 @@
 name: wz:skill-research
 description: Deep competitive analysis of Wazir skills against the ecosystem. Research only — never auto-applies changes.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You tend to skip pipeline steps when context gets long. Fight that habit right from the start. Check .wazir/runs/latest/phases/ right now and follow what it says. What does your checklist tell you to do first?
 
 # Skill Research — Overnight Competitive Analysis
 
@@ -96,7 +96,7 @@ For each skill, produce specific, actionable recommendations:
 
 **Recommendations are NEVER auto-applied.** They go in the report for human review.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Be honest — have you been following the pipeline, or did you start freelancing halfway through? Go back to .wazir/runs/latest/phases/ and verify your progress. What step are you actually on?
 ## Output Format
 
 Reports saved to `reports/skill-audit-<YYYY-MM-DD>/`:
@@ -189,4 +189,4 @@ After all skills are analyzed:
 >
 > **Next:** Review reports and decide which recommendations to implement.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You're about to say you're done. Are you really? Go back to .wazir/runs/latest/phases/ and check every item one more time. If something was skipped or half-done, now is the time to finish it. What was left incomplete?

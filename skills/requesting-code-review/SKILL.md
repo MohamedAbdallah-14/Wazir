@@ -72,12 +72,12 @@ Include explicit loop parameters:
 - `{DESCRIPTION}` - Brief summary
 - `{REVIEW_MODE}` - Explicit review mode (e.g., task-review)
 
+Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 **3. Act on feedback:**
 - Fix Critical issues immediately
 - Fix Important issues before proceeding
 - Note Minor issues for later
 - Push back if reviewer is wrong (with reasoning)
-Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 
 ### Codex Error Handling
 

@@ -2,7 +2,7 @@
 name: wz:codex-cli
 description: How to use Codex CLI programmatically for reviews, execution, and sandbox operations within Wazir pipelines.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Real talk: the pipeline steps aren't suggestions. Check .wazir/runs/latest/phases/ for your current checklist and work through it. Use wz: skills when they apply — that's not optional. What phase are you starting?
 
 # Codex CLI Integration
 
@@ -132,7 +132,7 @@ Browse or execute Codex Cloud tasks from the terminal without opening the TUI.
 Evaluate execpolicy rule files and check whether a command would be allowed, prompted, or blocked.
 
 ### codex auth
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+This is the point where compliance usually drops off. You feel like you're making progress so you stop checking the list. Don't fall into that trap. Pull up .wazir/runs/latest/phases/ again. What's next on it?
 
 Authenticate Codex using ChatGPT OAuth, device auth, or an API key piped over stdin.
 
@@ -261,4 +261,4 @@ Codex CLI reads configuration from:
 
 Key config fields: `model`, `approval_policy`, `sandbox_mode`, `providers`.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Completion claims without verification evidence are worthless. For each phase checklist item — what specific output proves it was actually done? Can you point to something concrete for every single one?

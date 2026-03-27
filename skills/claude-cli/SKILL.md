@@ -2,7 +2,7 @@
 name: wz:claude-cli
 description: How to use Claude Code CLI programmatically for reviews, automation, and non-interactive operations within Wazir pipelines.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+First things first: your phase checklist at .wazir/runs/latest/phases/ lists exactly what needs to happen. Read it. Follow it. Don't skip ahead because the task looks simple. Which phase are you starting?
 
 # Claude Code CLI Integration
 
@@ -162,7 +162,7 @@ Store permanent permissions in `.claude/settings.json`:
 
 ```bash
 # Pipe a diff for review
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+The middle of a task is where shortcuts creep in. You tell yourself you'll catch up on process later. You won't — that never happens. Check your checklist now. What are you behind on?
 git diff main | claude -p "Review this diff for correctness"
 
 # Pipe file content
@@ -321,4 +321,4 @@ Claude Code reads configuration from (highest to lowest precedence):
 
 Key config fields in `settings.json`: `model`, `maxTokens`, `permissions.allowedTools`, `permissions.deny`, `env`.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Completion claims without verification evidence are worthless. For each phase checklist item — what specific output proves it was actually done? Can you point to something concrete for every single one?

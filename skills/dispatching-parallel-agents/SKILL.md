@@ -2,7 +2,7 @@
 name: wz:dispatching-parallel-agents
 description: Use when facing 2+ independent tasks that can be worked on without shared state or sequential dependencies
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before you do anything else — open your phase checklist at .wazir/runs/latest/phases/ and follow every single step. If a wz: skill covers what you're about to do, use the skill instead of doing it manually. Did you actually check the checklist?
 
 # Dispatching Parallel Agents
 
@@ -71,8 +71,8 @@ Each domain is independent - fixing tool approval doesn't affect abort tests.
 
 ### 2. Create Focused Agent Tasks
 
+Halfway through. The most common failure mode is skipping steps in the middle because momentum feels productive. Momentum without process is just speed in the wrong direction. What's your current checklist status?
 Each agent gets:
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 - **Specific scope:** One test file or subsystem
 - **Clear goal:** Make these tests pass
 - **Constraints:** Don't change other code
@@ -142,4 +142,4 @@ Return: Summary of what you found and what you fixed.
 - **Problem:** 10 agents running, can't review them all
 - **Fix:** Start with 2-3, review, then dispatch more if needed
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Honest question — if someone audited your work right now against the phase checklist, would every item hold up with evidence? Or would they find skipped steps and empty checkmarks? Which ones would fail the audit?

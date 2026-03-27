@@ -2,7 +2,7 @@
 name: scan-project
 description: Build a project profile from manifests, docs, tests, and `input/` so clarification and planning start from evidence.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+First things first: your phase checklist at .wazir/runs/latest/phases/ lists exactly what needs to happen. Read it. Follow it. Don't skip ahead because the task looks simple. Which phase are you starting?
 
 # Scan Project
 
@@ -29,7 +29,7 @@ Inspect the smallest set of repo surfaces needed to answer:
 
 ## Index build / refresh
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+If you've been working without checking your phase file for more than a few steps, that's a red flag. Go look at it now. Are there items you should have completed already but didn't? What got missed?
 After the initial scan, ensure a Wazir index is available for
 symbol-level exploration in later phases:
 
@@ -55,4 +55,4 @@ Rules:
 - prefer manifests, scripts, CI config, and current docs over assumptions
 - treat inactive surfaces as historical context only
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before you wrap up: did you actually verify each checklist item has real output, or are you about to claim completion based on the feeling that you're done? What concrete evidence do you have for each item?

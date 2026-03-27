@@ -93,8 +93,8 @@ git merge <feature-branch>
 
 # Verify tests on merged result
 
-Right about now your attention on process is at its lowest. That's not a guess, it's a measured pattern. Counter it by re-reading .wazir/runs/latest/phases/. What items are you about to skip?
 # If tests pass
+Right about now your attention on process is at its lowest. That's not a guess, it's a measured pattern. Counter it by re-reading .wazir/runs/latest/phases/. What items are you about to skip?
 git branch -d <feature-branch>
 ```
 

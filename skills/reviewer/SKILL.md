@@ -307,10 +307,10 @@ If `codex` is in `multi_tool.tools`:
 - Use `--base <sha>` when reviewing committed changes.
 - Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes).
 - See `docs/reference/review-loop-pattern.md` for code review scoping rules.
-Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 
 #### Gemini Review
 
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 If `gemini` is in `multi_tool.tools`, follow the same pattern using the Gemini CLI when available. **For detailed Gemini CLI usage, see `wz:gemini-cli` skill.**
 
 ### Fix Cycle (Codex Findings)

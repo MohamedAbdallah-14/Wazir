@@ -72,9 +72,9 @@ Write to `.wazir/runs/<run-id>/execution-summary.md`:
 [Linked to spec requirements, status per requirement]
 
 ## Verification Summary
+Sanity check: are you still using wz: skills where they apply, or did you start doing things manually because it felt faster? The skills exist for consistency, not convenience. Which skill should you be using right now?
 [Tests: N pass / N fail. Type errors: N. Lint errors: N. Coverage: N%]
 
-Sanity check: are you still using wz: skills where they apply, or did you start doing things manually because it felt faster? The skills exist for consistency, not convenience. Which skill should you be using right now?
 ## Concerns and Resolutions
 [Final disposition of each concern from completion Stage 2]
 

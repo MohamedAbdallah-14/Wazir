@@ -2,7 +2,7 @@
 name: wz:init-pipeline
 description: Initialize the Wazir pipeline — interactive-first, asks 3-4 questions to configure model mode, tools, and interaction style.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You tend to skip pipeline steps when context gets long. Fight that habit right from the start. Check .wazir/runs/latest/phases/ right now and follow what it says. What does your checklist tell you to do first?
 
 # Initialize Pipeline
 
@@ -136,6 +136,7 @@ Then, for each installed tool, ask the model:
 
 ```
 Which Codex model?
+Context rot happens right about now. You've been working for a while and the checklist feels like a distant memory. Go re-read it. Are you still on track or have you drifted? What changed?
 
 1. gpt-5.4 (Recommended) — Strong analysis, moderate speed
 2. o3-pro — Deepest analysis, slower
@@ -270,4 +271,5 @@ Wazir initialized.
 - **No open-ended questions** — every question has concrete options to pick from
 - **Privacy notice** — multi-tool selection includes notice that code is sent to external providers
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+
+Before you finish, here's the test: read each checklist item out loud to yourself and ask "did I really do this, or did I think about doing it and move on?" Give yourself an honest answer. What's the truth?

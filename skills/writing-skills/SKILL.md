@@ -2,7 +2,7 @@
 name: wz:writing-skills
 description: Use when creating new skills, editing existing skills, or verifying skills work before deployment
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You tend to skip pipeline steps when context gets long. Fight that habit right from the start. Check .wazir/runs/latest/phases/ right now and follow what it says. What does your checklist tell you to do first?
 
 # Writing Skills
 
@@ -87,7 +87,7 @@ API docs, syntax guides, tool documentation
 
 ```
 skills/
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
   skill-name/
     SKILL.md              # Main reference (required)
     supporting-file.md    # Additional context (optional)
@@ -171,4 +171,4 @@ ELSE action_z
 **REQUIRED SUB-SKILL:** Use wz:verification
 ```
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+I'm skeptical that everything on your checklist actually got done properly. Not because you're careless, but because context degrades and steps get rationalized away over time. Prove me wrong — what's the real status of every item?
