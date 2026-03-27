@@ -127,38 +127,64 @@ Each phase has a dedicated role. The reviewer is never the author. Gates reject 
 
 ## Quick Start
 
-### As a Claude Code plugin (recommended)
+> Requires [Claude Code](https://claude.ai/claude-code) and [Node.js](https://nodejs.org/) 20+.
 
-```bash
-# Install the plugin
-claude mcp add wazir -- npx @wazir-dev/cli serve
-
-# Start a new task
-/wazir "Build a REST API with auth"
-```
-
-### From npm
+**One-time setup (3 commands):**
 
 ```bash
 npm install -g @wazir-dev/cli
-
-# Initialize in your project
-wazir init
-
-# Export host packages
-wazir export build
-
-# Validate your setup
-wazir doctor
 ```
 
-### From source
+Then in Claude Code:
 
-```bash
-git clone https://github.com/MohamedAbdallah-14/Wazir.git
-cd Wazir
-npm install
-npm test  # verify everything works
+```
+/plugin marketplace add MohamedAbdallah-14/Wazir
+/plugin install wazir
+```
+
+**That's it.** Open any project and run your first task:
+
+```
+/wazir Build a REST API for task management with authentication
+```
+
+Project state directories and indexing are set up automatically on first use. No `wazir init`, no `wazir export`, no configuration files to create.
+
+Here's what happens:
+
+```console
+$ /wazir Build a REST API for task management with authentication
+
+[clarify] What authentication method? (JWT, session, OAuth)
+[clarify] Should tasks support assignees or just a single owner?
+[clarify] Do you need soft deletes?
+
+> Operator answers...
+
+[specify]    Writing spec... done (47 acceptance criteria)
+[spec-gate]  APPROVAL REQUIRED — review spec before continuing
+> approved
+
+[plan]       Breaking into 6 implementation tasks...
+[plan-gate]  APPROVAL REQUIRED — review plan before continuing
+> approved
+
+[execute]    Task 1/6: auth middleware... tests passing (8/8)
+[execute]    Task 2/6: user model + migration... tests passing (12/12)
+...
+[verify]     All 43 tests passing. 0 lint errors.
+[review]     Adversarial review: 2 findings, both resolved.
+[learn]      3 learnings captured for next session.
+
+Pipeline complete. 3/3 gates passed.
+```
+
+Control the depth directly:
+
+```
+/wazir quick fix the login redirect bug       # skip spec, straight to implementation
+/wazir deep design a new onboarding flow      # full pipeline, extended design phase
+/wazir audit security                          # dedicated audit workflow
 ```
 
 ---
