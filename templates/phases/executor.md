@@ -7,5 +7,6 @@
 - [ ] Route on subtask status (DONE/DONE_WITH_CONCERNS/FAILED/BLOCKED/NEEDS_CONTEXT)
 - [ ] Merge completed worktrees sequentially
 - [ ] Collect residuals for any subtasks exhausting 7-step loop
-- [ ] Produce batch handover or transition to final review
-- [ ] Run `wazir capture event --run <id> --event phase_enter --phase final_review --status starting` <!-- transition -->
+- [ ] Produce batch handover or execute-to-complete handover
+- [ ] Write handover to `.wazir/runs/<id>/execute-to-complete-handover.md`
+- [ ] **HARD STOP** — ask user to compact or open new session for final review (session boundary)

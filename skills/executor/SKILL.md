@@ -84,10 +84,56 @@ Throughout the executor phase, produce reasoning at two layers:
 
 When all subtasks are complete (or abandoned with user approval):
 
-> **Executor phase complete.**
+### Step 1: Produce execute-to-complete handover
+
+Write the handover to `.wazir/runs/<run-id>/execute-to-complete-handover.md`:
+
+```markdown
+# Execute-to-Complete Handover
+
+## Run
+- **Run ID:** <run-id>
+- **Branch:** <branch-name>
+- **Interaction mode:** <auto | guided | interactive>
+- **Depth:** <quick | standard | deep>
+
+## Execution Summary
+- **Subtasks:** [completed]/[total]
+- **Residuals:** [count] (CRITICAL: [count], non-critical: [count])
+- **Concerns accumulated:** [count]
+- **Subtasks abandoned:** [count] (if any, with reasons)
+
+## Artifacts
+- Clarified artifacts: `.wazir/runs/latest/clarified/`
+- Verification proof per subtask: `.wazir/runs/latest/artifacts/`
+- Residuals: `.wazir/runs/latest/residuals/` (if any)
+- Concerns: accumulated in subtask status files
+
+## Resume Instruction
+Start a fresh session (new conversation). Run `/reviewer --mode final`.
+The reviewer's prerequisite gate will find all artifacts.
+Do NOT reopen this session — context rot from execution degrades review quality.
+```
+
+### Step 2: Hard stop (all interaction modes)
+
+**This is a hard stop. Do NOT continue to the completion phase in this session.** The completion phase (final review) MUST start in a fresh session to prevent context rot accumulated during subtask dispatching, status routing, and fix loops from degrading review quality. This applies to ALL interaction modes.
+
+Output to the user:
+
+> **Executor phase complete.** Handover saved to `.wazir/runs/<run-id>/execute-to-complete-handover.md`.
 >
 > - Subtasks: [completed]/[total]
 > - Residuals: [count] (CRITICAL: [count], non-critical: [count])
 > - Concerns accumulated: [count]
 >
-> **Next:** Run `/reviewer --mode final` to review against the original input.
+> **Session boundary:** The completion phase (final review) must start in a fresh session.
+
+Then ask via AskUserQuestion:
+- **Question:** "How would you like to proceed to final review?"
+- **Options:**
+  1. "Compact this session, then run `/reviewer --mode final`" — compacts conversation history, then starts review in this (now-compacted) session. Acceptable compromise.
+  2. "I'll open a new session" — cleanest option. Start a new conversation and run `/reviewer --mode final`.
+  3. "Continue in this session (not recommended)" — context rot risk. Execution context may bias review findings.
+
+Wait for selection. If option 3, warn: "Continuing without a session boundary risks context rot. Execution context may bias review — the reviewer may miss drift it participated in. Proceeding anyway."

@@ -6,6 +6,12 @@ description: Run the review phase — adversarial review of implementation again
 
 # Reviewer
 
+## Session Boundary (Hard Gate — `final` mode only)
+
+When invoked with `--mode final`, the completion phase MUST start in a fresh session. Do NOT run final review in a session that executed subtasks — the orchestrator's execution context biases the reviewer (it participated in routing decisions, saw intermediate findings, accumulated context that masks drift). If this skill is invoked in `final` mode in a session that ran the executor phase, STOP and instruct the user to start a new session with the execute-to-complete handover artifact.
+
+This gate does NOT apply to other review modes (task-review, spec-challenge, plan-review, etc.) — those run within their respective phase sessions.
+
 ## Model Annotation
 When multi-model mode is enabled:
 - **Sonnet** for internal review passes (internal-review)
@@ -600,7 +606,10 @@ Ask the user via AskUserQuestion:
   1. "Create a PR" *(Recommended if PASS)*
   2. "Auto-fix and re-review" *(Recommended if MINOR FIXES)*
   3. "Review findings in detail"
+  4. "I'll open a new session to create the PR" — if this session has accumulated significant context from the review, a fresh session for PR creation ensures clean context.
 
 Wait for the user's selection before continuing.
+
+**If the run is incomplete** (batch boundary, not all subtasks done): produce `handover-batch-N.md` per `templates/artifacts/batch-handover.md` and hard stop. The next batch MUST resume in a fresh session consuming the handover artifact.
 
 <!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->

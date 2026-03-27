@@ -1,4 +1,4 @@
-## Phase: final_review (Completion Pipeline)
+## Phase: final_review (Completion Pipeline — fresh session required)
 - [ ] Run integration verification on merged main (tests, typecheck, lint, build, plan-defined criteria) <!-- 4a -->
 - [ ] Verify all declared external side effects completed or compensated <!-- 4a -->
 - [ ] Run concern resolution — fresh agent evaluates concern registry + residuals <!-- 4b -->
