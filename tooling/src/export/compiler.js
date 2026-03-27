@@ -26,7 +26,14 @@ const MODEL_TIER_TO_CLAUDE = {
 
 function translateAgentPolicy(policy) {
   const tools = policy.capabilities
-    .flatMap((cap) => CAPABILITY_TO_CLAUDE_TOOLS[cap] || []);
+    .flatMap((cap) => {
+      const mapped = CAPABILITY_TO_CLAUDE_TOOLS[cap];
+      if (!mapped) {
+        console.warn(`Warning: unknown capability "${cap}" in agent_policy — skipped`);
+        return [];
+      }
+      return mapped;
+    });
 
   const frontmatter = {
     tools,

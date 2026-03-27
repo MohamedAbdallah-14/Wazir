@@ -481,7 +481,7 @@ concerns:
 #
 # Capabilities (host-agnostic):
 #   read    — read files
-#   write   — create new files
+#   write   — write files (hook guardrails restrict source-file mutation to executor phase)
 #   edit    — modify existing files
 #   shell   — run shell commands
 #   search  — search files by name and content
