@@ -208,10 +208,11 @@ function generateHostFiles(projectRoot, manifest, host) {
   const roleFiles = listDeclaredRoleFiles(projectRoot, manifest);
   const workflowFiles = listDeclaredWorkflowFiles(projectRoot, manifest);
 
-  // Load agent policy from composition-map
-  const compositionMap = readYamlFile(
-    path.join(projectRoot, 'expertise', 'composition-map.yaml'),
-  );
+  // Load agent policy from composition-map (graceful fallback for projects without one)
+  const compositionMapPath = path.join(projectRoot, 'expertise', 'composition-map.yaml');
+  const compositionMap = fs.existsSync(compositionMapPath)
+    ? readYamlFile(compositionMapPath)
+    : {};
   const agentPolicy = compositionMap.agent_policy || {};
 
   if (host === 'claude') {

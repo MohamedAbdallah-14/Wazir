@@ -1,3 +1,15 @@
+---
+tools:
+  - Read
+  - Write
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+model: sonnet
+maxTurns: 20
+---
+
 # learner
 
 ## Purpose

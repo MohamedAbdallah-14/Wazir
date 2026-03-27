@@ -1,3 +1,17 @@
+---
+tools:
+  - Read
+  - Write
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+model: opus
+maxTurns: 30
+mcpServers:
+  - pencil
+---
+
 # designer
 
 ## Purpose

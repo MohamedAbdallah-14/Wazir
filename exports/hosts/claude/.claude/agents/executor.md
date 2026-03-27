@@ -1,3 +1,17 @@
+---
+tools:
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+model: sonnet
+maxTurns: 80
+isolation: worktree
+---
+
 # executor
 
 ## Purpose

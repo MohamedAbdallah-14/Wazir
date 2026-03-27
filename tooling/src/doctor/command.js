@@ -86,7 +86,7 @@ export function runDoctorCommand(parsed, context = {}) {
           : `${ctx.stateRoot} stays outside the project root`,
       });
 
-      const missingHostExports = ctx.manifest.hosts.filter((host) => {
+      const missingHostExports = (ctx.manifest.hosts || []).filter((host) => {
         const exportPath = path.join(ctx.projectRoot, 'exports', 'hosts', host);
         return !fs.existsSync(exportPath);
       });

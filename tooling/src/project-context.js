@@ -43,6 +43,9 @@ export function resolveProjectContext(cwd = process.cwd(), opts = {}) {
 
   if (wazirRoot) {
     const manifest = readYamlFile(path.join(wazirRoot, 'wazir.manifest.yaml'));
+    if (!manifest || !manifest.paths) {
+      throw new Error(`wazir.manifest.yaml at ${wazirRoot} is empty or malformed`);
+    }
     const stateRoot = resolveStateRoot(wazirRoot, manifest, {
       cwd,
       override: opts.stateRootOverride,
