@@ -517,12 +517,52 @@ Examples of clarifier reasoning entries:
 
 When the plan is approved:
 
-> **Clarifier phase complete.**
+### Step 1: Produce clarify-to-execute handover
+
+Write the handover to `.wazir/runs/latest/clarified/execute-handover.md`:
+
+```markdown
+# Clarify-to-Execute Handover
+
+## Run
+- **Run ID:** <run-id>
+- **Branch:** <branch-name>
+- **Interaction mode:** <auto | guided | interactive>
+- **Depth:** <quick | standard | deep>
+
+## Artifacts (all verified present)
+- Spec: `.wazir/runs/latest/clarified/spec-hardened.md`
+- Design: `.wazir/runs/latest/clarified/design.md`
+- Plan: `.wazir/runs/latest/clarified/execution-plan.md`
+- Clarification: `.wazir/runs/latest/clarified/clarification.md`
+
+## Resume Instruction
+Start a fresh session (new conversation). Run `/executor`.
+The executor's prerequisite gate will find all artifacts at `.wazir/runs/latest/clarified/`.
+Do NOT reopen this session — context rot from clarify degrades execution quality.
+```
+
+### Step 2: Hard stop (all interaction modes)
+
+**This is a hard stop. Do NOT continue to the executor phase in this session.** The execute phase MUST start in a fresh session to prevent context rot accumulated during research, clarification, specification, design, and planning from degrading execution quality. This applies to ALL interaction modes — auto, guided, and interactive.
+
+Output to the user:
+
+> **Clarifier phase complete.** Handover saved to `.wazir/runs/latest/clarified/execute-handover.md`.
 >
 > - Spec: `.wazir/runs/latest/clarified/spec-hardened.md`
 > - Design: `.wazir/runs/latest/clarified/design.md`
 > - Plan: `.wazir/runs/latest/clarified/execution-plan.md`
 >
-> **Next:** Run `/executor` to implement the plan.
+> **Session boundary:** The execute phase must start in a fresh session. This prevents context rot from degrading execution quality.
+
+Then ask via AskUserQuestion:
+- **Question:** "How would you like to proceed to execution?"
+- **Options:**
+  1. "Compact this session, then run `/executor`" — compacts conversation history, then starts executor in this (now-compacted) session. Acceptable compromise when a fully new session is impractical.
+  2. "I'll open a new session with the handover" — cleanest option. Start a new conversation and run `/executor`. The prerequisites will find your artifacts.
+  3. "Continue in this session (not recommended)" — proceeds without session boundary. Context rot risk is real — execution quality may degrade.
+
+Wait for selection. If option 3, warn once more: "Continuing without a session boundary risks context rot. The vision recommends against this. Proceeding anyway."
 
 <!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
