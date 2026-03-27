@@ -59,7 +59,7 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 
 ---
 
-# Pre-Bootstrap: CLI Check (MANDATORY BEFORE PHASE 0)
+# Pre-Bootstrap: CLI + Init Check (MANDATORY BEFORE PHASE 0)
 
 **Before bootstrap**, verify the Wazir CLI is installed:
 
@@ -67,19 +67,29 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 which wazir
 ```
 
-**If not installed**, present:
+**If not installed**, auto-install it:
 
-> **The Wazir CLI is not installed. It's required for event capture, validation, and indexing.**
+```bash
+npm install -g @wazir-dev/cli
+```
 
-Ask the user via AskUserQuestion:
-- **Question:** "The Wazir CLI is not installed. How would you like to install it?"
-- **Options:**
-  1. "npm install -g @wazir-dev/cli" *(Recommended)*
-  2. "npm link from the Wazir project root"
-
-Wait for the user's selection before continuing. **STOP here if CLI is not installed — never enter the pipeline.**
+After install, verify with `which wazir`. If install fails (permissions, no npm), ask the user for help — do not proceed without the CLI.
 
 The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
+
+**Then check if this project is initialized:**
+
+```bash
+wazir doctor --json
+```
+
+If doctor reports the project is not initialized (no `.wazir/state/config.json`), run:
+
+```bash
+wazir init
+```
+
+This creates state directories and detects the project's host and stack. It works in any project — no `wazir.manifest.yaml` needed.
 
 ---
 

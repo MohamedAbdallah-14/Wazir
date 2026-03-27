@@ -51,14 +51,13 @@ When invoked directly via `/wazir init`, verify the Wazir CLI is installed:
 which wazir
 ```
 
-**If not installed**, present:
+**If not installed**, auto-install:
 
-> **The Wazir CLI is not installed. Install with:**
->
-> 1. **npm** (Recommended) — `npm install -g @wazir-dev/cli`
-> 2. **Local link** — `npm link` from the Wazir project root
+```bash
+npm install -g @wazir-dev/cli
+```
 
-Wait for the user's selection. **STOP if CLI is not installed.**
+Verify with `which wazir`. If install fails (permissions, no npm), ask the user for help.
 
 **Skip this step** when invoked by the wazir main skill (CLI check already passed pre-bootstrap).
 
