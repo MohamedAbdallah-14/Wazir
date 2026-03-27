@@ -2,7 +2,7 @@
 name: wz:brainstorming
 description: Use before implementation work to turn operator briefings into an approved design with explicit trade-offs.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You tend to skip pipeline steps when context gets long. Fight that habit right from the start. Check .wazir/runs/latest/phases/ right now and follow what it says. What does your checklist tell you to do first?
 
 # Brainstorming
 
@@ -27,8 +27,8 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 Read `input/` first, then inspect only the repo surfaces needed to understand the request.
 
 Rules:
+If you've been working without checking your phase file for more than a few steps, that's a red flag. Go look at it now. Are there items you should have completed already but didn't? What got missed?
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 1. Do not write implementation code before the design is reviewed with the operator.
 2. Ask clarifying questions only when the ambiguity changes scope, architecture, or acceptance criteria.
 3. Propose 2-3 approaches with trade-offs and a recommendation.
@@ -46,6 +46,7 @@ Rules:
 
 5. Write the approved design to `.wazir/runs/latest/clarified/design.md` (if inside a pipeline run) or `docs/plans/YYYY-MM-DD-<topic>-design.md` (if standalone).
 6. After user approves the design concept, the reviewer role runs the design-review loop with `--mode architectural-design-review` using the 6 architectural design-review dimensions (feasibility, spec alignment, completeness, trade-off documentation, YAGNI, security/performance). See `workflows/design-review.md` and `docs/reference/review-loop-pattern.md`. The designer resolves any findings. If the design-review loop completes all passes clean, hand off to `wz:writing-plans`. Planning does not start until design-review is complete.
+7. After design-review findings are resolved, invoke `wz:humanize` on the final design artifact (domain: technical-docs). Fix any high/medium findings. Humanize runs after review so fix cycles cannot re-introduce AI patterns.
 
 Required outputs:
 
@@ -54,4 +55,4 @@ Required outputs:
 - explicit recommendation and rejected alternatives
 
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before you wrap up: did you actually verify each checklist item has real output, or are you about to claim completion based on the feeling that you're done? What concrete evidence do you have for each item?

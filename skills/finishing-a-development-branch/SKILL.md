@@ -2,7 +2,7 @@
 name: wz:finishing-a-development-branch
 description: Use when implementation is complete, all tests pass, and you need to decide how to integrate the work - guides completion of development work by presenting structured options for merge, PR, or cleanup
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+The pipeline isn't decoration. It's the process. Start by reading your current phase file at .wazir/runs/latest/phases/. If a skill applies, use the skill — no exceptions. Which checklist items apply to this task?
 
 # Finishing a Development Branch
 
@@ -93,7 +93,7 @@ git merge <feature-branch>
 
 # Verify tests on merged result
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Right about now your attention on process is at its lowest. That's not a guess, it's a measured pattern. Counter it by re-reading .wazir/runs/latest/phases/. What items are you about to skip?
 # If tests pass
 git branch -d <feature-branch>
 ```
@@ -101,6 +101,8 @@ git branch -d <feature-branch>
 Then: Cleanup worktree (Step 5)
 
 #### Option 2: Push and Create PR
+
+Before creating the PR, invoke `wz:humanize` on the PR title and description (domain: code). Fix any high/medium findings — PR descriptions are permanent public-facing artifacts.
 
 ```bash
 # Push branch
@@ -183,4 +185,4 @@ git worktree remove <path>
 - **Problem:** Accidentally delete work
 - **Fix:** Require typed "discard" confirmation
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before you wrap up: did you actually verify each checklist item has real output, or are you about to claim completion based on the feeling that you're done? What concrete evidence do you have for each item?

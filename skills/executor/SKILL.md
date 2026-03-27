@@ -97,6 +97,8 @@ Run all three validators before producing the handover. If ANY fails, fix before
 
 This is a hard gate. Do NOT produce the handover or declare phase complete with validation failures.
 
+After changelog validation passes, invoke `wz:humanize` on the CHANGELOG.md `[Unreleased]` entries (domain: code). Fix any high/medium findings. CHANGELOG entries are permanent public-facing prose.
+
 ### Step 1: Produce execute-to-complete handover
 
 Write the handover to `.wazir/runs/<run-id>/execute-to-complete-handover.md`:

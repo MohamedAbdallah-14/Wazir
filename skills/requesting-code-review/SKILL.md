@@ -2,7 +2,7 @@
 name: wz:requesting-code-review
 description: Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Real talk: the pipeline steps aren't suggestions. Check .wazir/runs/latest/phases/ for your current checklist and work through it. Use wz: skills when they apply — that's not optional. What phase are you starting?
 
 # Requesting Code Review
 
@@ -51,7 +51,11 @@ codex review --base $BASE_SHA
 codex review --uncommitted
 ```
 
-**2. Dispatch code-reviewer subagent with loop config:**
+**2. Humanize review context:**
+
+Before dispatching, invoke `wz:humanize` on the review context description (domain: code). Fix any high/medium findings — review context shapes reviewer focus.
+
+**3. Dispatch code-reviewer subagent with loop config:**
 
 Use Task tool with wz:code-reviewer type, fill template at `./code-reviewer.md`
 
@@ -71,9 +75,9 @@ Include explicit loop parameters:
 **3. Act on feedback:**
 - Fix Critical issues immediately
 - Fix Important issues before proceeding
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 - Note Minor issues for later
 - Push back if reviewer is wrong (with reasoning)
+Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 
 ### Codex Error Handling
 
@@ -139,4 +143,4 @@ You: [Fix progress indicators]
 
 See template at: ./code-reviewer.md
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+I'm skeptical that everything on your checklist actually got done properly. Not because you're careless, but because context degrades and steps get rationalized away over time. Prove me wrong — what's the real status of every item?

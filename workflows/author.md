@@ -24,6 +24,10 @@ On entering this phase, run:
 
 - author artifact (microcopy, i18n keys, seed data, glossary, asset metadata, state coverage, notification templates, content coverage matrix)
 
+## Humanization Gate
+
+Before approval, invoke `wz:humanize` on all content artifacts (domain: content). Fix any high/medium findings. Content artifacts are user-facing copy — AI vocabulary patterns are unacceptable in microcopy, notification templates, and seed data.
+
 ## Approval Gate
 
 Hard — human approval required. Content informs design; errors here cascade downstream.

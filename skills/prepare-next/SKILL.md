@@ -2,7 +2,7 @@
 name: prepare-next
 description: Use after a run or execution slice completes to produce a clean next-run handoff without auto-applying stale context.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Quick check before you begin — is there a wz: skill for what you're about to do? If yes, use it. Also, your phase checklist at .wazir/runs/latest/phases/ needs to be open and followed. Have you looked at it?
 
 # Prepare Next
 
@@ -52,6 +52,10 @@ Read from the current run directory:
 
 ## Step 2: Write Output
 
+### Humanization Gate
+
+After drafting any prose output artifact (execution-summary or handover), invoke `wz:humanize` on the draft before writing to disk (domain: technical-docs). Fix any high/medium findings. The execution summary is the final pipeline deliverable — it must read as authored, not generated.
+
 ### Mode 1: Run Complete → `execution-summary.md`
 
 Write to `.wazir/runs/<run-id>/execution-summary.md`:
@@ -70,6 +74,7 @@ Write to `.wazir/runs/<run-id>/execution-summary.md`:
 ## Verification Summary
 [Tests: N pass / N fail. Type errors: N. Lint errors: N. Coverage: N%]
 
+Sanity check: are you still using wz: skills where they apply, or did you start doing things manually because it felt faster? The skills exist for consistency, not convenience. Which skill should you be using right now?
 ## Concerns and Resolutions
 [Final disposition of each concern from completion Stage 2]
 
@@ -136,4 +141,4 @@ wazir capture summary --run <run-id>
 - Do NOT carry forward stale context — each new run reads fresh state
 - Do NOT compress or delete files the user might need — only archive verbose intermediate logs
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Final challenge: name every checklist item you completed and what you produced for each one. If any answer is "I think I covered that" instead of "here's the output," you have more work to do. Which items are you unsure about?

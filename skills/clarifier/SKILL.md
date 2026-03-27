@@ -2,7 +2,7 @@
 name: wz:clarifier
 description: Run the clarification pipeline — research, clarify scope, brainstorm design, generate task specs and execution plan. Pauses for user approval between phases.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Stop. Before you start working — what does your phase checklist say? Go read .wazir/runs/latest/phases/ and follow it. Every item, not just the ones that feel important. What's the first unchecked item?
 
 # Clarifier
 
@@ -102,6 +102,8 @@ Delegate to the discover workflow (`workflows/discover.md`):
 6. Loop runs for `pass_counts[depth]` passes.
 
 Save result to `.wazir/runs/latest/clarified/research-brief.md`.
+
+Invoke `wz:humanize` on the research brief (domain: technical-docs). Fix any high/medium findings before proceeding.
 
 **After completing this phase, output to the user:**
 
@@ -226,6 +228,8 @@ Save to `.wazir/runs/latest/clarified/clarification.md`.
 
 Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presenting to user.
 
+After review findings are resolved, invoke `wz:humanize` on the final clarification artifact (domain: technical-docs). Fix any high/medium findings. Humanize runs after review so fix cycles cannot re-introduce AI patterns.
+
 **After completing this phase, output to the user:**
 
 > **Clarification complete.**
@@ -264,7 +268,6 @@ Wait for the user's selection before continuing. Route feedback: plan correction
 **Before starting this phase, output to the user:**
 
 > **Spec Hardening** — About to convert the clarified scope into a measurable, testable specification and then run adversarial spec-challenge review to find gaps.
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 >
 > **Why this matters:** Without hardening, acceptance criteria stay vague ("it should work well") instead of measurable ("response time under 200ms for 95th percentile"). Vague specs pass any implementation, making review meaningless.
 >
@@ -278,6 +281,8 @@ Delegate to the specify workflow (`workflows/specify.md`):
 
 Save result to `.wazir/runs/latest/clarified/spec-hardened.md`.
 
+Invoke `wz:humanize` on the hardened spec (domain: technical-docs). Fix any high/medium findings before proceeding.
+
 **After completing this phase, output to the user:**
 
 > **Spec Hardening complete.**
@@ -285,6 +290,7 @@ Save result to `.wazir/runs/latest/clarified/spec-hardened.md`.
 > **Found:** [N] acceptance criteria tightened, [N] edge cases added, [N] error handling requirements specified, [N] spec-challenge findings resolved
 >
 > **Without this phase:** Acceptance criteria would be subjective, review would have no concrete standard to measure against, and "done" would mean whatever the implementer decided
+Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 >
 > **Changed because of this work:** [List of hardening changes — e.g., "added 404 handling spec for missing resources", "specified max payload size of 5MB", "added rate limit requirement of 100 req/min"]
 
@@ -414,6 +420,8 @@ Save approved design to `.wazir/runs/latest/clarified/design.md`.
 > **Changed because of this work:** [Selected approach and why, rejected alternatives and why, architectural-design-review adjustments made]
 
 After approval: design-review loop with `--mode architectural-design-review` (6 architectural dimensions: feasibility, spec alignment, completeness, trade-off documentation, YAGNI, security/performance). See `docs/reference/review-loop-pattern.md` for the full dimension set.
+
+After design-review findings are resolved, invoke `wz:humanize` on the final design artifact (domain: technical-docs). Fix any high/medium findings. Humanize runs after review so fix cycles cannot re-introduce AI patterns.
 
 ---
 
@@ -565,4 +573,4 @@ Then ask via AskUserQuestion:
 
 Wait for selection. If option 3, warn once more: "Continuing without a session boundary risks context rot. The vision recommends against this. Proceeding anyway."
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+I don't think you followed every step. Before you call this done, go through your phase checklist item by item and check each one against what you actually did. Is each one genuinely completed, or did you just check the box?

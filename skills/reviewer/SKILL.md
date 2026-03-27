@@ -2,7 +2,7 @@
 name: wz:reviewer
 description: Run the review phase — adversarial review of implementation against the approved spec, plan, and verification evidence.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before anything else happens here: read your phase checklist. It's at .wazir/runs/latest/phases/. Every item on it is there because skipping it caused problems before. Are you going to follow it or skip it?
 
 # Reviewer
 
@@ -307,6 +307,7 @@ If `codex` is in `multi_tool.tools`:
 - Use `--base <sha>` when reviewing committed changes.
 - Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes).
 - See `docs/reference/review-loop-pattern.md` for code review scoping rules.
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 
 #### Gemini Review
 
@@ -363,7 +364,6 @@ Read `interaction_mode` from run-config:
 - **`interactive`:** Discuss findings with user: "I found a potential auth bypass in `src/auth.js:42` — here's why I rated it high severity. Do you agree, or is there context I'm missing?" Show detailed reasoning for each dimension score.
 
 **Exception for `final` mode:** In final mode, completion is autonomous regardless of `interaction_mode`. The only user interaction is the two exceptions defined in "User Interaction During Completion" (drift escalation, unresolvable concern). The mode rules above apply to non-final review modes only.
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 ## CLI/Context-Mode Enforcement
 
@@ -393,6 +393,8 @@ Run the phase report and display it to the user:
 ```bash
 wazir report phase --run <run-id> --phase <review-mode>
 ```
+
+Invoke `wz:humanize` on the report content (domain: technical-docs) before presenting to the user. Fix any high/medium findings — review reports are the primary artifact users read to judge pipeline quality.
 
 Output the report content to the user in the conversation.
 
@@ -513,7 +515,11 @@ approval_status: required
 - **Basis:** [single run observation | multi-run recurrence | user correction]
 ```
 
-### Step 4: Report
+### Step 4: Humanize
+
+Invoke `wz:humanize` on each learning proposal (domain: technical-docs). Fix any high/medium findings. Learning proposals persist across runs and shape future execution context — AI patterns in learnings propagate into every downstream run.
+
+### Step 5: Report
 
 Present proposed learnings to the user:
 
@@ -530,6 +536,8 @@ Learnings are NEVER auto-applied. They require explicit user acceptance before b
 After learning extraction (completion Stage 7), prepare the session handoff. This corresponds to completion pipeline Stage 8 in `docs/vision/pipeline-complete.md`. Invoke the `prepare-next` skill which handles the two output modes:
 
 ### Mode 1: Run Complete → execution-summary.md
+
+After drafting the execution summary, invoke `wz:humanize` on it before writing to disk (domain: technical-docs). This is the final pipeline output — it must read as authored, not generated.
 
 Produces `.wazir/runs/<run-id>/execution-summary.md` with: what was built (linked to spec requirements), verification summary, concerns and resolutions, final review findings per pass with adoption rates, residuals disposition, learning proposals, quality delta, cost/timing, SHIP/SHIP WITH CAVEATS/DO NOT SHIP recommendation.
 
@@ -609,4 +617,4 @@ User interaction occurs ONLY for the two exceptions defined in "User Interaction
 
 **If the run is incomplete** (batch boundary, not all subtasks done): produce `handover-batch-N.md` and hard stop. The next batch MUST resume in a fresh session consuming the handover artifact.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Final challenge: name every checklist item you completed and what you produced for each one. If any answer is "I think I covered that" instead of "here's the output," you have more work to do. Which items are you unsure about?
