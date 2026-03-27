@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 
 import { readYamlFile } from './loaders.js';
@@ -59,11 +60,34 @@ export function resolveProjectContext(cwd = process.cwd(), opts = {}) {
     return { projectRoot: wazirRoot, manifest, stateRoot, isUserProject: false };
   }
 
-  const projectRoot = path.resolve(cwd);
+  // No manifest — user project mode.
+  // Walk up looking for .wazir/state/config.json to find the initialized project root.
+  // This handles commands run from nested subdirectories (e.g., myproject/src/).
+  const projectRoot = findInitializedProjectRoot(cwd) ?? path.resolve(cwd);
   const manifest = buildSyntheticManifest(projectRoot);
   const stateRoot = resolveStateRoot(projectRoot, manifest, {
     cwd,
     override: opts.stateRootOverride,
   });
   return { projectRoot, manifest, stateRoot, isUserProject: true };
+}
+
+/**
+ * Walk up from startDir looking for .wazir/state/config.json.
+ * Returns the directory containing .wazir/ or null if not found.
+ */
+function findInitializedProjectRoot(startDir) {
+  let currentDir = path.resolve(startDir);
+
+  while (true) {
+    if (fs.existsSync(path.join(currentDir, '.wazir', 'state', 'config.json'))) {
+      return currentDir;
+    }
+
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) {
+      return null;
+    }
+    currentDir = parentDir;
+  }
 }

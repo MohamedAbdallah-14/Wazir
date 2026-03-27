@@ -94,6 +94,20 @@ describe('resolveProjectContext', () => {
     assert.strictEqual(ctx.isUserProject, false);
   });
 
+  it('resolves initialized project root from nested subdirectory', () => {
+    // Simulate: wazir init at tmpDir, then run from tmpDir/src/components/
+    const configDir = path.join(tmpDir, '.wazir', 'state');
+    fs.mkdirSync(configDir, { recursive: true });
+    fs.writeFileSync(path.join(configDir, 'config.json'), '{"config_version": 2}');
+
+    const nestedDir = path.join(tmpDir, 'src', 'components');
+    fs.mkdirSync(nestedDir, { recursive: true });
+
+    const ctx = resolveProjectContext(nestedDir);
+    assert.strictEqual(ctx.isUserProject, true);
+    assert.strictEqual(ctx.projectRoot, path.resolve(tmpDir), 'should find initialized root, not nested dir');
+  });
+
   it('slug generation handles special characters in directory names', () => {
     const projectDir = path.join(tmpDir, 'My Project (v2.0)');
     fs.mkdirSync(projectDir);
