@@ -11,8 +11,8 @@ On entering this phase, run:
 
 ## Inputs
 
-- clarified scope
-- explicit research questions
+- user briefing (`.wazir/input/briefing.md` + any `input/*.md` files)
+- research questions extracted from briefing
 
 ## Primary Role
 

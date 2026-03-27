@@ -7,8 +7,15 @@ Extract durable scoped learnings and experiments without silently mutating the c
 ## Inputs
 
 - run artifacts
-- review findings
+- review findings (all passes, all tiers — including per-subtask and final review)
 - verification evidence
+- user corrections (approvals, rejections, redirects, scope changes from `user-input-log.ndjson`) — highest-priority learning signal
+- concern registry and resolutions (final disposition from completion Stage 2)
+- residuals and their disposition
+- retry evidence (which subtasks retried, which tier, why they failed)
+- model performance data (success/failure per tier per complexity)
+- timing data (bottlenecks per phase)
+- merge issues (conflicts despite planning)
 
 ## Allowed Tools
 
@@ -27,9 +34,14 @@ Default approach: recall L0 (one-line summaries)
 
 ## Required Outputs
 
-- proposed learning artifacts
+- proposed learning artifacts with impact scoring (HIGH/MEDIUM/LOW)
 - experiment summaries
 - confidence and scope metadata
+- finding adoption rate (proportion of findings that led to code changes, per pass, per severity, per source)
+- quality delta (per-dimension first-pass vs final-state scores)
+- review effectiveness metrics (detection rate per pass, per source)
+- model tier calibration data (empirical tier → performance mapping)
+- expertise proposals (concrete updates to antipatterns, composition-map, quality modules)
 
 ## Git-Flow Responsibilities
 

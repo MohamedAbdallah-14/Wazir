@@ -13,6 +13,11 @@ On entering this phase, run:
 
 - current run summary
 - accepted learnings where explicitly enabled
+- concern registry and resolutions (final disposition)
+- residuals and their disposition
+- final review findings (per pass, with adoption rates)
+- quality delta (per-dimension first-pass vs final-state)
+- cost and timing data
 
 ## Primary Role
 
@@ -20,8 +25,13 @@ On entering this phase, run:
 
 ## Outputs
 
-- next-step handoff
-- scoped context summary
+Two output modes:
+
+### Mode 1: Run Complete
+- `execution-summary.md` — what was built, verification summary, concerns/resolutions, findings per pass with adoption rates, residuals disposition, learning proposals, quality delta, cost/timing, SHIP/SHIP WITH CAVEATS/DO NOT SHIP recommendation
+
+### Mode 2: Run Incomplete
+- `handover-batch-N.md` — completed/in-progress/remaining subtask IDs, accumulated concerns, blocked subtasks with lifecycle states, partial learnings, environment state, resume prompt (~500 tokens)
 
 ## Approval Gate
 
