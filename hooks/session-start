@@ -83,7 +83,13 @@ function refreshIndex() {
       }
     }
   } catch {
-    process.stderr.write('[wazir:session-start] WARN: wazir CLI not found, skipping index refresh.\n');
+    process.stdout.write(
+      `<system-reminder>\n` +
+      `WAZIR CLI NOT INSTALLED. The pipeline needs the CLI for indexing and state management.\n` +
+      `Run: npm install -g @wazir-dev/cli\n` +
+      `If npm install fails with permissions, use: npx @wazir-dev/cli doctor\n` +
+      `</system-reminder>\n`,
+    );
   }
 }
 
@@ -157,16 +163,30 @@ function injectPipelineStatus() {
 
 injectPipelineStatus();
 
-process.stdout.write(
-  `<cli-bootstrap-guidance>\n` +
-  `## CLI Bootstrap\n\n` +
-  `Run the following checks at session start:\n\n` +
-  `1. Run \`wazir doctor --json\` to check repo health.\n` +
-  `2. Run \`wazir index refresh\` to update the index.\n` +
-  `   - If no index exists, run \`wazir index build && wazir index summarize --tier all\`.\n` +
-  `3. Check \`<state-root>/runs/latest\` for previous run ID.\n` +
-  `   - If previous run is incomplete, resume it.\n` +
-  `   - Otherwise run \`wazir capture init --run <new-id> --phase clarify --status starting\`.\n` +
-  `</cli-bootstrap-guidance>\n`,
-);
+// Detect if user's project has been initialized
+const userCwd = process.env.PWD || process.cwd();
+const userInitialized = existsSync(join(userCwd, '.wazir', 'state', 'config.json'));
+
+if (!userInitialized) {
+  process.stdout.write(
+    `<cli-bootstrap-guidance>\n` +
+    `## CLI Bootstrap\n\n` +
+    `This project has not been initialized for Wazir.\n` +
+    `Run \`wazir init\` to set up state directories, then \`/wazir <task>\` to start.\n` +
+    `</cli-bootstrap-guidance>\n`,
+  );
+} else {
+  process.stdout.write(
+    `<cli-bootstrap-guidance>\n` +
+    `## CLI Bootstrap\n\n` +
+    `Run the following checks at session start:\n\n` +
+    `1. Run \`wazir doctor --json\` to check repo health.\n` +
+    `2. Run \`wazir index refresh\` to update the index.\n` +
+    `   - If no index exists, run \`wazir index build && wazir index summarize --tier all\`.\n` +
+    `3. Check \`<state-root>/runs/latest\` for previous run ID.\n` +
+    `   - If previous run is incomplete, resume it.\n` +
+    `   - Otherwise run \`wazir capture init --run <new-id> --phase clarify --status starting\`.\n` +
+    `</cli-bootstrap-guidance>\n`,
+  );
+}
 process.exit(0);
