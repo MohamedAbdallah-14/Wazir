@@ -2,7 +2,7 @@
 name: wz:using-skills
 description: Use when starting any conversation — establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before you do anything else — open your phase checklist at .wazir/runs/latest/phases/ and follow every single step. If a wz: skill covers what you're about to do, use the skill instead of doing it manually. Did you actually check the checklist?
 
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
@@ -55,8 +55,8 @@ digraph skill_flow {
     "Already brainstormed?" -> "Invoke wz:brainstorming skill" [label="no"];
     "Already brainstormed?" -> "Might any skill apply?" [label="yes"];
     "Invoke wz:brainstorming skill" -> "Might any skill apply?";
+Mid-task check: look at your phase checklist again. Is every completed item actually done with real output, or did you just move past it mentally? Which items have you genuinely finished?
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
     "User message received" -> "Might any skill apply?";
     "Might any skill apply?" -> "Invoke Skill tool" [label="yes, even 1%"];
     "Might any skill apply?" -> "Respond (including clarifications)" [label="definitely not"];
@@ -109,4 +109,4 @@ The skill itself tells you which.
 
 Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Honest question — if someone audited your work right now against the phase checklist, would every item hold up with evidence? Or would they find skipped steps and empty checkmarks? Which ones would fail the audit?

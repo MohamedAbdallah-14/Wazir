@@ -1,0 +1,12 @@
+{
+  "subtask_id": "BE-3.1",
+  "status": "DONE_WITH_CONCERNS",
+  "summary": "Implemented auth middleware with JWT validation and role-based access control",
+  "concerns": ["File src/auth/middleware.js is growing large (280 lines) — may need splitting in a future subtask"],
+  "files_changed": ["src/auth/middleware.js", "src/auth/middleware.test.js", "src/routes/index.js"],
+  "verification_evidence": {
+    "tests_passed": true,
+    "types_passed": true,
+    "lint_passed": true
+  }
+}

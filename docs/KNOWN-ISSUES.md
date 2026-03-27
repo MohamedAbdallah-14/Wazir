@@ -144,21 +144,21 @@ Last updated: 2026-03-24
 
 ### KI-015: init-pipeline skill skips interactive questions
 
-**Status:** Open
+**Status:** Fixed (init-pipeline-redesign branch)
 **First seen:** Session 11 (2026-03-24)
+**Fixed:** Session 12 (2026-03-26) — init-pipeline skill rewritten to interactive-first flow with 3-4 explicit questions.
 **Symptom:** `/wz:init-pipeline` runs `wazir init` in zero-config mode without asking the user any questions. User gets no say in pipeline mode, model routing, or external tool configuration.
 **Root cause:** Skill defaults to zero-config flow. Interactive flow only triggers with `wazir init --interactive`, but the skill never offers that choice.
 **Impact:** User has no control over pipeline setup. Must manually reconfigure after the fact.
-**Fix:** init-pipeline skill should ask the user whether they want zero-config or interactive mode before running `wazir init`. Interactive should be the presented option, not a hidden flag.
 
 ### KI-016: config.json stores per-run values as project config
 
-**Status:** Open
+**Status:** Fixed (init-pipeline-redesign branch)
 **First seen:** Session 11 (2026-03-24)
+**Fixed:** Session 12 (2026-03-26) — `default_depth` and `default_intent` removed from config. Depth is per-run in `run-config.yaml`. Config migrated to v2 schema.
 **Symptom:** `config.json` contains `default_depth: "standard"` and `default_intent: "feature"`. These are per-run values inferred from request text, not project-level configuration.
 **Root cause:** `autoInit()` in `tooling/src/init/auto-detect.js` writes these to the persistent config. They should only exist in the run's `run-config.json`.
 **Impact:** Misleading config. Users think they're setting project defaults, but `inferIntent()` and `parseDepthModifier()` override them per-run anyway.
-**Fix:** Remove `default_depth` and `default_intent` from `autoInit()` config output. These belong in per-run state only.
 
 ### KI-017: context-mode detection uses wrong plugin directory name
 

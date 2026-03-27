@@ -1,0 +1,12 @@
+{
+  "subtask_id": "FE-2.1",
+  "status": "FAILED",
+  "error_cause": "verification_failure",
+  "summary": "Tests fail on auth token refresh — race condition between concurrent requests",
+  "files_changed": ["src/auth/refresh.js", "src/auth/refresh.test.js"],
+  "verification_evidence": {
+    "tests_passed": false,
+    "types_passed": true,
+    "lint_passed": true
+  }
+}

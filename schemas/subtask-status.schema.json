@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wazir.dev/schemas/subtask-status.schema.json",
+  "title": "Subtask Status Artifact",
+  "description": "Agent-reported subtask status. Named subtask-status to avoid collision with the run-level status.json ledger.",
+  "type": "object",
+  "required": ["subtask_id", "status", "summary"],
+  "properties": {
+    "subtask_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["DONE", "DONE_WITH_CONCERNS", "NEEDS_CONTEXT", "BLOCKED", "FAILED"]
+    },
+    "error_cause": {
+      "type": "string",
+      "enum": ["verification_failure", "tool_failure", "timeout", "cost_limit", "step_limit"]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "concerns": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "files_changed": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "verification_evidence": {
+      "type": "object",
+      "properties": {
+        "tests_passed": { "type": "boolean" },
+        "types_passed": { "type": "boolean" },
+        "lint_passed": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": { "status": { "const": "FAILED" } }
+  },
+  "then": {
+    "required": ["subtask_id", "status", "summary", "error_cause"]
+  },
+  "else": {
+    "not": { "required": ["error_cause"] }
+  }
+}

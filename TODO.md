@@ -31,8 +31,7 @@
 - [ ] Sub-skills pipeline awareness (KI-009)
 - [ ] DeCRIM-style prompt restructuring
 
-## Banked (researched, not building now)
-- [ ] `claude -p` orchestrator — main session dispatches phases as separate `-p` calls with `--disallowedTools`. Fresh context per phase. Clarifier loop protocol. Executor parallel batches with per-task worktrees. Full design in docs/plans/2026-03-24-enforcement-v3-findings.md + research from 2026-03-24 session.
+## Banked (researched, not building)
 - [ ] Typed artifact envelopes between phases (Codex recommendation)
 - [ ] Append-only event log for audit trail (Codex recommendation)
 - [ ] Restriction test matrix — canary jobs for forbidden writes/commits/skips

@@ -6,6 +6,68 @@ import { readJsonFile, readYamlFile } from '../loaders.js';
 import { validateAgainstSchema } from '../schema-validator.js';
 import { injectReminders } from '../pipeline/skill-reminder-injector.js';
 
+const CAPABILITY_TO_CLAUDE_TOOLS = {
+  read: ['Read'],
+  write: ['Write'],
+  edit: ['Edit'],
+  shell: ['Bash'],
+  search: ['Glob', 'Grep'],
+  skills: ['Skill'],
+  agents: ['Agent'],
+  web: ['WebSearch', 'WebFetch'],
+};
+
+const MODEL_TIER_TO_CLAUDE = {
+  orchestration: 'sonnet',
+  exploration: 'sonnet',
+  review: 'opus',
+  implementation: 'sonnet',
+};
+
+function translateAgentPolicy(policy) {
+  const tools = policy.capabilities
+    .flatMap((cap) => {
+      const mapped = CAPABILITY_TO_CLAUDE_TOOLS[cap];
+      if (!mapped) {
+        console.warn(`Warning: unknown capability "${cap}" in agent_policy — skipped`);
+        return [];
+      }
+      return mapped;
+    });
+
+  const frontmatter = {
+    tools,
+    model: MODEL_TIER_TO_CLAUDE[policy.model_tier] || 'sonnet',
+    maxTurns: policy.max_turns,
+  };
+
+  if (policy.isolation) {
+    frontmatter.isolation = policy.isolation;
+  }
+
+  if (policy.mcp_servers) {
+    frontmatter.mcpServers = policy.mcp_servers;
+  }
+
+  return frontmatter;
+}
+
+function renderFrontmatter(obj) {
+  const lines = ['---'];
+  for (const [key, value] of Object.entries(obj)) {
+    if (Array.isArray(value)) {
+      lines.push(`${key}:`);
+      for (const item of value) {
+        lines.push(`  - ${item}`);
+      }
+    } else {
+      lines.push(`${key}: ${value}`);
+    }
+  }
+  lines.push('---');
+  return lines.join('\n');
+}
+
 function hashContent(content) {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
@@ -47,11 +109,24 @@ function collectCanonicalSources(projectRoot, manifest) {
     ...listDeclaredWorkflowFiles(projectRoot, manifest),
     ...listHookDefinitions(path.join(projectRoot, 'hooks', 'definitions')),
   ];
-  // hooks.json is a canonical source for Claude settings generation
+
   const hooksJson = path.join(projectRoot, 'hooks', 'hooks.json');
   if (fs.existsSync(hooksJson)) {
     sources.push(hooksJson);
   }
+
+  // Agent policy source
+  const compositionMap = path.join(projectRoot, 'expertise', 'composition-map.yaml');
+  if (fs.existsSync(compositionMap)) {
+    sources.push(compositionMap);
+  }
+
+  // CLAUDE.md template source
+  const claudeTemplate = path.join(projectRoot, 'templates', 'exports', 'claude-md.md');
+  if (fs.existsSync(claudeTemplate)) {
+    sources.push(claudeTemplate);
+  }
+
   return sources;
 }
 
@@ -136,28 +211,83 @@ function renderCursorHooks() {
 }
 
 function generateHostFiles(projectRoot, manifest, host) {
-  const common = renderCommonInstructions(host, manifest);
   const files = {};
   const roleFiles = listDeclaredRoleFiles(projectRoot, manifest);
   const workflowFiles = listDeclaredWorkflowFiles(projectRoot, manifest);
 
+  // Load agent policy from composition-map (graceful fallback for projects without one)
+  const compositionMapPath = path.join(projectRoot, 'expertise', 'composition-map.yaml');
+  const compositionMap = fs.existsSync(compositionMapPath)
+    ? readYamlFile(compositionMapPath)
+    : {};
+  const agentPolicy = compositionMap.agent_policy || {};
+
   if (host === 'claude') {
-    files['CLAUDE.md'] = common;
+    // CLAUDE.md from template
+    const templatePath = path.join(projectRoot, 'templates', 'exports', 'claude-md.md');
+    if (fs.existsSync(templatePath)) {
+      let template = fs.readFileSync(templatePath, 'utf8');
+      template = template.replace(/\{\{project_name\}\}/g, manifest.project.display_name);
+      template = template.replace(/\{\{phase_list\}\}/g,
+        manifest.phases.map((p) => `- \`${p}\``).join('\n'));
+      template = template.replace(/\{\{agent_list\}\}/g,
+        Object.keys(agentPolicy).map((a) => `- \`${a}\``).join('\n'));
+      template = template.replace(/\{\{protected_paths\}\}/g,
+        manifest.protected_paths.join(', '));
+      template = template.replace(/\{\{state_root\}\}/g,
+        manifest.paths.state_root_default);
+      files['CLAUDE.md'] = template;
+    } else {
+      files['CLAUDE.md'] = renderCommonInstructions(host, manifest);
+    }
+
     files['.claude/settings.json'] = renderClaudeSettings(projectRoot);
 
+    // Agent definitions with YAML frontmatter
     for (const roleFile of roleFiles) {
-      files[path.join('.claude', 'agents', path.basename(roleFile))] = fs.readFileSync(roleFile, 'utf8');
+      const roleName = path.basename(roleFile, '.md');
+      const roleContent = fs.readFileSync(roleFile, 'utf8');
+      const policy = agentPolicy[roleName];
+
+      if (policy) {
+        const frontmatter = renderFrontmatter(translateAgentPolicy(policy));
+        files[path.join('.claude', 'agents', path.basename(roleFile))] =
+          `${frontmatter}\n\n${roleContent}`;
+      } else {
+        files[path.join('.claude', 'agents', path.basename(roleFile))] = roleContent;
+      }
     }
 
+    // Controller agent (not backed by a role file)
+    const controllerPolicy = agentPolicy.controller;
+    if (controllerPolicy) {
+      const frontmatter = renderFrontmatter(translateAgentPolicy(controllerPolicy));
+      files['.claude/agents/controller.md'] = `${frontmatter}\n\n# Controller\n\nPipeline orchestrator. Dispatches phase agents in sequence. Does not do phase work inline.\n\nRead the CLAUDE.md for dispatch rules and phase sequence.\n`;
+    }
+
+    // Merged reviewer-verifier agent
+    const rvPolicy = agentPolicy['reviewer-verifier'];
+    if (rvPolicy) {
+      const frontmatter = renderFrontmatter(translateAgentPolicy(rvPolicy));
+      const reviewerContent = fs.readFileSync(
+        path.join(projectRoot, 'roles', 'reviewer.md'), 'utf8');
+      const verifierContent = fs.readFileSync(
+        path.join(projectRoot, 'roles', 'verifier.md'), 'utf8');
+      files['.claude/agents/reviewer-verifier.md'] =
+        `${frontmatter}\n\n${reviewerContent}\n\n---\n\n${verifierContent}`;
+    }
+
+    // Workflow commands
     for (const workflowFile of workflowFiles) {
-      files[path.join('.claude', 'commands', path.basename(workflowFile))] = fs.readFileSync(workflowFile, 'utf8');
+      files[path.join('.claude', 'commands', path.basename(workflowFile))] =
+        fs.readFileSync(workflowFile, 'utf8');
     }
   } else if (host === 'codex') {
-    files['AGENTS.md'] = common;
+    files['AGENTS.md'] = renderCommonInstructions(host, manifest);
   } else if (host === 'gemini') {
-    files['GEMINI.md'] = common;
+    files['GEMINI.md'] = renderCommonInstructions(host, manifest);
   } else if (host === 'cursor') {
-    files[path.join('.cursor', 'rules', 'wazir-core.mdc')] = common;
+    files[path.join('.cursor', 'rules', 'wazir-core.mdc')] = renderCommonInstructions(host, manifest);
     files[path.join('.cursor', 'hooks.json')] = renderCursorHooks();
   }
 
@@ -461,7 +591,7 @@ export function buildHostExports(projectRoot) {
       const skillFile = path.join(skillsDir, dir, 'SKILL.md');
       if (fs.existsSync(skillFile)) {
         const content = fs.readFileSync(skillFile, 'utf8');
-        const updated = injectReminders(content);
+        const updated = injectReminders(content, `${dir}/SKILL.md`);
         if (updated !== content) {
           fs.writeFileSync(skillFile, updated, 'utf8');
         }

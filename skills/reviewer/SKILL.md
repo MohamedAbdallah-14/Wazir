@@ -2,16 +2,23 @@
 name: wz:reviewer
 description: Run the review phase — adversarial review of implementation against the approved spec, plan, and verification evidence.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before anything else happens here: read your phase checklist. It's at .wazir/runs/latest/phases/. Every item on it is there because skipping it caused problems before. Are you going to follow it or skip it?
 
 # Reviewer
+
+## Session Boundary (Hard Gate — `final` mode only)
+
+When invoked with `--mode final`, the completion phase MUST start in a fresh session. Do NOT run final review in a session that executed subtasks — the orchestrator's execution context biases the reviewer (it participated in routing decisions, saw intermediate findings, accumulated context that masks drift). If this skill is invoked in `final` mode in a session that ran the executor phase, STOP and instruct the user to start a new session with the execute-to-complete handover artifact.
+
+This gate does NOT apply to other review modes (task-review, spec-challenge, plan-review, etc.) — those run within their respective phase sessions.
 
 ## Model Annotation
 When multi-model mode is enabled:
 - **Sonnet** for internal review passes (internal-review)
 - **Opus** for final review mode (final-review)
 - **Opus** for spec-challenge mode (spec-harden)
-- **Opus** for design-review mode (design)
+- **Opus** for architectural-design-review mode (design)
+- **Opus** for visual-design-review mode (visual design)
 
 ## Command Routing
 Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
@@ -28,14 +35,14 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 
 Run the Final Review phase — or any review mode invoked by other phases.
 
-The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
+The reviewer role owns all review loops across the pipeline: research-review, clarification-review, spec-challenge, architectural-design-review, visual-design-review, plan-review, per-task execution review, and final review. Each uses phase-specific dimensions from `docs/reference/review-loop-pattern.md`.
 
 **Key principle for `final` mode:** Compare implementation against the **ORIGINAL INPUT** (briefing + input files), NOT the task specs. The executor's per-task reviewer already validated against task specs — that concern is covered. The final reviewer catches drift: does what we built match what the user actually asked for?
 
 **Reviewer-owned responsibilities** (callers must NOT replicate these):
 1. **Two-tier review** — internal review first (fast, cheap, expertise-loaded), Codex second (fresh eyes on clean code)
 2. **Dimension selection** — the reviewer selects the correct dimension set for the review mode and depth
-3. **Pass counting** — the reviewer tracks pass numbers and enforces the depth-based cap (quick=3, standard=5, deep=7)
+3. **Pass counting** — the reviewer tracks pass numbers and enforces the depth-based cap (quick=3, standard=5, deep=7). Final mode uses a different structure: 2+1 passes (see Completion Pipeline section).
 4. **Finding attribution** — each finding is tagged `[Internal]`, `[Codex]`, or `[Both]` based on source
 5. **Dimension set recording** — each review pass file records which canonical dimension set was used, enabling Phase Scoring (first vs final delta)
 6. **Learning pipeline** — ALL findings (internal + Codex) feed into `state.sqlite` and the learning system
@@ -46,13 +53,14 @@ The reviewer operates in different modes depending on the phase. Mode MUST be pa
 
 | Mode | Invoked during | Prerequisites | Dimensions | Output |
 |------|---------------|---------------|------------|--------|
-| `final` | After execution + verification | Completed task artifacts, approved spec/plan/design | 7 final-review dims, scored 0-70 | Scored verdict (PASS/FAIL) |
-| `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Pass/fix loop, no score |
-| `design-review` | After design approval | Design artifact, approved spec | 5 design-review dims (canonical) | Pass/fix loop, no score |
-| `plan-review` | After planning | Draft plan artifact | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
-| `task-review` | During execution, per task | Uncommitted changes or `--base` SHA | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
-| `research-review` | During discover | Research artifact | 5 research dims | Pass/fix loop, no score |
-| `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Pass/fix loop, no score |
+| `final` | After integration verification + concern resolution | All completion inputs (see Completion Pipeline section) | 7 final-review dims, 2+1 passes, scored 0-70 | Scored verdict with severity-based exit criteria (SHIP/SHIP WITH CAVEATS/DO NOT SHIP) |
+| `spec-challenge` | After specify | Draft spec artifact, original input | 5 spec/clarification dims | Pass/fix loop, no score |
+| `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec, original input | 6 architectural design-review dims | Pass/fix loop, no score |
+| `visual-design-review` | After visual design approval (Phase 4a) | Visual design artifact, approved spec, original input | 5 visual design-review dims | Pass/fix loop, no score |
+| `plan-review` | After planning | Draft plan artifact, original input | 8 plan dims (7 + input coverage) | Pass/fix loop, no score |
+| `task-review` | During execution, per task | Uncommitted changes or `--base` SHA, original input | 5 task-execution dims (correctness, tests, wiring, drift, quality) | Pass/fix loop, no score |
+| `research-review` | During discover | Research artifact, original input | 5 research dims | Pass/fix loop, no score |
+| `clarification-review` | During clarify | Clarification artifact, original input | 5 spec/clarification dims | Pass/fix loop, no score |
 
 Each mode follows the review loop pattern in `docs/reference/review-loop-pattern.md`. Pass counts are fixed by depth (quick=3, standard=5, deep=7). No extension.
 
@@ -84,69 +92,170 @@ If any file is missing:
 
 1. Check `.wazir/runs/latest/artifacts/` has completed task artifacts. If not, tell the user to run `/wazir:executor` first.
 2. Read the approved spec, plan, and design from `.wazir/runs/latest/clarified/`.
-3. Read `.wazir/state/config.json` for depth and multi_tool settings.
+3. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 
 ### `task-review` mode
 1. Uncommitted changes exist for the current task, or a `--base` SHA is provided for committed changes.
-2. Read `.wazir/state/config.json` for depth and multi_tool settings.
+2. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
 3. **Commit discipline check:** If uncommitted changes span work from multiple tasks (e.g., files from task N and task N+1 are both modified), REJECT immediately: "REJECTED: Multiple tasks in single commit. Split into per-task commits before review." This is a blocking finding — no other dimensions are evaluated until resolved.
 4. **Security sensitivity check:** Run `detectSecurityPatterns` from `tooling/src/checks/security-sensitivity.js` against the diff. If `triggered === true`, add the 6 security review dimensions (injection, auth bypass, data exposure, CSRF/SSRF, XSS, secrets leakage) to the standard 5 task-execution dimensions for this review pass. Security findings use severity levels: critical (exploitable), high (likely exploitable), medium (defense-in-depth gap), low (best-practice deviation).
+5. **Pipeline vs standalone:** In-pipeline execution, `task-review` is handled by the subtask execution loop's Reviewer/Verifier steps — the orchestrator dispatches the loop, not this skill. This skill's `task-review` mode is for standalone/non-pipeline invocations only (e.g., manual review of uncommitted changes outside a pipeline run). See `docs/reference/review-loop-pattern.md` "Subtask Execution Loop" section.
 
-### `spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes
+### `spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes
 1. The appropriate input artifact for the mode exists.
-2. Read `.wazir/state/config.json` for depth and multi_tool settings.
-3. **`plan-review` additional dimension — Input Coverage:**
+2. Read the original user input from `.wazir/input/briefing.md` and any `input/*.md` files. This is required for ALL review modes — it serves as the ground truth reference per Vision Principle 16.
+3. Read `depth` from `run-config.yaml`. Read `.wazir/state/config.json` for `multi_tool` settings.
+4. **`plan-review` additional dimension — Input Coverage:**
    - Read the original input/briefing from `.wazir/input/briefing.md` and any `input/*.md` files
-   - Count distinct items/requirements in the input
-   - Count tasks in the execution plan
-   - If `tasks_in_plan < items_in_input` → **HIGH** finding: "Plan covers [N] of [M] input items. Missing: [list of uncovered items]"
-   - If `tasks_in_plan >= items_in_input` → dimension passes
-   - One task MAY cover multiple input items if justified in the task description
-   - This is the review-level enforcement of the "no scope reduction" rule
+   - List every distinct item/requirement in the original input
+   - For each input item, check whether at least one task maps to it
+   - If any input item has no mapped task → **HIGH** finding: "Input item '[item]' has no mapped task in the plan"
+   - One task MAY cover multiple input items (vertical-slice) if justified in the task description
+   - This is item-level traceability, not a count comparison — aligns with the scope coverage hard gate
 
-## Review Process (`final` mode)
+## Review Process (`final` mode) — Completion Pipeline
 
-**Before starting this phase, output to the user:**
+**The final review is not another code review — it is a compliance audit with fix authority.**
 
-> **Final Review** — About to run adversarial 7-dimension review comparing your implementation against the original input, not just the task specs. The executor's per-task reviewer already validated correctness per-task — this catches drift between what you asked for and what was actually built.
+The completion pipeline runs three stages. The orchestrator (wazir skill) dispatches Stages 1-2 as separate sub-phases (4a, 4b) before invoking this skill. The reviewer skill owns Stage 3 (the review passes). Stages 1-2 are documented here for context — the reviewer consumes their outputs but does not orchestrate them.
+
+### Integration Verification (Vision Stage 1 — orchestrator-owned, sub-phase 4a)
+
+The orchestrator runs the full verification suite on merged main before invoking the reviewer:
+
+1. **Plan-defined integration criteria**: run the exact commands specified in `.wazir/runs/latest/clarified/execution-plan.md` under "Integration verification criteria"
+2. **Standard suite**: test suite, type checking, lint, build, and full deterministic analysis scan
+3. **Side effects verification**: check all declared external side effects from subtask specs were completed or compensated. Undeclared side effects discovered here are CRITICAL findings.
+
+If integration fails: identify the culprit via sequential merge record (re-run checks after each individual merge). Targeted fix executor receives failing output + acceptance criteria + merged code.
+
+Save results to `.wazir/runs/latest/completion/integration/`.
+
+### Concern Resolution (Vision Stage 2 — orchestrator-owned, sub-phase 4b)
+
+A fresh agent — one that did NOT produce any of the artifacts being evaluated — reads:
+
+1. **Concern registry**: all DONE_WITH_CONCERNS entries from execution
+2. **Residuals**: all `residuals-<subtask-id>.md` files from execution (findings that exhausted the 7-spawn subtask loop)
+3. **Batch-boundary disposition**: concerns from final batch + cross-subtask systemic patterns
+
+For each concern and residual, four questions:
+1. Is the concern still valid? (Some become moot after later subtasks.)
+2. Was the resolution acceptable? (Full implementation may change the picture.)
+3. Does it map to a spec requirement? (If yes, cannot be dismissed as trade-off.)
+4. Is it systemic? (3+ occurrences across subtasks = planning gap.)
+
+**Principle: concerns are innocent until proven acceptable.** Burden of proof is on the resolution.
+
+**Sycophancy guard**: the generating agent MUST NOT rebut or respond to reviewer concerns during this stage. Models abandon correct answers 98% of the time when challenged. If a concern is contested, route to human — not to agent debate.
+
+Save results to `.wazir/runs/latest/completion/concerns/`.
+
+### Final Review — 2+1 Passes (Vision Stages 3-6)
+
+**Before starting, output to the user:**
+
+> **Final Review** — About to run 2+1 pass compliance audit comparing your implementation against the original input. Pass 1: expertise-loaded internal review. Pass 2: cross-model fresh-context review. Pass 3 (conditional): reconciliation if passes disagree.
 >
-> **Why this matters:** Without this, implementation drift ships undetected. Per-task review confirms each task matches its spec, but cannot catch: tasks that collectively miss the original intent, scope creep that added unrequested features, or acceptance criteria that were rewritten to match implementation instead of input.
->
-> **Looking for:** Logic errors, missing features, dead code, unsubstantiated "it works" claims, scope creep, security gaps, stale documentation
+> **Why this matters:** Without this, implementation drift ships undetected. Per-task review confirms each task matches its spec, but cannot catch: tasks that collectively miss the original intent, scope creep, or acceptance criteria rewritten to match implementation.
 
-**Input:** Read the ORIGINAL user input (`.wazir/input/briefing.md`, `input/` directory files) and compare against what was built. This catches intent drift that task-level review misses.
+#### Pass 1: Internal Review (Expertise-Loaded)
 
-Perform adversarial review across 7 dimensions:
+Composer-built prompt with `always.reviewer` + `reviewer_modes.final` + stack antipatterns + auto modules.
 
-1. **Correctness** — Does the code do what the original input asked for? *(catches: logic errors, wrong behavior, spec violations)*
-2. **Completeness** — Are all requirements from the original input met? *(catches: missing features, unimplemented acceptance criteria, partially delivered items)*
-3. **Wiring** — Are all paths connected end-to-end? *(catches: dead code, disconnected paths, missing imports, orphaned routes)*
-4. **Verification** — Is there evidence (tests, type checks) for each claim? *(catches: false claims of "it works" without evidence, untested code paths, missing type coverage)*
-5. **Drift** — Does the implementation match what the user originally requested? (not just the plan — the INPUT) *(catches: scope creep, plan deviations, unauthorized changes, gold-plating)*
-6. **Quality** — Code style, naming, error handling, security *(catches: security vulnerabilities, poor error handling, inconsistent naming, missing input validation)*
-7. **Documentation** — Changelog entries, commit messages, comments *(catches: missing changelogs, wrong commit messages, stale comments, undocumented breaking changes)*
+**Input:** All completion inputs — merged implementation, approved plan, approved spec, original user input, concern resolution output, all `proof.json` files, integration results, all `analysis-findings.json` files.
 
-## Context Retrieval
+**Dual comparison:**
+1. **Implementation vs Plan** (bidirectional): does each plan item have implementation? Are there files the plan didn't mention? Plan items with no code? Code no plan item requested?
+2. **Implementation vs Original Input**: the telephone game check. Would the user recognize this as what they asked for? Drift measured from the source across all transformations.
 
-- Read the diff first (primary input)
-- Use `wazir index search-symbols <name>` to locate related code
-- Use `wazir recall symbol <name-or-id> --tier L1` to check structural alignment
-- Read files directly for: logic errors, missing edge cases, integration concerns
+**Three additional dimensions:**
+3. **Concern & residual resolutions**: re-examine every resolution from Stage 2
+4. **Verification evidence quality**: are tests meaningful or tautological? Every acceptance criterion covered by proof?
+5. **Integration completeness**: do cross-subtask interfaces match? Data flow correct between modules?
 
-## Scoring (`final` mode)
+Score each of the 7 canonical dimensions 0-10. Total out of 70. Additionally classify each finding by severity (CRITICAL/HIGH/MEDIUM/LOW).
+
+Save to `.wazir/runs/latest/completion/final-review/pass-1-internal.md`.
+
+#### Finding Severity (Final Review Specific)
+
+| Severity | Meaning | Response |
+|----------|---------|----------|
+| CRITICAL | Implementation contradicts spec or original input | Targeted fix or escalate to user |
+| HIGH | Significant drift or integration gap | Targeted fix |
+| MEDIUM | Minor drift or quality gap | Document, fix if ≤10 lines |
+| LOW | Style or convention divergence | Document for learning only |
+
+#### Targeted Fixes (Between Passes 1 and 2)
+
+- **CRITICAL/HIGH code issues** → fix executor batched by severity tier. All CRITICAL findings to one executor, all HIGH to another. Each executor receives all findings of its tier + relevant files + violated criteria. Batching prevents the "Death of a Thousand Round Trips" anti-pattern.
+- **CRITICAL/HIGH drift** → escalate to user (pipeline can't decide user intent)
+- **MEDIUM** → fix if ≤10 lines, otherwise document
+- **LOW** → document only (regression risk exceeds value)
+
+After fixes: commit, re-run integration verification (Stage 1). Fixed state becomes input for Pass 2.
+
+**Finding adoption tracking**: after targeted fixes, record which findings led to code changes vs documented vs ignored. Write to `.wazir/runs/latest/completion/final-review/finding-adoption.md`. This is the learner's source data for adoption rate metrics.
+
+#### Pass 2: Cross-Model Review (Fresh Session, Different Family)
+
+Different model family from Pass 1. Selection priority:
+1. Different vendor, highest tier (maximizes blind spot diversity)
+2. Same vendor, different generation
+3. Same vendor, same tier (last resort — still a fresh context)
+
+**Input:** Deterministic inputs + concern resolution output — merged implementation, plan, spec, original input, `proof.json` files, integration results, `analysis-findings.json` files, concern resolution output. Pass 2 does NOT receive Pass 1's LLM-generated findings. Deterministic findings reduce hallucinations 60-80%. Prior LLM opinions cause self-conditioning. Note: concern resolution output is included despite being LLM-generated because it is a neutral evaluation by a fresh agent (not the producer's self-assessment) — the vision explicitly includes it in Pass 2's inputs.
+
+Independent review. Same dual comparison (implementation vs plan vs original input). Also reviews concern resolutions and verification evidence independently.
+
+If Codex/Gemini CLI is the cross-model tool: invoked via Bash in a fresh subagent session. Falls back to same-model fresh-context review if external tools unavailable.
+
+Save to `.wazir/runs/latest/completion/final-review/pass-2-cross-model.md`.
+
+#### Pass 3: Reconciliation (Conditional)
+
+Runs ONLY if Passes 1 and 2 have conflicting CRITICAL or HIGH findings — one pass flagged an issue the other did not, or they disagree on severity/resolution.
+
+A fresh agent reads both pass outputs and reconciles:
+- **Both found it** → confirmed finding
+- **Only one found it** → evaluate with code evidence. If substantiated, confirmed. If not, downgrade or remove.
+- **Conflicting assessments** → escalate to user with both rationales
+
+If Passes 1 and 2 agree (no conflicting CRITICAL/HIGH): skip Pass 3, merge findings with deduplication.
+
+Save to `.wazir/runs/latest/completion/final-review/pass-3-reconciliation.md` (if run).
+
+### Scoring and Exit Criteria
 
 Score each dimension 0-10. Total out of 70.
 
 | Verdict | Score | Action |
 |---------|-------|--------|
-| **PASS** | 56+ | Ready for PR or merge |
+| **PASS** | 56+ | Ready for SHIP sign-off |
 | **NEEDS MINOR FIXES** | 42-55 | Auto-fix and re-review |
 | **NEEDS REWORK** | 28-41 | Re-run affected tasks |
 | **FAIL** | 0-27 | Fundamental issues |
 
-## Two-Tier Review Flow
+**Verdict-to-sign-off mapping:** Score verdicts determine the *next action*. Sign-off labels (SHIP/SHIP WITH CAVEATS/DO NOT SHIP) are the *final disposition* after all actions complete. PASS with no remaining findings → SHIP. PASS with accepted MEDIUM/LOW → SHIP WITH CAVEATS. NEEDS REWORK or FAIL after all passes exhausted → DO NOT SHIP.
 
-The review process has two tiers. Internal review catches ~80% of issues quickly and cheaply. Codex review provides fresh eyes on clean code.
+**Precedence rule**: a single unresolved CRITICAL finding prevents SHIP regardless of score. When score and blocking findings disagree, blocking findings win.
+
+Full exit criteria:
+- All CRITICAL findings resolved (including CRITICAL residuals from execution)
+- All HIGH findings resolved or explicitly accepted by user
+- MEDIUM/LOW documented in learning system
+- Every spec requirement has implementation evidence
+- No undetected drift (or drift explicitly approved)
+- Cross-model reviewer has no unresolved CRITICAL/HIGH
+
+If not met after Pass 3 (or Pass 2 when Pass 3 skipped): escalate to user with full finding history.
+
+## Two-Tier Review Flow (Non-Final Modes)
+
+The review process for non-final modes has two tiers. Internal review catches ~80% of issues quickly and cheaply. Codex review provides fresh eyes on clean code.
+
+**Note:** Final mode uses the Completion Pipeline structure above (2+1 passes), not this two-tier flow. The two-tier flow applies to: task-review, spec-challenge, architectural-design-review, visual-design-review, plan-review, research-review, and clarification-review modes.
 
 ### Tier 1: Internal Review (Fast, Cheap, Expertise-Loaded)
 
@@ -158,6 +267,8 @@ The review process has two tiers. Internal review catches ~80% of issues quickly
 Internal review passes are logged to `.wazir/runs/latest/reviews/<mode>-internal-pass-<N>.md`.
 
 ### Tier 2: External Review (Fresh Eyes on Clean Code)
+
+Codex is one implementation of cross-model review. If `gemini` or other tools are in `multi_tool.tools`, follow the same pattern. The principle is "different model family for blind spot diversity," not a specific vendor.
 
 Only runs AFTER Tier 1 produces a clean pass (no blocking findings).
 
@@ -194,11 +305,12 @@ If `codex` is in `multi_tool.tools`:
 **Code review scoping by mode:**
 - Use `--uncommitted` when reviewing uncommitted changes (`task-review` mode).
 - Use `--base <sha>` when reviewing committed changes.
-- Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `design-review`, `plan-review`, `research-review`, `clarification-review` modes).
+- Use `codex exec -c model="$CODEX_MODEL"` with stdin pipe for non-code artifacts (`spec-challenge`, `architectural-design-review`, `visual-design-review`, `plan-review`, `research-review`, `clarification-review` modes).
 - See `docs/reference/review-loop-pattern.md` for code review scoping rules.
 
 #### Gemini Review
 
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 If `gemini` is in `multi_tool.tools`, follow the same pattern using the Gemini CLI when available. **For detailed Gemini CLI usage, see `wz:gemini-cli` skill.**
 
 ### Fix Cycle (Codex Findings)
@@ -250,7 +362,8 @@ Read `interaction_mode` from run-config:
 - **`auto`:** No user checkpoints. Present verdict and let gating agent decide. On escalation, write reason and STOP.
 - **`guided`:** Standard behavior — present verdict, ask user how to proceed.
 - **`interactive`:** Discuss findings with user: "I found a potential auth bypass in `src/auth.js:42` — here's why I rated it high severity. Do you agree, or is there context I'm missing?" Show detailed reasoning for each dimension score.
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+
+**Exception for `final` mode:** In final mode, completion is autonomous regardless of `interaction_mode`. The only user interaction is the two exceptions defined in "User Interaction During Completion" (drift escalation, unresolvable concern). The mode rules above apply to non-final review modes only.
 
 ## CLI/Context-Mode Enforcement
 
@@ -270,8 +383,8 @@ In `task-review` mode, use task-scoped log filenames and cap tracking:
 
 ## Output
 
-Save review results to `.wazir/runs/latest/reviews/review.md` with:
-- Findings with severity (blocking, warning, note)
+Save review results to `.wazir/runs/latest/reviews/review.md` (non-final modes) or `.wazir/runs/latest/completion/final-review/` (final mode) with:
+- Findings with severity: blocking/warning/note (non-final modes) or CRITICAL/HIGH/MEDIUM/LOW (final mode)
 - Rationale tied to evidence
 - Score breakdown
 - Verdict
@@ -280,6 +393,8 @@ Run the phase report and display it to the user:
 ```bash
 wazir report phase --run <run-id> --phase <review-mode>
 ```
+
+Invoke `wz:humanize` on the report content (domain: technical-docs) before presenting to the user. Fix any high/medium findings — review reports are the primary artifact users read to judge pipeline quality.
 
 Output the report content to the user in the conversation.
 
@@ -342,7 +457,9 @@ All required fields per `schemas/phase-report.schema.json`:
 
 ## Post-Review: Learn (final mode only)
 
-After the final review verdict, extract durable learnings using the **learner role** (`roles/learner.md`).
+After the final review verdict (completion Stages 3-6 exit), extract durable learnings using the **learner role** (`roles/learner.md`). This corresponds to completion pipeline Stage 7 (Apply Learning) in `docs/vision/pipeline-complete.md`.
+
+The learning agent receives ALL signals from the run — not just review findings. See `roles/learner.md` for the full input list including user corrections (highest-priority signal), adoption rates, and quality deltas.
 
 ### Step 1: Gather all findings
 
@@ -398,7 +515,11 @@ approval_status: required
 - **Basis:** [single run observation | multi-run recurrence | user correction]
 ```
 
-### Step 4: Report
+### Step 4: Humanize
+
+Invoke `wz:humanize` on each learning proposal (domain: technical-docs). Fix any high/medium findings. Learning proposals persist across runs and shape future execution context — AI patterns in learnings propagate into every downstream run.
+
+### Step 5: Report
 
 Present proposed learnings to the user:
 
@@ -412,37 +533,19 @@ Learnings are NEVER auto-applied. They require explicit user acceptance before b
 
 ## Post-Review: Prepare Next (final mode only)
 
-After learning extraction, invoke the `prepare-next` skill to prepare the handoff:
+After learning extraction (completion Stage 7), prepare the session handoff. This corresponds to completion pipeline Stage 8 in `docs/vision/pipeline-complete.md`. Invoke the `prepare-next` skill which handles the two output modes:
 
-### Handoff document
+### Mode 1: Run Complete → execution-summary.md
 
-Write to `.wazir/runs/<run-id>/handoff.md`:
+After drafting the execution summary, invoke `wz:humanize` on it before writing to disk (domain: technical-docs). This is the final pipeline output — it must read as authored, not generated.
 
-```markdown
-# Handoff — <run-id>
+Produces `.wazir/runs/<run-id>/execution-summary.md` with: what was built (linked to spec requirements), verification summary, concerns and resolutions, final review findings per pass with adoption rates, residuals disposition, learning proposals, quality delta, cost/timing, SHIP/SHIP WITH CAVEATS/DO NOT SHIP recommendation.
 
-**Status:** [Completed | Partial]
-**Branch:** <branch-name>
-**Date:** YYYY-MM-DD
+### Mode 2: Run Incomplete → handover-batch-N.md
 
-## What Was Done
-[List of completed tasks with commit hashes]
+Produces `.wazir/runs/<run-id>/handover-batch-N.md` with: completed/in-progress/remaining subtask IDs with status and lifecycle state, accumulated concerns from DONE_WITH_CONCERNS subtasks, blocked subtasks with reasons and lifecycle state, partial learnings, environment state (active branches, worktrees), resume prompt (~500 tokens, self-contained, references files for depth).
 
-## Test Results
-[Test count, pass/fail, validator status]
-
-## Review Score
-[Final review verdict and score]
-
-## What's Next
-[Pending items, deferred work, follow-up tasks]
-
-## Open Bugs
-[Any known issues discovered during this run]
-
-## Learnings From This Run
-[Key insights — what worked, what didn't, what to change]
-```
+See `skills/prepare-next/SKILL.md` for the canonical template.
 
 ### Cleanup
 
@@ -467,34 +570,51 @@ Throughout the reviewer phase, produce reasoning at two layers:
 
 Key reviewer reasoning moments: severity assignments, PASS/FAIL decisions, dimension score justifications, and escalation decisions.
 
+### Completion-Specific Reasoning Moments
+
+During final mode (completion pipeline), additionally capture reasoning for:
+- Concern resolution dispositions (accepted/rejected/escalated)
+- Reconciliation verdicts (Pass 3 confirmed/downgraded/escalated findings)
+- SHIP/DO NOT SHIP decisions
+- Learning proposal priorities
+- Severity assignments for CRITICAL/HIGH findings
+
+Write completion reasoning to `.wazir/runs/<id>/reasoning/phase-completion-reasoning.md`.
+
+## User Interaction During Completion
+
+Completion is autonomous with exactly two exceptions:
+1. **Drift escalation**: implementation doesn't match what user asked for (CRITICAL/HIGH drift finding)
+2. **Unresolvable concern**: requires spec/design change (concern maps to spec requirement but resolution is unacceptable)
+
+Pipeline pauses, presents evidence, waits. User's decision is final. All other completion stages run without user interaction.
+
 ## Done
 
 **After completing this phase, output to the user:**
 
-> **Final Review complete.**
+> **Final Review Phase complete (Completion Pipeline).**
 >
-> **Found:** [N] findings across 7 dimensions — [N] blocking, [N] warnings, [N] notes. Score: [score]/70 ([VERDICT]).
+> **Integration verification:** [PASS/FAIL] — [N] tests, [N] type errors, [N] lint errors
+> **Concern resolution:** [N] concerns evaluated, [N] residuals resolved, [N] escalated
+> **Final review (2+1 passes):** [N] findings — [N] CRITICAL, [N] HIGH, [N] MEDIUM, [N] LOW. Score: [score]/70.
+> **Pass 3 reconciliation:** [ran/skipped] — [reason]
+> **Learnings:** [N] proposed (adoption rate: [X]%, quality delta: [Y] points average)
 >
-> **Without this phase:** [N] blocking issues would have shipped — including [specific examples: e.g., "missing error handler on /api/users endpoint", "auth middleware not wired to 3 routes", "CHANGELOG missing entry for breaking API change"]
+> **Without this phase:** Implementation drift would ship undetected, concerns would accumulate without resolution, cross-subtask integration bugs would hide, and recurring mistakes would never get captured
 >
-> **Changed because of this work:** [List of issues caught and fixed during review passes, score improvement from first to final pass]
+> **Changed because of this work:** [List of findings fixed per pass, score improvement, learnings extracted]
 
-Present the verdict and offer next steps:
+**Autonomous sign-off** — completion does NOT ask the user what to do. Present the sign-off and proceed:
 
-> **Review complete: [VERDICT] ([score]/70)**
->
-> [Score breakdown and findings summary]
->
-> **Learnings proposed:** [count] (see `memory/learnings/proposed/`)
-> **Handoff:** `.wazir/runs/<run-id>/handoff.md`
+> **Sign-off:** [SHIP / SHIP WITH CAVEATS / DO NOT SHIP]
+> **Handoff:** `.wazir/runs/<run-id>/execution-summary.md`
 
-Ask the user via AskUserQuestion:
-- **Question:** "How would you like to proceed with the review results?"
-- **Options:**
-  1. "Create a PR" *(Recommended if PASS)*
-  2. "Auto-fix and re-review" *(Recommended if MINOR FIXES)*
-  3. "Review findings in detail"
+If SHIP or SHIP WITH CAVEATS: proceed to create PR automatically.
+If DO NOT SHIP: present findings and stop.
 
-Wait for the user's selection before continuing.
+User interaction occurs ONLY for the two exceptions defined in "User Interaction During Completion" above (drift escalation, unresolvable concern). All other completion stages run without user prompts.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+**If the run is incomplete** (batch boundary, not all subtasks done): produce `handover-batch-N.md` and hard stop. The next batch MUST resume in a fresh session consuming the handover artifact.
+
+Final challenge: name every checklist item you completed and what you produced for each one. If any answer is "I think I covered that" instead of "here's the output," you have more work to do. Which items are you unsure about?

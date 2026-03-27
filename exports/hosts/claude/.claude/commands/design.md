@@ -22,20 +22,20 @@ On entering this phase, run:
 
 ## Outputs
 
-- design artifact (`.fig` + exported code + tokens + screenshots)
+- design artifact (`.fig` + tokens + screenshots, optionally exported code scaffolds as reference)
 
 ## Skip Conditions
 
 - project has no visual design needs
-- open-pencil MCP server is not available (proceed to planning with text-only design specs)
+- open-pencil MCP server is not available (proceed to architectural design with text-only design specs)
 
 ## Approval Gate
 
-- explicit human approval required before design-review
+- explicit human approval required before visual-design-review
 
 ## Review Loop
 
-After user approval, design artifact is reviewed via the design-review workflow (`workflows/design-review.md`) using the review loop pattern with the canonical design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The reviewer is invoked with `--mode design-review`. Design does not flow to planning until all review passes complete.
+After user approval, visual design artifact is reviewed via the design-review workflow (`workflows/design-review.md`) using the review loop pattern with the visual design-review dimensions (spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity). The reviewer is invoked with `--mode visual-design-review`. Design does not flow to planning until all review passes complete.
 
 ## Phase exit
 
@@ -45,4 +45,4 @@ On completing this phase, run:
 ## Failure Conditions
 
 - design does not address spec requirements
-- missing exported code scaffolds or tokens
+- missing design tokens

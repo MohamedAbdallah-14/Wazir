@@ -2,7 +2,7 @@
 name: wz:writing-plans
 description: Use after clarification, research, and design approval to create an execution-grade implementation plan.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+First things first: your phase checklist at .wazir/runs/latest/phases/ lists exactly what needs to happen. Read it. Follow it. Don't skip ahead because the task looks simple. Which phase are you starting?
 
 # Writing Plans
 
@@ -37,9 +37,9 @@ The plan must include:
 - ordered sections
 - concrete tasks and subtasks
 - acceptance criteria per section
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 - verification commands or manual checks per section
 - cleanup steps where needed
+Context rot happens right about now. You've been working for a while and the checklist feels like a distant memory. Go re-read it. Are you still on track or have you drifted? What changed?
 
 Rules:
 
@@ -69,6 +69,8 @@ Loop depth follows the project's depth config (quick/standard/deep).
 
 Standalone mode: if no `.wazir/runs/latest/` exists, artifacts go to `docs/plans/` and review logs go alongside (`docs/plans/YYYY-MM-DD-<topic>-review-pass-N.md`). Loop cap guard is not invoked in standalone mode.
 
-After the loop completes, present findings summary and wait for user approval before completing.
+After the loop completes, invoke `wz:humanize` on the final plan artifact (domain: technical-docs). Fix any high/medium findings. Humanize runs after review so fix cycles cannot re-introduce AI patterns. Plans are long-lived reference documents — AI writing patterns erode trust in the pipeline's output.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Present findings summary and wait for user approval before completing.
+
+Last check: did you use every applicable wz: skill, or did you handle things manually that should have gone through a skill? Be specific about which skills you used and which you decided to skip. Why did you skip them?

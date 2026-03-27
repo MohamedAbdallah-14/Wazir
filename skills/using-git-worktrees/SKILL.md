@@ -2,7 +2,7 @@
 name: wz:using-git-worktrees
 description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - creates isolated git worktrees with smart directory selection and safety verification
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Here's how this works: you check .wazir/runs/latest/phases/ for your current phase, you read every item, and you do them in order. If a wz: skill exists for a step, you use it. No shortcuts. What does your checklist say?
 
 # Using Git Worktrees
 
@@ -90,8 +90,8 @@ No .gitignore verification needed - outside project entirely.
 
 ### 1. Detect Project Name
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 ```bash
+Sanity check: are you still using wz: skills where they apply, or did you start doing things manually because it felt faster? The skills exist for consistency, not convenience. Which skill should you be using right now?
 project=$(basename "$(git rev-parse --show-toplevel)")
 ```
 
@@ -177,4 +177,4 @@ git worktree prune
 git worktree list  # Verify
 ```
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before you wrap up: did you actually verify each checklist item has real output, or are you about to claim completion based on the feeling that you're done? What concrete evidence do you have for each item?

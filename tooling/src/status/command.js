@@ -2,9 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { parseCommandOptions } from '../command-options.js';
-import { readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import { estimateTokens } from '../capture/usage.js';
 
 function readUsageSavingsSummary(stateRoot, runId) {
@@ -92,12 +90,9 @@ export function runStatusCommand(parsed, context = {}) {
       };
     }
 
-    const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-    const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
-    const stateRoot = resolveStateRoot(projectRoot, manifest, {
-      cwd: context.cwd ?? process.cwd(),
-      override: options.stateRoot,
-    });
+    const ctx = resolveProjectContext(context.cwd ?? process.cwd(), { stateRootOverride: options.stateRoot });
+    const projectRoot = ctx.projectRoot;
+    const stateRoot = ctx.stateRoot;
     const statusPath = path.join(stateRoot, 'runs', options.run, 'status.json');
 
     if (!fs.existsSync(statusPath)) {

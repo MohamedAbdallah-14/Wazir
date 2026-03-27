@@ -185,15 +185,15 @@ export function parseDepthModifier(requestText) {
 }
 
 /**
- * Run zero-config auto-initialization.
- * Creates .wazir directories, detects host, scans project, writes config.
- * No interactive prompts — everything is inferred.
+ * Auto-initialize project config with sensible defaults.
+ * Creates .wazir directories, detects host/stack, writes v2 config.
+ * The skill layer adds interactive questions on top.
  *
  * @param {string} projectRoot
  * @param {object} [opts]
  * @param {object} [opts.context] - Runtime context (availableTools, etc.)
  * @param {boolean} [opts.force] - Force reinitialize even if config exists
- * @returns {{ config: object, host: object, stack: object, filesCreated: string[] }}
+ * @returns {{ config: object, host: object, stack: object, filesCreated: string[], alreadyInitialized: boolean, needsMigration?: boolean }}
  */
 export function autoInit(projectRoot, opts = {}) {
   const wazirDir = path.join(projectRoot, '.wazir');
@@ -208,6 +208,7 @@ export function autoInit(projectRoot, opts = {}) {
       stack: detectProjectStack(projectRoot),
       filesCreated: [],
       alreadyInitialized: true,
+      needsMigration: !isConfigCurrent(existing),
     };
   }
 
@@ -239,15 +240,19 @@ export function autoInit(projectRoot, opts = {}) {
     }
   }
 
-  // Sensible defaults — no questions
+  const hasGit = fs.existsSync(path.join(projectRoot, '.git'));
+
   const config = {
-    model_mode: 'claude-only',
-    default_depth: 'standard',
-    default_intent: 'feature',
+    config_version: 2,
+    initialized_at: new Date().toISOString(),
+    model_mode: 'single',
+    interaction_mode: 'guided',
     context_mode: contextMode,
-    detected_host: host.host,
-    detected_stack: stack,
-    auto_initialized: true,
+    detected: {
+      host: host.host,
+      stack,
+      git: hasGit,
+    },
   };
 
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n');
@@ -255,4 +260,14 @@ export function autoInit(projectRoot, opts = {}) {
   const filesCreated = ['.wazir/input/', '.wazir/state/', '.wazir/runs/', '.wazir/state/config.json'];
 
   return { config, host, stack, filesCreated, alreadyInitialized: false };
+}
+
+/**
+ * Check if a config object is current (v2).
+ *
+ * @param {object} config
+ * @returns {boolean}
+ */
+export function isConfigCurrent(config) {
+  return config?.config_version === 2;
 }

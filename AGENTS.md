@@ -1,111 +1,33 @@
-# Wazir Agent Instructions
+# Wazir Agents
 
-## Role-Based Workflow System
+> Auto-maintained. See `expertise/composition-map.yaml` for canonical policy.
 
-Wazir uses canonical roles and phased workflows. Role contracts are in `roles/`. Workflow definitions are in `workflows/`.
+## Roles
 
-### Canonical Roles
+| Role | Model Tier | Capabilities | Max Turns | Notes |
+|---|---|---|---|---|
+| controller | orchestration | read, shell, search, skills, agents | 50 | Dispatch-only, no write/edit |
+| clarifier | review | read, write, shell, search, skills | 30 | |
+| researcher | exploration | read, write, shell, search, skills, web | 25 | |
+| specifier | review | read, write, shell, search, skills | 25 | |
+| content-author | implementation | read, write, shell, search, skills, web | 30 | |
+| designer | review | read, write, shell, search, skills | 30 | MCP: pencil |
+| planner | review | read, write, shell, search, skills | 30 | |
+| executor | implementation | read, write, edit, shell, search, skills | 80 | Isolation: worktree |
+| verifier | review | read, write, shell, search, skills | 30 | |
+| reviewer | review | read, write, shell, search, skills | 40 | |
+| learner | implementation | read, write, shell, search, skills | 20 | |
+| reviewer-verifier | review | read, write, shell, search, skills | 40 | |
 
-1. **clarifier** — disambiguate intent, extract acceptance criteria
-2. **researcher** — gather evidence, prior art, domain context
-3. **specifier** — write precise specs from clarified requirements
-4. **designer** — produce architecture and interface designs
-5. **content-author** — create documentation, guides, and prose artifacts
-6. **planner** — break specs into ordered, testable tasks
-7. **executor** — implement code following the plan
-8. **verifier** — run tests, linting, and validation gates
-9. **reviewer** — final quality review against acceptance criteria
-10. **learner** — capture lessons learned and update knowledge base
+## How Agents Are Dispatched
 
-See `roles/` for full contracts. See `wazir.manifest.yaml` for the authoritative list.
+The orchestrator (controller) dispatches phase agents in sequence. Each agent gets:
+- A fresh context window
+- Only its role contract and relevant expertise modules
+- Tool restrictions enforced by YAML frontmatter in `.claude/agents/`
 
-### Entering a Workflow
+## Files
 
-1. **Clarifier:** read and follow `~/.claude/agents/clarifier.md` — tasks are in `input/`
-2. **Subsequent phases:** the workflow system assigns roles per phase. See `workflows/` for phase sequence.
-3. **Review:** read and follow `~/.claude/agents/reviewer.md` — run all review phases
-
-## Build Commands
-
-| Command | Purpose |
-|---------|---------|
-| `npm install` | Install dependencies |
-| `npm test` | Run full test suite (node:test) |
-| `wazir validate` | Validate manifest, hooks, docs, brand, runtime, branches, commits, changelog |
-| `wazir doctor` | Check environment health |
-| `wazir export build` | Build host-native packages |
-
-## Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error |
-| 2 | Usage / argument error |
-| 42 | Validation failure (non-fatal) |
-| 43 | Gate rejection (hard stop) |
-
-## Code Style
-
-- Pure JavaScript — no TypeScript, no JSX, no transpilation
-- Node.js >= 20
-- ES modules (`import` / `export`)
-- Test framework: `node:test` + `node:assert`
-- Zero runtime dependencies in the core kit
-
-### Test Pattern
-
-```js
-import { describe, it } from 'node:test';
-import assert from 'node:assert/strict';
-
-describe('featureName', () => {
-  it('should behave correctly', () => {
-    const result = featureName();
-    assert.strictEqual(result, expected);
-  });
-});
-```
-
-## Project Structure
-
-| Directory | Purpose |
-|-----------|---------|
-| `roles/` | Canonical role contracts (one file per role) |
-| `workflows/` | Phase-based workflow definitions and entry points |
-| `expertise/` | Domain knowledge modules consumed by roles |
-| `skills/` | Reusable skill definitions (prefixed `wz:`) |
-| `hooks/` | Lifecycle hooks (pre-commit, pre-push, gates) |
-| `tooling/` | CLI source, tests, and internal utilities |
-| `exports/` | Generated host-native packages (do not edit) |
-| `templates/` | Scaffold and boilerplate templates |
-| `schemas/` | JSON / YAML schemas for validation |
-| `docs/` | Architecture docs, guides, and references |
-
-## Git Workflow
-
-- **Conventional commits:** `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`
-- **Isolated feature branches** — never commit directly to `main`
-- **TDD cycle:** failing test -> implement -> verify -> commit
-
-## Boundaries
-
-- Never edit files in `exports/` directly — they are generated from canonical sources
-- Never modify pipeline input files — they are read-only task input
-- Never skip `wazir doctor` before starting work
-- Never add runtime dependencies to the core kit
-- Never use TypeScript, JSX, or any transpilation step
-- Never commit without running `npm test` first
-- Never bypass validation gates (`wazir validate`)
-
-## Review Mode
-
-This project uses Codex as a secondary reviewer. Review artifacts are in `tasks/opus/reviews/`.
-
-## Operating Constraints
-
-- Use `roles/` as the source of truth for role contracts
-- Keep default live run state outside the repo under `~/.wazir/projects/<project-slug>/`
-- Preserve evidence-first execution, TDD, verification, and conventional commits
-- Use isolated feature branches
-- Reference `wazir.manifest.yaml` for the project manifest and schema
+- Role contracts: `roles/*.md`
+- Agent definitions (Claude): `exports/hosts/claude/.claude/agents/*.md`
+- Agent policy: `expertise/composition-map.yaml` → `agent_policy` section

@@ -2,7 +2,7 @@
 name: wz:receiving-code-review
 description: Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Stop. Before you start working — what does your phase checklist say? Go read .wazir/runs/latest/phases/ and follow it. Every item, not just the ones that feel important. What's the first unchecked item?
 
 # Code Review Reception
 
@@ -74,7 +74,7 @@ WHY: Items may be related. Partial understanding = wrong implementation.
 the user: "Fix 1-6"
 You understand 1,2,3,6. Unclear on 4,5.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 WRONG: Implement 1,2,3,6 now, ask about 4,5 later
 RIGHT: "I understand items 1,2,3,6. Need clarification on 4 and 5 before proceeding."
 ```
@@ -145,4 +145,4 @@ FOR multi-item feedback:
 | "Implement properly" suggestion | YAGNI check first |
 | Multiple items, some unclear | Clarify ALL unclear items before implementing ANY |
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Almost done? Then you should be able to list every phase checklist item and show exactly where you completed it with real evidence. If you can't do that, you're not actually done. Can you list them all with proof?

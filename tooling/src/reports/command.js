@@ -1,9 +1,5 @@
-import path from 'node:path';
-
 import { parseCommandOptions } from '../command-options.js';
-import { readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import { collectPhaseMetrics, buildPhaseReport } from './phase-report.js';
 
 const USAGE = 'Usage: wazir report phase --run <run-id> --phase <phase> [--base <branch>] [--json]';
@@ -35,12 +31,9 @@ function handlePhase(parsed, context = {}) {
     };
   }
 
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-  const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
-  const stateRoot = resolveStateRoot(projectRoot, manifest, {
-    cwd: context.cwd ?? process.cwd(),
-    override: options.stateRoot,
-  });
+  const ctx = resolveProjectContext(context.cwd ?? process.cwd(), { stateRootOverride: options.stateRoot });
+  const projectRoot = ctx.projectRoot;
+  const stateRoot = ctx.stateRoot;
 
   const metrics = collectPhaseMetrics({
     projectRoot,

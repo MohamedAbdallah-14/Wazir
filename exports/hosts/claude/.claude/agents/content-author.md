@@ -1,3 +1,17 @@
+---
+tools:
+  - Read
+  - Write
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+  - WebSearch
+  - WebFetch
+model: sonnet
+maxTurns: 30
+---
+
 # content-author
 
 ## Purpose

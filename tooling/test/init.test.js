@@ -50,13 +50,13 @@ function createInitFixture() {
 }
 
 describe('wazir init command', () => {
-  test('init rejects when config exists without --force', async () => {
+  test('init rejects when v2 config exists without --force', async () => {
     const fixture = createInitFixture();
     try {
       const wazirDir = path.join(fixture.fixtureRoot, '.wazir');
       const stateDir = path.join(wazirDir, 'state');
       fs.mkdirSync(stateDir, { recursive: true });
-      fs.writeFileSync(path.join(stateDir, 'config.json'), '{}');
+      fs.writeFileSync(path.join(stateDir, 'config.json'), JSON.stringify({ config_version: 2 }));
 
       const result = await runInitCommand(
         { command: 'init', subcommand: null, args: [], help: false },
@@ -65,6 +65,26 @@ describe('wazir init command', () => {
 
       assert.strictEqual(result.exitCode, 1);
       assert.ok(result.stderr.includes('already initialized'), `stderr should mention already initialized: ${result.stderr}`);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('init shows migration notice for v1 config without --force', async () => {
+    const fixture = createInitFixture();
+    try {
+      const wazirDir = path.join(fixture.fixtureRoot, '.wazir');
+      const stateDir = path.join(wazirDir, 'state');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.writeFileSync(path.join(stateDir, 'config.json'), JSON.stringify({ model_mode: 'claude-only' }));
+
+      const result = await runInitCommand(
+        { command: 'init', subcommand: null, args: [], help: false },
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('Config format has changed'), `stderr should show migration notice: ${result.stderr}`);
     } finally {
       fixture.cleanup();
     }
@@ -88,9 +108,59 @@ describe('wazir init command', () => {
     }
   });
 
+  test('init shows corrupt config message for unparseable config', async () => {
+    const fixture = createInitFixture();
+    try {
+      const wazirDir = path.join(fixture.fixtureRoot, '.wazir');
+      const stateDir = path.join(wazirDir, 'state');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.writeFileSync(path.join(stateDir, 'config.json'), '{not valid json!!!');
+
+      const result = await runInitCommand(
+        { command: 'init', subcommand: null, args: [], help: false },
+        { cwd: fixture.fixtureRoot },
+      );
+
+      assert.strictEqual(result.exitCode, 1);
+      assert.ok(result.stderr.includes('corrupt or unreadable'), `stderr should mention corrupt: ${result.stderr}`);
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
   test('init shows in CLI help', () => {
     const result = runCli(['--help']);
     assert.ok(result.stdout.includes('init'), 'help output should list init command');
+  });
+
+  test('init output does not contain Depth line', async () => {
+    const fixture = createInitFixture();
+    try {
+      const result = await runInitCommand(
+        { command: 'init', subcommand: null, args: [], help: false },
+        { cwd: fixture.fixtureRoot },
+      );
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(!result.stdout.includes('Depth:'), 'output should not contain Depth line');
+      assert.ok(!result.stdout.includes('zero-config'), 'output should not contain zero-config');
+    } finally {
+      fixture.cleanup();
+    }
+  });
+
+  test('init output contains Interaction line', async () => {
+    const fixture = createInitFixture();
+    try {
+      const result = await runInitCommand(
+        { command: 'init', subcommand: null, args: [], help: false },
+        { cwd: fixture.fixtureRoot },
+      );
+      assert.strictEqual(result.exitCode, 0);
+      assert.ok(result.stdout.includes('Interaction:'), 'output should contain Interaction line');
+      assert.ok(result.stdout.includes('Reconfigure:'), 'output should contain Reconfigure hint');
+    } finally {
+      fixture.cleanup();
+    }
   });
 
   test('init --force overwrites existing config', () => {

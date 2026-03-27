@@ -580,3 +580,68 @@ describe('claude export includes design integration files', () => {
     assert.ok(fs.existsSync(reviewPath), 'design-review command not exported');
   });
 });
+
+describe('claude export agent frontmatter and CLAUDE.md content', () => {
+  test('Claude agent files include YAML frontmatter with tools', () => {
+    const hostDir = path.join(ROOT, 'exports', 'hosts', 'claude');
+    const agentDir = path.join(hostDir, '.claude', 'agents');
+    assert.ok(fs.existsSync(agentDir), '.claude/agents/ must exist');
+
+    const executorContent = fs.readFileSync(path.join(agentDir, 'executor.md'), 'utf8');
+    assert.ok(executorContent.startsWith('---'), 'executor.md must start with YAML frontmatter');
+    assert.ok(executorContent.includes('tools:'), 'executor.md must have tools: field');
+    assert.ok(executorContent.includes('Edit'), 'executor must have Edit tool');
+    assert.ok(executorContent.includes('maxTurns:'), 'executor.md must have maxTurns:');
+    assert.ok(executorContent.includes('isolation: worktree'), 'executor must have isolation: worktree');
+
+    const designerContent = fs.readFileSync(path.join(agentDir, 'designer.md'), 'utf8');
+    assert.ok(designerContent.startsWith('---'), 'designer.md must start with YAML frontmatter');
+    assert.ok(designerContent.includes('mcpServers:'), 'designer must have mcpServers field');
+
+    const reviewerContent = fs.readFileSync(path.join(agentDir, 'reviewer.md'), 'utf8');
+    assert.ok(reviewerContent.startsWith('---'), 'reviewer.md must start with YAML frontmatter');
+    assert.ok(reviewerContent.includes('tools:'), 'reviewer.md must have tools: field');
+    assert.ok(!reviewerContent.includes('Edit'), 'reviewer must NOT have Edit tool');
+  });
+
+  test('Claude agent files include controller.md', () => {
+    const controllerPath = path.join(ROOT, 'exports', 'hosts', 'claude', '.claude', 'agents', 'controller.md');
+    assert.ok(fs.existsSync(controllerPath), 'controller.md must exist');
+
+    const content = fs.readFileSync(controllerPath, 'utf8');
+    assert.ok(content.startsWith('---'), 'controller.md must start with YAML frontmatter');
+    assert.ok(content.includes('Agent'), 'controller must have Agent tool');
+    assert.ok(!content.includes('Write'), 'controller must NOT have Write tool');
+    assert.ok(!content.includes('Edit'), 'controller must NOT have Edit tool');
+  });
+
+  test('Claude agent files include reviewer-verifier.md', () => {
+    const rvPath = path.join(ROOT, 'exports', 'hosts', 'claude', '.claude', 'agents', 'reviewer-verifier.md');
+    assert.ok(fs.existsSync(rvPath), 'reviewer-verifier.md must exist');
+
+    const content = fs.readFileSync(rvPath, 'utf8');
+    assert.ok(content.startsWith('---'), 'reviewer-verifier.md must start with YAML frontmatter');
+    assert.ok(!content.includes('Edit'), 'reviewer-verifier must NOT have Edit tool');
+  });
+
+  test('Claude CLAUDE.md falls back to common instructions when template missing', () => {
+    // The fallback is tested implicitly by the fixture-based tests that don't have
+    // the template file. For the live export, we verify the template path IS used
+    // (the "orchestrator" content only exists in the template, not in the fallback).
+    const claudeMdPath = path.join(ROOT, 'exports', 'hosts', 'claude', 'CLAUDE.md');
+    const content = fs.readFileSync(claudeMdPath, 'utf8');
+    // If template was used, it has "orchestrator". If fallback was used, it has "Canonical facts".
+    // We expect the template to be used in the real export.
+    assert.ok(content.includes('orchestrator'), 'CLAUDE.md should use template (contains orchestrator)');
+    assert.ok(!content.includes('Canonical facts'), 'CLAUDE.md should not use fallback (no Canonical facts)');
+  });
+
+  test('Claude CLAUDE.md contains pipeline identity', () => {
+    const claudeMdPath = path.join(ROOT, 'exports', 'hosts', 'claude', 'CLAUDE.md');
+    const content = fs.readFileSync(claudeMdPath, 'utf8');
+    assert.ok(content.includes('orchestrator'), 'CLAUDE.md must mention orchestrator role');
+    assert.ok(content.includes('Dispatch Rule'), 'CLAUDE.md must have Dispatch Rule section');
+    assert.ok(content.includes('Hard Invariants'), 'CLAUDE.md must have Hard Invariants section');
+    assert.ok(!content.includes('{{'), 'CLAUDE.md must not contain unresolved placeholders');
+  });
+});

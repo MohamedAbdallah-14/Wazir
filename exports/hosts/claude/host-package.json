@@ -35,16 +35,20 @@
     "hooks/definitions/protected_path_write_guard.yaml",
     "hooks/definitions/session_start.yaml",
     "hooks/definitions/stop_handoff_harvest.yaml",
-    "hooks/hooks.json"
+    "hooks/hooks.json",
+    "expertise/composition-map.yaml",
+    "templates/exports/claude-md.md"
   ],
   "files": [
     ".claude/agents/clarifier.md",
     ".claude/agents/content-author.md",
+    ".claude/agents/controller.md",
     ".claude/agents/designer.md",
     ".claude/agents/executor.md",
     ".claude/agents/learner.md",
     ".claude/agents/planner.md",
     ".claude/agents/researcher.md",
+    ".claude/agents/reviewer-verifier.md",
     ".claude/agents/reviewer.md",
     ".claude/agents/specifier.md",
     ".claude/agents/verifier.md",

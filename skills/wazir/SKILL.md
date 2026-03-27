@@ -2,7 +2,7 @@
 name: wz:wazir
 description: One-command pipeline — type /wazir followed by what you want to build. Handles init, clarification, execution, review, and audits automatically.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before anything else happens here: read your phase checklist. It's at .wazir/runs/latest/phases/. Every item on it is there because skipping it caused problems before. Are you going to follow it or skip it?
 
 # Wazir — Full Pipeline Runner
 
@@ -55,13 +55,48 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 | **Init** | Setup, prereqs, run directory, input scan | `wz:wazir` (inline) | `run-config.yaml` |
 | **Clarifier** | Research, clarify, specify, brainstorm, plan | `wz:clarifier` | Approved spec + design + plan |
 | **Executor** | Implement, verify | `wz:executor` | Code + verification proof |
-| **Final Review** | Review vs original input, learn, prepare next | `wz:reviewer` | Verdict + learnings + handoff |
+| **Final Review** | Integration verification, concern resolution, 2+1 pass review, learn, prepare next | `wz:reviewer` | Verdict + learnings + handoff |
+
+---
+
+# Pre-Bootstrap: CLI + Init Check (MANDATORY BEFORE PHASE 0)
+
+**Before bootstrap**, verify the Wazir CLI is installed:
+
+```bash
+which wazir
+```
+
+**If not installed**, check npm is available and auto-install:
+
+```bash
+which npm || { echo "npm not found — install Node.js 20+ first"; exit 1; }
+npm install -g @wazir-dev/cli
+```
+
+After install, verify with `which wazir`. If install fails (permissions, no npm), ask the user for help — do not proceed without the CLI.
+
+The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
+
+**Then check if this project is initialized:**
+
+```bash
+wazir doctor --json
+```
+
+If doctor reports the project is not initialized (no `.wazir/state/config.json`), run:
+
+```bash
+wazir init
+```
+
+This creates state directories and detects the project's host and stack. It works in any project — no `wazir.manifest.yaml` needed.
 
 ---
 
 # Phase 0: Bootstrap (MANDATORY FIRST STEP)
 
-**Before ANYTHING else**, run this command:
+**After CLI check passes**, run this command:
 
 ```bash
 wazir capture ensure
@@ -127,25 +162,18 @@ Recognized modifiers:
 
 ## Step 2: Check Prerequisites
 
-### CLI Check
+### Config Check
 
-Run `which wazir` to check if the CLI is installed.
+Check if `.wazir/state/config.json` exists and has `config_version: 2`.
 
-**If not installed**, present:
+- **If missing or v1 (no `config_version` or `config_version !== 2`):** Invoke the `init-pipeline` skill. It handles dependency checks, asks 3-4 questions, and writes config.
+- **If exists and v2:** Show one-line config summary and proceed:
+  ```
+  Config: <model_mode summary> | <interaction_mode> | Reconfigure: /wazir init
+  ```
+  Model mode summary formats: `single`, `multi-model (Haiku/Sonnet/Opus)`, `multi-tool (Opus + Codex gpt-5.4)`
 
-> **The Wazir CLI is not installed. It's required for event capture, validation, and indexing.**
-
-Ask the user via AskUserQuestion:
-- **Question:** "The Wazir CLI is not installed. How would you like to install it?"
-- **Options:**
-  1. "npm install -g @wazir-dev/cli" *(Recommended)*
-  2. "npm link from the Wazir project root"
-
-Wait for the user's selection before continuing.
-
-The CLI is **required** — the pipeline uses `wazir capture`, `wazir validate`, `wazir index`, and `wazir doctor` throughout execution.
-
-**If installed**, run `wazir doctor --json` to verify repo health. Stop if unhealthy.
+Run `wazir doctor --json` to verify repo health. Stop if unhealthy.
 
 ### Branch Check
 
@@ -173,13 +201,6 @@ else
   wazir index refresh
 fi
 ```
-
-### Pipeline Init Check
-
-Check if `.wazir/state/config.json` exists.
-
-- **If missing** — invoke the `init-pipeline` skill.
-- **If exists** — continue.
 
 ## Step 3: Create Run Directory
 
@@ -219,7 +240,12 @@ Wait for the user's selection before continuing.
 
 ## Step 4: Build Run Config
 
-**No questions asked.** Depth, intent, and mode are all inferred or defaulted.
+**No questions asked.** Depth, intent, and interaction mode are inferred or read from project config.
+
+**Interaction mode wiring:** Read `interaction_mode` from `.wazir/state/config.json` as the project default. Inline modifiers override:
+```
+interaction_mode = inline_modifier ?? project_config.interaction_mode ?? 'guided'
+```
 
 ### Intent Inference
 
@@ -250,7 +276,7 @@ parsed_intent: feature
 entry_point: "/wazir"
 
 depth: standard
-interaction_mode: guided  # auto | guided | interactive
+interaction_mode: guided  # from inline modifier ?? project config ?? 'guided'
 
 # Workflow policy — individual workflows within each phase
 workflow_policy:
@@ -261,7 +287,7 @@ workflow_policy:
   spec-challenge: { enabled: true, loop_cap: 10 }
   author:         { enabled: false, loop_cap: 10 }
   design:         { enabled: true, loop_cap: 10 }
-  design-review:  { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }  # covers architectural-design-review + visual-design-review
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
   # Executor phase workflows
@@ -287,7 +313,7 @@ Map intent + depth to applicable workflows. The system decides — the user does
 |-------|-----------|-------|
 | **Core** (always run) | `clarify`, `execute`, `verify`, `review` | Never skipped |
 | **Adaptive** (run when evidence says so) | `discover`, `design`, `author`, `specify` | Skipped for bugfix/docs/spike at quick depth |
-| **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `design-review` | Loop cap controls iteration depth |
+| **Scale** (intensity varies) | `spec-challenge`, `plan-review`, `architectural-design-review`, `visual-design-review` | Loop cap controls iteration depth |
 | **Post-run** (always run) | `learn`, `prepare_next` | Part of Final Review phase |
 
 Log skip decisions with reasons in `workflow_policy`.
@@ -334,7 +360,7 @@ The `interaction_mode` field in run-config controls how the pipeline interacts w
 
 ## `auto` mode constraints
 
-- **Codex REQUIRED** — refuse to start auto mode if `multi_tool.codex` is not configured in `.wazir/state/config.json`. Error: "Auto mode requires an external reviewer (Codex). Configure it first or use guided mode."
+- **External reviewer REQUIRED** — refuse to start auto mode if no external reviewer is configured (requires multi-tool mode with Codex or Gemini in `.wazir/state/config.json`). Error: "Auto mode requires an external reviewer (multi-tool mode with Codex or Gemini). Configure it first or use guided mode."
 - **On escalate:** STOP immediately, write the escalation reason to `.wazir/runs/<id>/escalations/`, and wait for user input
 - **Wall-clock limit:** default 4 hours. If exceeded, stop with escalation.
 - **Never auto-commits to main** — always work on feature branch
@@ -383,24 +409,26 @@ Phase 2: Clarifier
   ├── clarify ← clarification-review loop
   ├── specify ← spec-challenge loop
   ├── author (adaptive) ← approval gate
-  ├── design ← design-review loop
+  ├── design ← architectural-design-review loop
   └── plan ← plan-review loop
 
 Phase 3: Executor
   ├── execute (per-task) ← task-review loop per task
   └── verify
 
-Phase 4: Final Review
-  ├── review (final) ← scored review
-  ├── learn
+Phase 4: Final Review (Completion Pipeline)
+  ├── integration-verify ← full suite on merged main
+  ├── concern-resolve ← fresh agent, sycophancy guard
+  ├── review (final) ← 2+1 pass compliance audit
+  ├── learn ← adoption rates, quality delta, user corrections
   └── prepare_next
 ```
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 **Event capture uses both levels.** When emitting phase events, include `--parent-phase`:
 ```bash
 wazir capture event --run <id> --event phase_enter --phase discover --parent-phase clarifier --status in_progress
 ```
+This is the point where compliance usually drops off. You feel like you're making progress so you stop checking the list. Don't fall into that trap. Pull up .wazir/runs/latest/phases/ again. What's next on it?
 
 **Progress markers between workflows:** After each workflow completes, output:
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
@@ -431,7 +459,7 @@ Invoke the `wz:clarifier` skill. It handles all sub-workflows internally:
 2. **Research** (discover workflow) — codebase + external research
 3. **Clarify** (clarify workflow) — scope, constraints, assumptions
 4. **Spec Harden** (specify + spec-challenge workflows) — measurable spec
-5. **Brainstorm** (design + design-review workflows) — design approaches
+5. **Brainstorm** (architectural design + architectural-design-review) — design approaches
 6. **Plan** (plan + plan-review workflows) — execution plan
 
 Each sub-workflow has its own review loop. User checkpoints between major steps.
@@ -507,8 +535,8 @@ wazir capture event --run <run-id> --event phase_enter --phase executor --status
 **Pre-execution gate:**
 
 ```bash
-wazir validate manifest && wazir validate hooks
-# Hard gate — stop if either fails.
+wazir validate manifest && wazir validate hooks && wazir validate branches
+# Hard gate — stop if any fails.
 ```
 
 Invoke the `wz:executor` skill. It handles:
@@ -578,36 +606,68 @@ wazir capture event --run <run-id> --event phase_enter --phase final_review --st
 
 This phase validates the implementation against the **ORIGINAL INPUT** (not the task specs — the executor's per-task reviewer already covered that).
 
-### 4a: Review (reviewer role in final mode)
+### 4a: Integration Verification
+
+Full verification suite on merged main before any review:
+1. Run plan-defined integration criteria from the execution plan
+2. Run standard suite: tests, type checking, lint, build, deterministic analysis
+3. Verify all declared external side effects were completed or compensated
+
+If integration fails: identify culprit via sequential merge record. Targeted fix executor receives failing output + acceptance criteria.
+
+### 4b: Concern Resolution
+
+A fresh agent (NOT the executor or any producing agent) evaluates:
+1. Concern registry — all DONE_WITH_CONCERNS entries from execution
+2. Residuals — all `residuals-<subtask-id>.md` files
+3. Batch-boundary disposition — concerns from final batch + cross-subtask patterns
+
+**Sycophancy guard**: generating agent MUST NOT rebut concerns. Route contested concerns to human.
+
+### 4c: Review (reviewer role in final mode)
 
 Invoke `wz:reviewer --mode final`.
-7-dimension scored review comparing implementation against the original user input.
-Score 0-70. Verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+2+1 pass compliance audit comparing implementation against the original user input:
+- Pass 1: Internal expertise-loaded review (7 dims, scored 0-70)
+- Targeted fixes between passes (batched by severity tier)
+- Pass 2: Cross-model review (fresh session, deterministic inputs only)
+- Pass 3: Reconciliation (conditional — only if passes 1-2 have conflicting CRITICAL/HIGH)
 
-### 4b: Learn (learner role)
+**Exit criteria**: single unresolved CRITICAL blocks SHIP regardless of score.
+Score verdicts: PASS (56+), NEEDS MINOR FIXES (42-55), NEEDS REWORK (28-41), FAIL (0-27).
+Final sign-off (after all actions): SHIP / SHIP WITH CAVEATS / DO NOT SHIP.
+
+### 4d: Learn (learner role)
 
 Extract durable learnings from the completed run:
-- Scan all review findings (internal + Codex)
-- Propose learnings to `memory/learnings/proposed/`
-- Findings that recur across 2+ runs → auto-proposed as learnings
+- Scan all review findings (all passes, internal + cross-model)
+- Process user corrections as highest-priority signal
+- Track finding adoption rates (per pass, per severity, per source)
+- Calculate quality delta (per-dimension first-pass vs final-state)
+- Propose learnings to `memory/learnings/proposed/` with impact scoring
 - Learnings require explicit scope tags (roles, stacks, concerns)
 
-### 4c: Prepare Next (planner role)
+### 4e: Prepare Next (planner role)
 
 Prepare context and handoff for the next run:
-- Write handoff document
+- Write `execution-summary.md` (complete) or `handover-batch-N.md` (incomplete)
+- Include: concerns and resolutions, residuals disposition, quality delta, finding adoption rates
+- Record SHIP / SHIP WITH CAVEATS / DO NOT SHIP recommendation
 - Compress/archive unneeded files
-- Record what's left to do
 
 **After completing this phase, output to the user:**
 
-> **Final Review Phase complete.**
+> **Final Review Phase complete (Completion Pipeline).**
 >
-> **Found:** [N] findings across 7 dimensions, [N] blocking issues, [N] warnings, [N] learnings proposed for future runs
+> **Integration verification:** [PASS/FAIL] — [N] tests, [N] type errors, [N] lint errors
+> **Concern resolution:** [N] concerns evaluated, [N] residuals resolved, [N] escalated
+> **Final review (2+1 passes):** [N] findings — [N] CRITICAL, [N] HIGH, [N] MEDIUM, [N] LOW. Score: [score]/70.
+> **Pass 3 reconciliation:** [ran/skipped] — [reason]
+> **Learnings:** [N] proposed (adoption rate: [X]%, quality delta: [Y] points average)
 >
-> **Without this phase:** Implementation drift from the original request would ship undetected, untested paths would hide production bugs, and recurring mistakes would never get captured as learnings
+> **Without this phase:** Implementation drift would ship undetected, concerns would accumulate without resolution, cross-subtask integration bugs would hide, and recurring mistakes would never get captured
 >
-> **Changed because of this work:** [List of findings fixed, score achieved, learnings extracted, handoff prepared]
+> **Changed because of this work:** [List of findings fixed per pass, score improvement, learnings extracted, handoff prepared]
 
 ```bash
 wazir capture event --run <run-id> --event phase_exit --phase final_review --status completed
@@ -627,60 +687,67 @@ Output the report content to the user in the conversation.
 Before presenting results:
 
 ```bash
-wazir validate changelog --require-entries --base main
-wazir validate commits --base main
+wazir validate branches
+wazir validate commits
+wazir validate changelog --require-entries --base $(git merge-base HEAD develop || git merge-base HEAD main)
 ```
 
 Both must pass before PR. These are not warnings.
 
 ## Step 6: Present Results
 
-After the reviewer completes, present verdict with numbered options:
+Completion is **autonomous** — the pipeline presents its sign-off and proceeds. User interaction happens only for two exceptions:
 
-### If PASS (score 56+):
+### Autonomous Sign-Off
 
-> **Result: PASS (score/70)**
+Present the completion pipeline results:
 
-Ask the user via AskUserQuestion:
-- **Question:** "Pipeline passed. What would you like to do next?"
-- **Options:**
-  1. "Create a PR" *(Recommended)*
-  2. "Merge directly"
-  3. "Review the changes first"
-
-Wait for the user's selection before continuing.
-
-### If NEEDS MINOR FIXES (score 42-55):
-
-> **Result: NEEDS MINOR FIXES (score/70)**
-
-Ask the user via AskUserQuestion:
-- **Question:** "Minor issues found. How should we handle them?"
-- **Options:**
-  1. "Auto-fix and re-review" *(Recommended)*
-  2. "Fix manually"
-  3. "Accept as-is"
-
-Wait for the user's selection before continuing.
-
-### If NEEDS REWORK (score 28-41):
-
-> **Result: NEEDS REWORK (score/70)**
-
-Ask the user via AskUserQuestion:
-- **Question:** "Significant issues found. How should we proceed?"
-- **Options:**
-  1. "Re-run affected tasks" *(Recommended)*
-  2. "Review findings in detail"
-  3. "Abandon this run"
-
-Wait for the user's selection before continuing.
-
-### If FAIL (score 0-27):
-
-> **Result: FAIL (score/70)**
+> **Completion Pipeline Results**
 >
-> Something fundamental went wrong. Review the findings above.
+> **Integration verification:** [PASS/FAIL]
+> **Concern resolution:** [N] concerns, [N] residuals
+> **Final review (2+1 passes):** Score [score]/70 — [N] CRITICAL, [N] HIGH, [N] MEDIUM, [N] LOW
+> **Sign-off:** [SHIP / SHIP WITH CAVEATS / DO NOT SHIP]
+>
+> **Learnings:** [N] proposed. **Handoff:** `.wazir/runs/<run-id>/execution-summary.md`
+
+If SHIP or SHIP WITH CAVEATS: proceed to create PR automatically.
+
+If DO NOT SHIP: present findings and stop.
+
+### Exception 1: Drift Escalation
+
+If any CRITICAL or HIGH drift finding exists (implementation doesn't match what user asked for):
+
+> **Drift detected — user decision required.**
+>
+> [List drift findings with evidence]
+
+Ask the user via AskUserQuestion:
+- **Question:** "Implementation drift detected. How should we proceed?"
+- **Options:**
+  1. "Accept the drift"
+  2. "Fix and re-review"
+  3. "Abort the run"
+
+### Exception 2: Unresolvable Concern
+
+If a concern maps to a spec requirement but the resolution is unacceptable (requires spec/design change):
+
+> **Unresolvable concern — user decision required.**
+>
+> [Concern details, spec requirement it maps to, why resolution failed]
+
+Ask the user via AskUserQuestion:
+- **Question:** "This concern requires a spec change to resolve. How should we proceed?"
+- **Options:**
+  1. "Accept as-is with caveat"
+  2. "Modify spec and re-run affected tasks"
+  3. "Abort the run"
+
+### CRITICAL Precedence
+
+Even if score is 56+, a single unresolved CRITICAL finding overrides to DO NOT SHIP. Present the CRITICAL finding(s) and stop.
 
 ### Run Summary
 
@@ -787,4 +854,4 @@ Create the `reasoning/` directory during run init. Every phase skill (clarifier,
 - **No open-ended questions** — every question has concrete options to pick from
 - **Inline answers accepted** — users can type the number or the option name
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Final challenge: name every checklist item you completed and what you produced for each one. If any answer is "I think I covered that" instead of "here's the output," you have more work to do. Which items are you unsure about?

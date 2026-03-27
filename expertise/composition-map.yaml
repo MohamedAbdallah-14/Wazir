@@ -16,6 +16,21 @@
 #
 # All paths are relative to expertise/
 
+# Subagent prompt type resolution (used by the Composer):
+#
+# Executor prompt:
+#   always.executor + stacks.<detected>.executor + concerns.<declared>.executor + auto.all-stacks.all-roles
+#   Composer adds: TDD instructions, hard limits, self-review checklist, escalation permission, code org guidance
+#
+# Reviewer/Verifier prompt:
+#   always.reviewer + always.verifier + reviewer_modes.task-review + stacks.<detected>.antipatterns + auto.all-stacks.all-roles
+#   Composer adds: two-stage review instructions, security dim injection rules, commit discipline check,
+#   finding attribution rules, type-aware verification commands, agent behavior check rules
+#
+# Cross-Model R/V prompt:
+#   Same as Reviewer/Verifier + cross-model tool invocation from multi_tool.tools config (Codex, Gemini, etc.)
+#   Composer adds: source attribution rules ([Internal], [Codex], [Gemini], [Both]), merge strategy
+
 always:
   executor:
     - antipatterns/process/ai-coding-antipatterns.md
@@ -45,7 +60,7 @@ reviewer_modes:
   spec-challenge:
     - digests/reviewer/architectural-thinking-digest.md
     - digests/reviewer/ddd-digest.md
-  design-review:
+  design-review:  # covers architectural-design-review + visual-design-review
     - digests/reviewer/architectural-thinking-digest.md
     - digests/reviewer/coupling-cohesion-digest.md
   plan-review:
@@ -460,3 +475,74 @@ concerns:
   audit-dependencies:
     researcher: [antipatterns/code/dependency-antipatterns.md, security/foundations/supply-chain-security.md, antipatterns/process/technical-debt-antipatterns.md]
     reviewer: [security/foundations/secure-sdlc.md]
+
+# Agent policy — host-agnostic capability declarations
+# The export compiler translates these to host-specific agent definitions.
+#
+# Capabilities (host-agnostic):
+#   read    — read files
+#   write   — write files (hook guardrails restrict source-file mutation to executor phase)
+#   edit    — modify existing files
+#   shell   — run shell commands
+#   search  — search files by name and content
+#   skills  — invoke skills
+#   agents  — dispatch subagents
+#   web     — web search and fetch
+#
+# Model tiers (host exporter maps to specific model IDs):
+#   orchestration  — lightweight routing/dispatch
+#   exploration    — research and discovery
+#   review         — quality assessment, adversarial review
+#   implementation — code writing, content creation
+
+agent_policy:
+  controller:
+    model_tier: orchestration
+    capabilities: [read, shell, search, skills, agents]
+    max_turns: 50
+  clarifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 30
+  researcher:
+    model_tier: exploration
+    capabilities: [read, write, shell, search, skills, web]
+    max_turns: 25
+  specifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 25
+  content-author:
+    model_tier: implementation
+    capabilities: [read, write, shell, search, skills, web]
+    max_turns: 30
+  designer:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    mcp_servers: [pencil]
+    max_turns: 30
+  planner:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 30
+  executor:
+    model_tier: implementation
+    capabilities: [read, write, edit, shell, search, skills]
+    isolation: worktree
+    max_turns: 80
+  verifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 30
+  reviewer:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 40
+  learner:
+    model_tier: implementation
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 20
+  reviewer-verifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 40

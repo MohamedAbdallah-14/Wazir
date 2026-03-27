@@ -1,43 +1,83 @@
 # Wazir
 
-> The operating model for AI coding agents — roles, phases, expertise modules, quality gates for Claude, Codex, Gemini & Cursor.
+Wazir is a host-native engineering OS kit that gives AI coding agents (Claude, Codex, Gemini, Cursor) canonical roles, phased workflows, callable skills, and quality gates -- so you drop a task in and get production-ready code out.
 
-<!-- Note: These are relative file paths. View on GitHub at https://github.com/wazir-dev/wazir -->
+## Install
 
-## Getting Started
+```bash
+npm install -g @wazir-dev/cli
+```
 
-- [Installation](docs/getting-started/01-installation.md)
-- [First Run Tutorial](docs/getting-started/02-first-run.md)
+Then in Claude Code:
 
-## Concepts
+```
+/plugin marketplace add MohamedAbdallah-14/Wazir
+/plugin install wazir
+```
 
-- [Architecture](docs/concepts/architecture.md)
-- [Roles & Workflows](docs/concepts/roles-and-workflows.md)
-- [Composition Engine](docs/concepts/composition-engine.md)
-- [Artifact Model](docs/concepts/artifact-model.md)
-- [Observability](docs/concepts/observability.md)
-- [Indexing & Recall](docs/concepts/indexing-and-recall.md)
-- [Terminology Policy](docs/concepts/terminology-policy.md)
+## Pipeline
 
-## Guides
+14 phases, 3 approval gates. The agent cannot skip, shortcut, or rubber-stamp its way through.
 
-- [Troubleshooting](docs/guides/troubleshooting.md)
-- [Memory & Learnings](docs/guides/memory-and-learnings.md)
+```
+clarify -> discover -> specify -> spec-challenge (GATE)
+  -> author -> design -> design-review (GATE)
+  -> plan -> plan-review (GATE)
+  -> execute -> verify -> review -> learn -> prepare-next
+```
 
-## Reference
+Gates reject work back to the authoring phase until quality passes.
 
-- [CLI Reference](docs/reference/tooling-cli.md)
-- [Hook Contracts](docs/reference/hooks.md)
-- [Configuration](docs/reference/configuration-reference.md)
-- [Host Exports](docs/reference/host-exports.md)
-- [Roles Reference](docs/reference/roles-reference.md)
-- [Expertise Index](docs/reference/expertise-index.md)
-- [Skills](docs/reference/skills.md)
-- [Git Flow](docs/reference/git-flow.md)
-- [Release Process](docs/reference/release-process.md)
-- [Templates](docs/reference/templates.md)
+## Key Concepts
 
-## Optional
+- 14 phases: Each phase has a dedicated role. The reviewer is never the author.
+- 10 roles: clarifier, researcher, specifier, content-author, designer, planner, executor, verifier, reviewer, learner.
+- 3 approval gates: spec-challenge, design-review, plan-review.
+- Composition engine: Deterministic function (not LLM) that assembles task-specific agent prompts from 270 expertise modules across 13 domains.
+- Enforcement: Hook guardrails + schema validation target 99%+ per-step compliance. Prompt-only compliance caps at 40-50%.
+- Fresh agents: Every agent is born, does one job, and dies. No session continuity. Context rot is worse than one extra spawn.
+- TDD: Mandatory. Verification requires proof artifacts with fresh command output.
+- Interaction modes: auto (zero human stops), guided (default, 2 pause points + boundary gates), interactive (stops between every sub-phase).
 
-- [Contributing](CONTRIBUTING.md)
-- [Full Documentation](llms-full.txt): Complete documentation in a single file
+## Agent Policy
+
+- Only the executor role gets Edit capability.
+- The controller (orchestrator) is dispatch-only: read, shell, search, skills, agents -- no write/edit.
+- Each dispatched agent gets a fresh context window, only its role contract, and relevant expertise modules.
+- Tool restrictions enforced by YAML frontmatter in .claude/agents/.
+
+## Where to Find Things
+
+```
+roles/           10 canonical role contracts
+workflows/       14 phase entrypoints
+skills/          30 callable procedures (wz: namespace)
+hooks/           7 guardrail definitions
+expertise/       270 knowledge modules (13 domains)
+templates/       Artifact formats and phase checklists
+schemas/         Validation schemas (manifest, hooks, artifacts)
+exports/         Generated host packages (claude, codex, gemini, cursor)
+tooling/         CLI source (validation, indexing, recall, capture)
+docs/concepts/   Architecture, roles, composition engine
+docs/reference/  Lookup tables, review dimensions
+docs/research/   123 research files (14 categories, 47+ papers)
+docs/vision/     Pipeline source of truth (locked)
+```
+
+## Key Files
+
+- `wazir.manifest.yaml` -- project manifest and schema
+- `docs/concepts/architecture.md` -- system architecture
+- `docs/concepts/roles-and-workflows.md` -- role and phase concepts
+- `docs/reference/roles-reference.md` -- role and workflow lookup tables
+- `expertise/composition-map.yaml` -- agent policy and composition rules
+- `CLAUDE.md` -- project instructions for Claude
+- `AGENTS.md` -- agent dispatch table
+
+## Research Basis
+
+Every pipeline design decision is grounded in empirical research (47+ papers). Key constraints: 39% multi-turn degradation, 64.5% self-correction blind spot, 40-50% prompt-only compliance ceiling. Full index: docs/research/INDEX.md.
+
+## Full Documentation
+
+See llms-full.txt for comprehensive context including README, CLAUDE.md, AGENTS.md, architecture, and roles reference.

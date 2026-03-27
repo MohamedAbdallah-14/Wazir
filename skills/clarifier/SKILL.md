@@ -2,7 +2,7 @@
 name: wz:clarifier
 description: Run the clarification pipeline — research, clarify scope, brainstorm design, generate task specs and execution plan. Pauses for user approval between phases.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Stop. Before you start working — what does your phase checklist say? Go read .wazir/runs/latest/phases/ and follow it. Every item, not just the ones that feel important. What's the first unchecked item?
 
 # Clarifier
 
@@ -21,7 +21,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 
 Run the Clarifier phase — everything from reading input to having an approved execution plan.
 
-**Pacing rule:** This skill has mandatory user checkpoints between sub-workflows. Do NOT skip checkpoints. Do NOT combine sub-workflows. Complete each fully, present output, and wait for explicit user approval before advancing.
+**Pacing rule:** This skill has checkpoints between sub-workflows. Checkpoint behavior depends on `interaction_mode` (see Interaction Mode Behavior below). In `interactive` mode, all checkpoints pause. In `guided` mode, only Clarify and Design pause. In `auto` mode, no checkpoints pause — the gating agent handles decisions. Do NOT combine sub-workflows regardless of mode. Complete each fully before advancing.
 
 Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All reviewer invocations use explicit `--mode`.
 
@@ -32,13 +32,39 @@ Review loops follow the pattern in `docs/reference/review-loop-pattern.md`. All 
 1. Check `.wazir/state/config.json` exists. If not, run `wazir init` first.
 2. Check `.wazir/input/briefing.md` exists. If not, ask the user what they want to build and save it there.
 3. Scan `input/` (project-level) and `.wazir/input/` (state-level) for additional input files. Present what's found.
-4. Read config for `default_depth` and `multi_tool` settings.
-5. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
-6. Create a run directory if one doesn't exist:
+4. Read `depth` from `run-config.yaml`. Read `multi_tool` from `.wazir/state/config.json`.
+5. Read `interaction_mode` from `run-config.yaml` (values: `auto`, `guided`, `interactive`; default: `guided`).
+6. **Load accepted learnings:** Glob `memory/learnings/accepted/*.md`. For each accepted learning, read scope tags. Inject learnings whose scope matches the current run's intent/stack into context. Limit: top 10 by confidence, most recent first. This is how prior run insights improve future runs.
+7. Create a run directory if one doesn't exist:
    ```bash
-   mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified}
+   mkdir -p .wazir/runs/run-YYYYMMDD-HHMMSS/{sources,tasks,artifacts,reviews,clarified,reasoning}
    ln -sfn run-YYYYMMDD-HHMMSS .wazir/runs/latest
    ```
+
+---
+
+## Interaction Mode Behavior
+
+Checkpoints are conditional on `interaction_mode`:
+
+| Sub-Workflow | Auto | Guided | Interactive |
+|--------------|------|--------|-------------|
+| SW1: Research | skip | skip | **PAUSE** — present research findings |
+| SW2: Clarify | gating agent answers | **PAUSE** | **PAUSE** — pair-program the clarification |
+| SW3: Spec Harden | skip | skip | **PAUSE** — walk through spec changes |
+| SW3a: Visual Design | skip | skip | **PAUSE** — heavy collaboration (if enabled) |
+| SW4: Brainstorm | gating agent picks | **PAUSE** | **PAUSE** — co-design approach |
+| SW5: Plan | skip | skip | **PAUSE** — walk through plan |
+
+**Auto**: gating agent (external reviewer) handles Clarify/Design decisions. Escalates to human only on loop cap exceeded or "not doable."
+**Guided**: 2 interaction points (Clarify + Design) + boundary gates between pipeline parts.
+**Interactive**: pair-programmer — stops between sub-phases, discusses findings, co-designs decisions.
+
+**Interactive mode compaction:** Between phases, the orchestrator suggests the user compact context. The main session accumulates discussion across checkpoints; compaction between phases prevents context rot from degrading later phases. After each checkpoint where the user approves, suggest:
+
+> Context is growing from our discussion. To keep later phases sharp, consider compacting now (`/compact`). This preserves decisions but frees working memory.
+
+This is a suggestion, not a gate. The user can skip compaction.
 
 ---
 
@@ -77,6 +103,8 @@ Delegate to the discover workflow (`workflows/discover.md`):
 
 Save result to `.wazir/runs/latest/clarified/research-brief.md`.
 
+Invoke `wz:humanize` on the research brief (domain: technical-docs). Fix any high/medium findings before proceeding.
+
 **After completing this phase, output to the user:**
 
 > **Research complete.**
@@ -88,6 +116,10 @@ Save result to `.wazir/runs/latest/clarified/research-brief.md`.
 > **Changed because of this work:** [List of key discoveries — e.g., "found existing auth middleware at src/middleware/auth.ts", "project uses Vitest not Jest"]
 
 ### Checkpoint: Research Review
+
+**Mode gate:** This checkpoint pauses only in `interactive` mode. In `auto` and `guided` modes, research flows directly to the next sub-workflow.
+
+**If `interaction_mode == interactive`:**
 
 > **Research complete. Here's what I found:**
 >
@@ -101,6 +133,10 @@ Ask the user via AskUserQuestion:
   3. "Wrong direction — let me clarify the intent"
 
 Wait for the user's selection before continuing.
+
+**If `interaction_mode == auto` or `guided`:** Log research summary to reasoning file and continue.
+
+**All modes:** If research reveals the request is impossible, contradictory, or fundamentally wrong approach — present evidence and stop before proceeding to questions. This is not a checkpoint; it's a guard. In `auto` mode, escalate to the gating agent. In `guided`/`interactive`, present to the user.
 
 ---
 
@@ -153,6 +189,30 @@ Based on research, I have [N] questions before proceeding:
 
 Ask via AskUserQuestion with the full batch. Wait for answers. If answers introduce new ambiguity, ask a follow-up batch (max 3 batches total).
 
+### Visual Design Triage (after question batching)
+
+During clarification, determine whether the project needs visual design artifacts.
+
+**Design tool detection:** Before asking, check if pencil MCP or equivalent design tools are available. Option 2 (collaborative) is only offered if design tools are detected.
+
+**Mode gate:** In `auto` mode, this question goes to the gating agent. In `guided` and `interactive` modes, ask the user.
+
+**Question:** "Does this project need visual design?"
+**Options:**
+1. **No visual design** — no UI work (API, CLI, backend, library). Proceed directly to clarification production.
+2. **Collaborative visual design** — co-design with pencil MCP or equivalent tools. Triggers the VISUAL DESIGN sub-phase (Phase 4a). Requires interactive mode. *(Only shown if design tools detected.)*
+3. **Design from references** — you provide existing designs (Figma links, screenshots, sketches) as input. Pipeline works from those without a visual design sub-phase.
+
+**If the user selects option 2 but `interaction_mode` is not `interactive`:**
+
+> Collaborative visual design requires interactive mode. Switch to interactive, or pick another option.
+
+**In `auto` mode:** Gating agent evaluates — defaults to option 1 (no visual design) unless input explicitly references UI/visual work.
+
+Set `workflow_policy.visual_design.enabled` and `workflow_policy.visual_design.mode` in the run config based on the answer.
+
+**If option 3 (design from references) selected:** Save user-provided design references (Figma links, screenshots, sketches) to `.wazir/runs/latest/clarified/visual-design/references/`. These are passed as inputs to the specify and design phases. No visual design sub-phase runs — the pipeline works from the provided references directly.
+
 ### Clarification Production
 
 Read the briefing, research brief, user answers to questions, and codebase context. Produce:
@@ -168,6 +228,8 @@ Save to `.wazir/runs/latest/clarified/clarification.md`.
 
 Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presenting to user.
 
+After review findings are resolved, invoke `wz:humanize` on the final clarification artifact (domain: technical-docs). Fix any high/medium findings. Humanize runs after review so fix cycles cannot re-introduce AI patterns.
+
 **After completing this phase, output to the user:**
 
 > **Clarification complete.**
@@ -179,6 +241,10 @@ Invoke `wz:reviewer --mode clarification-review`. Resolve findings before presen
 > **Changed because of this work:** [List of resolved ambiguities — e.g., "clarified auth means OAuth2 with Google provider only", "out-of-scope: mobile responsive for v1"]
 
 ### Checkpoint: Clarification Review
+
+**Mode gate:** This checkpoint pauses in `guided` and `interactive` modes. In `auto` mode, the gating agent evaluates the clarification.
+
+**If `interaction_mode == interactive` or `guided`:**
 
 > **Here's the clarified scope:**
 >
@@ -193,6 +259,8 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing. Route feedback: plan corrections → `user-feedback.md`, new requirements → `briefing.md`.
 
+**If `interaction_mode == auto`:** Submit clarification artifact to gating agent. If gating agent approves, continue. If gating agent requests changes, loop. If gating agent escalates, present to user.
+
 ---
 
 ## Sub-Workflow 3: Spec Harden (specify + spec-challenge workflows)
@@ -200,7 +268,6 @@ Wait for the user's selection before continuing. Route feedback: plan correction
 **Before starting this phase, output to the user:**
 
 > **Spec Hardening** — About to convert the clarified scope into a measurable, testable specification and then run adversarial spec-challenge review to find gaps.
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 >
 > **Why this matters:** Without hardening, acceptance criteria stay vague ("it should work well") instead of measurable ("response time under 200ms for 95th percentile"). Vague specs pass any implementation, making review meaningless.
 >
@@ -214,11 +281,14 @@ Delegate to the specify workflow (`workflows/specify.md`):
 
 Save result to `.wazir/runs/latest/clarified/spec-hardened.md`.
 
+Invoke `wz:humanize` on the hardened spec (domain: technical-docs). Fix any high/medium findings before proceeding.
+
 **After completing this phase, output to the user:**
 
 > **Spec Hardening complete.**
 >
 > **Found:** [N] acceptance criteria tightened, [N] edge cases added, [N] error handling requirements specified, [N] spec-challenge findings resolved
+Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 >
 > **Without this phase:** Acceptance criteria would be subjective, review would have no concrete standard to measure against, and "done" would mean whatever the implementer decided
 >
@@ -235,10 +305,31 @@ After spec hardening, scan the spec for content needs. Auto-enable the `author` 
 - Documentation content, user guides, API docs
 - Email templates, notification text
 
-If detected, set `workflow_policy.author.enabled = true` in the run config and note:
-> **Content needs detected.** The content-author workflow will run after design approval to produce: [list detected content types].
+If detected, set `workflow_policy.author.enabled = true` in the run config.
+
+**Content-author runs autonomously** with its own review loop — no human approval gate. It produces content artifacts (microcopy, i18n keys, terminology, seed data) that downstream phases need.
+
+**Ordering when content-author is detected:**
+1. REVIEW(spec) completes
+2. Content-author workflow runs (autonomous, review loop)
+3. VISUAL DESIGN runs (if enabled and `interaction_mode == interactive`)
+4. DESIGN (architectural brainstorming)
+
+The designer role expects content-author artifacts as input. Content gaps discovered during execution are 10-100x more expensive to fix.
+
+If `workflow_policy.author.enabled == true`:
+
+> **Content-author workflow starting.** Producing: [list detected content types]. This runs autonomously with its own review loop — no approval needed.
+
+Delegate to the author workflow (`workflows/author.md`). Wait for completion before proceeding to visual design or architectural design.
+
+> **Content needs detected.** The content-author workflow will now run autonomously to produce: [list detected content types]. No approval needed — review loop ensures quality.
 
 ### Checkpoint: Hardened Spec Review
+
+**Mode gate:** This checkpoint pauses only in `interactive` mode. In `auto` and `guided` modes, the hardened spec flows directly to the next sub-workflow.
+
+**If `interaction_mode == interactive`:**
 
 > **Spec hardened. Changes made:**
 >
@@ -253,13 +344,40 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing.
 
+**If `interaction_mode == auto` or `guided`:** Log spec hardening summary to reasoning file and continue.
+
 ---
 
-## Sub-Workflow 4: Brainstorm (design + design-review workflows)
+## Sub-Workflow 3a: Visual Design (conditional, interactive-only)
+
+**Condition:** Only runs if `workflow_policy.visual_design.enabled == true` AND `workflow_policy.visual_design.mode == "collaborative"` AND `interaction_mode == interactive`.
+
+If conditions are met, delegate to the design workflow (`workflows/design.md`):
+
+1. The **designer role** produces visual design artifacts using pencil MCP or equivalent tools.
+2. This is the most interaction-heavy part of the pipeline — heavy user collaboration.
+3. After user approves the visual designs, invoke `wz:reviewer --mode visual-design-review`.
+4. Loop runs for `pass_counts[depth]` passes.
+
+**Produces:** design files, design tokens (colors, spacing, typography), screenshot references. Optionally exports code scaffolds as reference — these are convenience exports, not architecture decisions. Phase 5 determines the implementation stack.
+
+Save result to `.wazir/runs/latest/clarified/visual-design/`.
+
+### Checkpoint: Visual Design Review
+
+**Mode gate:** This sub-workflow only runs in `interactive` mode, so this checkpoint always pauses.
+
+Present visual designs to the user for approval before proceeding to architectural design.
+
+**If conditions are NOT met:** Skip directly to Sub-Workflow 4 (Brainstorm).
+
+---
+
+## Sub-Workflow 4: Brainstorm (architectural design + architectural-design-review)
 
 **Before starting this phase, output to the user:**
 
-> **Brainstorming** — About to propose 2-3 design approaches with explicit trade-offs, then run design-review on the approved choice.
+> **Brainstorming** — About to propose 2-3 design approaches with explicit trade-offs, then run architectural-design-review on the approved choice.
 >
 > **Why this matters:** Without exploring alternatives, the first approach that comes to mind gets built — even if a simpler, more maintainable, or more performant option exists. This is where architectural mistakes get caught cheaply instead of discovered during implementation.
 >
@@ -273,6 +391,10 @@ Invoke the `brainstorming` skill (`wz:brainstorming`):
 
 ### Checkpoint: Design Approval
 
+**Mode gate:** This checkpoint pauses in `guided` and `interactive` modes. In `auto` mode, the gating agent selects the approach.
+
+**If `interaction_mode == interactive` or `guided`:**
+
 Ask the user via AskUserQuestion:
 - **Question:** "Which design approach should we implement?"
 - **Options:**
@@ -283,19 +405,23 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing. This is the most important checkpoint.
 
+**If `interaction_mode == auto`:** Submit all approaches with trade-offs to gating agent. Gating agent selects one or escalates to user.
+
 Save approved design to `.wazir/runs/latest/clarified/design.md`.
 
 **After completing this phase, output to the user:**
 
 > **Brainstorming complete.**
 >
-> **Found:** [N] approaches evaluated, [N] trade-offs documented, [N] design-review findings resolved
+> **Found:** [N] approaches evaluated, [N] trade-offs documented, [N] architectural-design-review findings resolved
 >
 > **Without this phase:** The first viable approach would be built without considering alternatives — potentially choosing a complex solution when a simple one exists, or an approach that conflicts with existing patterns
 >
-> **Changed because of this work:** [Selected approach and why, rejected alternatives and why, design-review adjustments made]
+> **Changed because of this work:** [Selected approach and why, rejected alternatives and why, architectural-design-review adjustments made]
 
-After approval: design-review loop with `--mode design-review` (5 canonical dimensions: spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity).
+After approval: design-review loop with `--mode architectural-design-review` (6 architectural dimensions: feasibility, spec alignment, completeness, trade-off documentation, YAGNI, security/performance). See `docs/reference/review-loop-pattern.md` for the full dimension set.
+
+After design-review findings are resolved, invoke `wz:humanize` on the final design artifact (domain: technical-docs). Fix any high/medium findings. Humanize runs after review so fix cycles cannot re-introduce AI patterns.
 
 ---
 
@@ -327,6 +453,10 @@ Delegate to `wz:writing-plans`:
 
 ### Checkpoint: Plan Review
 
+**Mode gate:** This checkpoint pauses only in `interactive` mode. In `auto` and `guided` modes, the plan flows to the scope coverage gate and then to execution.
+
+**If `interaction_mode == interactive`:**
+
 > **Implementation plan: [N] tasks**
 >
 > | # | Task | Complexity | Dependencies | Description |
@@ -342,29 +472,34 @@ Ask the user via AskUserQuestion:
 
 Wait for the user's selection before continuing.
 
+**If `interaction_mode == auto` or `guided`:** Log plan summary to reasoning file. Proceed to scope coverage gate.
+
 ---
 
 ### Scope Coverage Gate (Hard Gate)
 
-Before presenting the plan to the user, verify ALL input items are covered:
+Mechanical gate, separate from the review loop. Before the plan exits pre-execution:
 
-1. Count distinct items/deliverables in the input briefing (`.wazir/input/briefing.md` + any `input/*.md` files)
-2. Count tasks in the execution plan
-3. **If `tasks_in_plan < items_in_input`:** STOP and present:
+1. List every distinct item/deliverable in the original input (`.wazir/input/briefing.md` + any `input/*.md` files)
+2. For each input item, verify at least one task in the plan maps to it
+3. **If any input item has no mapped task → BLOCK:**
 
-> **Scope reduction detected.** The input contains [N] items but the plan only covers [M].
+> **Scope coverage failure.** The following input items have no mapped task in the plan:
 >
-> Missing items: [list]
+> | Input Item | Status |
+> |-----------|--------|
+> | [item description] | **UNMAPPED** |
+> | ... | ... |
 
 Ask the user via AskUserQuestion:
-- **Question:** "The plan is missing [N-M] items from your input. How should we proceed?"
+- **Question:** "[N] input items are not covered by any task. How should we proceed?"
 - **Options:**
   1. "Add missing items to the plan" *(Recommended)*
   2. "Approve reduced scope — I confirm these items can be dropped"
 
-**The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.**
+This is **item-level traceability**, not a count comparison. A vertical-slice task covering 3 input items is valid. 10 tasks that miss 2 input items is not. The check is: every input item is accounted for, not that task count >= item count.
 
-Invariant: `items_in_plan >= items_in_input` unless user explicitly approves reduction.
+**The clarifier MUST NOT autonomously drop items into "future tiers", "deferred", or "out of scope" without explicit user approval. This is a hard rule.** The review loop's "100% rule" checklist item catches coverage issues during review; this gate catches them mechanically at the exit.
 
 ---
 
@@ -390,12 +525,52 @@ Examples of clarifier reasoning entries:
 
 When the plan is approved:
 
-> **Clarifier phase complete.**
+### Step 1: Produce clarify-to-execute handover
+
+Write the handover to `.wazir/runs/latest/clarified/execute-handover.md`:
+
+```markdown
+# Clarify-to-Execute Handover
+
+## Run
+- **Run ID:** <run-id>
+- **Branch:** <branch-name>
+- **Interaction mode:** <auto | guided | interactive>
+- **Depth:** <quick | standard | deep>
+
+## Artifacts (all verified present)
+- Spec: `.wazir/runs/latest/clarified/spec-hardened.md`
+- Design: `.wazir/runs/latest/clarified/design.md`
+- Plan: `.wazir/runs/latest/clarified/execution-plan.md`
+- Clarification: `.wazir/runs/latest/clarified/clarification.md`
+
+## Resume Instruction
+Start a fresh session (new conversation). Run `/executor`.
+The executor's prerequisite gate will find all artifacts at `.wazir/runs/latest/clarified/`.
+Do NOT reopen this session — context rot from clarify degrades execution quality.
+```
+
+### Step 2: Hard stop (all interaction modes)
+
+**This is a hard stop. Do NOT continue to the executor phase in this session.** The execute phase MUST start in a fresh session to prevent context rot accumulated during research, clarification, specification, design, and planning from degrading execution quality. This applies to ALL interaction modes — auto, guided, and interactive.
+
+Output to the user:
+
+> **Clarifier phase complete.** Handover saved to `.wazir/runs/latest/clarified/execute-handover.md`.
 >
 > - Spec: `.wazir/runs/latest/clarified/spec-hardened.md`
 > - Design: `.wazir/runs/latest/clarified/design.md`
 > - Plan: `.wazir/runs/latest/clarified/execution-plan.md`
 >
-> **Next:** Run `/executor` to implement the plan.
+> **Session boundary:** The execute phase must start in a fresh session. This prevents context rot from degrading execution quality.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Then ask via AskUserQuestion:
+- **Question:** "How would you like to proceed to execution?"
+- **Options:**
+  1. "Compact this session, then run `/executor`" — compacts conversation history, then starts executor in this (now-compacted) session. Acceptable compromise when a fully new session is impractical.
+  2. "I'll open a new session with the handover" — cleanest option. Start a new conversation and run `/executor`. The prerequisites will find your artifacts.
+  3. "Continue in this session (not recommended)" — proceeds without session boundary. Context rot risk is real — execution quality may degrade.
+
+Wait for selection. If option 3, warn once more: "Continuing without a session boundary risks context rot. The vision recommends against this. Proceeding anyway."
+
+I don't think you followed every step. Before you call this done, go through your phase checklist item by item and check each one against what you actually did. Is each one genuinely completed, or did you just check the box?

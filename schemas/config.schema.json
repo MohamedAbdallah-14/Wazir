@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wazir.dev/schemas/config.schema.json",
+  "title": "Wazir Project Config (v2)",
+  "type": "object",
+  "required": [
+    "config_version",
+    "initialized_at",
+    "model_mode",
+    "interaction_mode",
+    "context_mode",
+    "detected"
+  ],
+  "properties": {
+    "config_version": {
+      "const": 2
+    },
+    "initialized_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "model_mode": {
+      "type": "string",
+      "enum": ["single", "multi-model", "multi-tool"]
+    },
+    "multi_model": {
+      "type": "object",
+      "required": ["routing"],
+      "properties": {
+        "routing": {
+          "type": "object",
+          "required": ["mechanical", "comprehension", "judgment"],
+          "properties": {
+            "mechanical": { "type": "string", "minLength": 1 },
+            "comprehension": { "type": "string", "minLength": 1 },
+            "judgment": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "multi_tool": {
+      "type": "object",
+      "required": ["tools"],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["codex", "gemini"] },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "codex": {
+          "type": "object",
+          "required": ["model"],
+          "properties": {
+            "model": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        },
+        "gemini": {
+          "type": "object",
+          "required": ["model"],
+          "properties": {
+            "model": { "type": "string", "minLength": 1 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "interaction_mode": {
+      "type": "string",
+      "enum": ["auto", "guided", "interactive"]
+    },
+    "context_mode": {
+      "type": "object",
+      "required": ["enabled", "has_execute_file"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "has_execute_file": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "detected": {
+      "type": "object",
+      "required": ["host", "stack", "git"],
+      "properties": {
+        "host": { "type": "string", "minLength": 1 },
+        "stack": {
+          "type": "object",
+          "required": ["language", "framework", "stack"],
+          "properties": {
+            "language": { "type": "string", "minLength": 1 },
+            "framework": { "type": ["string", "null"] },
+            "stack": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        },
+        "git": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": { "model_mode": { "const": "multi-model" } }
+  },
+  "then": {
+    "required": ["multi_model"]
+  },
+  "else": {
+    "if": {
+      "properties": { "model_mode": { "const": "multi-tool" } }
+    },
+    "then": {
+      "required": ["multi_tool"]
+    }
+  }
+}

@@ -1,8 +1,12 @@
 ## Phase: executor
+- [ ] Run `wazir capture event --run <id> --event phase_enter --phase execute --status starting`
 - [ ] Read clarifier output from `.wazir/runs/<id>/clarified/`
-- [ ] Use `Skill(wz:tdd)` for each task — RED, GREEN, REFACTOR
-- [ ] Run `npm test` — all tests pass
-- [ ] Use `Skill(wz:requesting-code-review)` — per-task review before each commit
-- [ ] Commit each task with conventional message
-- [ ] Use `Skill(wz:verification)` — write verification proof to `.wazir/runs/<id>/artifacts/verification-proof.md`
-- [ ] Run `wazir capture event --run <id> --event phase_enter --phase final_review --status starting` <!-- transition -->
+- [ ] Read execution plan (DAG of subtasks)
+- [ ] Run pre-execution validation (`wazir validate manifest`, `wazir validate hooks`)
+- [ ] For each subtask: capture PRE_TASK_SHA, dispatch via subtask execution loop
+- [ ] Route on subtask status (DONE/DONE_WITH_CONCERNS/FAILED/BLOCKED/NEEDS_CONTEXT)
+- [ ] Merge completed worktrees sequentially
+- [ ] Collect residuals for any subtasks exhausting 7-step loop
+- [ ] Produce batch handover or execute-to-complete handover
+- [ ] Write handover to `.wazir/runs/<id>/execute-to-complete-handover.md`
+- [ ] **HARD STOP** — ask user to compact or open new session for final review (session boundary) <!-- transition -->

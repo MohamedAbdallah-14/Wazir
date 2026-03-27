@@ -22,7 +22,8 @@ The canonical workflow sequence is:
 4. **spec-challenge** — adversarial review of the spec
 5. **author** — finalize content, microcopy, and i18n keys
 6. **design** — produce visual designs from the approved spec
-7. **design-review** — validate designs against spec, accessibility, and visual consistency
+7. **architectural-design-review** — validate implementation approach: feasibility, spec alignment, completeness, trade-offs, YAGNI, security/performance
+7a. **visual-design-review** — validate visual designs: spec coverage, design-spec consistency, accessibility, visual consistency, exported-code fidelity
 8. **plan** — create an implementation plan from the approved spec and designs
 9. **plan-review** — adversarial review of the plan
 10. **execute** — implement the plan

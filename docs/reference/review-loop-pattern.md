@@ -66,10 +66,11 @@ else:
 ## Review Loop Pseudocode
 
 ```
-review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
+review_loop(artifact_path, original_input_path, phase, dimensions[], depth, config, options={}):
 
   # options.mode      -- explicit review mode (required)
   # options.task_id   -- task identifier for task-scoped reviews (optional)
+  # original_input_path -- .wazir/input/briefing.md + any input/*.md files (ground truth for all reviews)
 
   # Standalone detection
   run_mode = detect_run_mode()  # "pipeline" or "standalone"
@@ -108,7 +109,7 @@ review_loop(artifact_path, phase, dimensions[], depth, config, options={}):
 
     # --- Primary review (reviewer role, not producer) ---
     # Mode is always explicit -- passed by caller via options.mode
-    findings = self_review(artifact_path, focus=dimension, mode=options.mode)
+    findings = self_review(artifact_path, original_input_path, focus=dimension, mode=options.mode)
 
     # --- Secondary review (Codex, if available) ---
     if codex_available:
@@ -245,7 +246,8 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
    ```
 3. Fix any findings (still uncommitted).
 4. Re-review until all passes exhausted or cap reached.
-5. **Only after review passes:** commit with conventional commit format.
+5. **Only after review passes:** if user-facing change, update `CHANGELOG.md` under `[Unreleased]` using keepachangelog categories (Added, Changed, Fixed, Removed, Deprecated, Security). Then commit with conventional commit format.
+6. **Post-commit validation:** run `wazir validate commits --base $PRE_TASK_SHA` and `wazir validate changelog`. If either fails, amend and re-validate before proceeding to the next task.
 
 **If changes are already committed** (e.g., subagent workflow where the implementer subagent commits before review):
 
@@ -261,6 +263,10 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
 codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <summary>" \
   "Review against acceptance criteria: <criteria>" \
   2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
+
+# Post-review validation (same as uncommitted path step 6)
+wazir validate commits --base $PRE_TASK_SHA
+wazir validate changelog
 ```
 
 ---
@@ -283,9 +289,22 @@ codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <su
 4. **Assumptions** -- hidden assumptions explicit
 5. **Scope creep** -- nothing beyond briefing
 
-### Design-Review Dimensions (5)
+### Architectural Design-Review Dimensions (6)
 
-Matches canonical `workflows/design-review.md`:
+Used for Phase 5 DESIGN (implementation approach selection). Review mode: `architectural-design-review`.
+
+1. **Feasibility** -- can this approach be built with the current stack and constraints?
+2. **Spec alignment** -- does the design address every requirement from the spec?
+3. **Completeness** -- are all components, interfaces, and data flows accounted for?
+4. **Trade-off documentation** -- are trade-offs between approaches explicit and honest?
+5. **YAGNI** -- does the design avoid over-engineering beyond what the spec requires?
+6. **Security/performance** -- are security and performance implications of the chosen approach identified?
+
+### Visual Design-Review Dimensions (5)
+
+Used for Phase 4a VISUAL DESIGN (collaborative visual design with pencil MCP or equivalent). Review mode: `visual-design-review`. Only runs when visual design sub-phase is active.
+
+Matches canonical `workflows/design-review.md` (visual-design-review dimensions):
 
 1. **Spec coverage** -- does the design address every acceptance criterion with a visual component?
 2. **Design-spec consistency** -- does the design introduce anything not in the spec? (scope creep check)
@@ -302,7 +321,7 @@ Matches canonical `workflows/design-review.md`:
 5. **Edge cases** -- error paths covered
 6. **Security** -- auth, injection, data exposure
 7. **Integration** -- tasks connect end-to-end
-8. **Input Coverage** -- every distinct item in the original input maps to at least one task. If `tasks < input items`, HIGH finding listing missing items
+8. **Input Coverage** -- every distinct item in the original input maps to at least one task. If any input item has no mapped task, HIGH finding listing unmapped items (item-level traceability, not count comparison)
 
 ### Task Execution Dimensions (5)
 
@@ -322,7 +341,7 @@ Used for `workflows/review.md` scored gate:
 2. **Completeness** -- are all acceptance criteria met?
 3. **Wiring** -- are all paths connected end-to-end?
 4. **Verification** -- is there evidence (tests, type checks) for each claim?
-5. **Drift** -- does the implementation match the approved plan?
+5. **Drift** -- does the implementation match what the user originally asked for? (ground truth = original input, not approved plan — Vision Principle 16)
 6. **Quality** -- code style, naming, error handling, security
 7. **Documentation** -- changelog entries, commit messages, comments
 
@@ -332,13 +351,59 @@ The final review dimensions are the existing 7 from `skills/reviewer/SKILL.md`. 
 
 ## Per-Depth Coverage Contract
 
-| Depth | Research | Spec | Design-Review | Plan | Task Execution | Final Review |
-|-------|----------|------|---------------|------|----------------|--------------|
-| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 1 pass |
-| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 1 pass |
-| Deep | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-5, 7 passes | dims 1-7, 7 passes | dims 1-5, 7 passes | always 7 dims, 1 pass |
+| Depth | Research | Spec | Arch. Design-Review | Visual Design-Review | Plan | Task Execution | Final Review |
+|-------|----------|------|---------------------|---------------------|------|----------------|--------------|
+| Quick | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | dims 1-3, 3 passes | always 7 dims, 2+1 passes |
+| Standard | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | dims 1-5, 5 passes | always 7 dims, 2+1 passes |
+| Deep | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-6, 7 passes | dims 1-5, 7 passes | dims 1-8, 7 passes | dims 1-5, 7 passes | always 7 dims, 2+1 passes |
 
-Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review is always a single scored pass across all 7 dimensions -- it is a gate, not a loop.
+Pass counts are FIXED per depth. Quick = 3 passes, standard = 5 passes, deep = 7 passes. No extension. No early-exit. Final review uses a different structure: 2 mandatory passes (Pass 1 internal + Pass 2 cross-model) with a conditional 3rd pass for reconciliation when Passes 1 and 2 have conflicting CRITICAL or HIGH findings. All 3 passes cover all 7 dimensions. This is not a fix loop — it is a multi-perspective compliance audit. See docs/vision/pipeline-complete.md Stages 3-6 for the full structure.
+
+---
+
+## Completion Pipeline: Final Review Structure
+
+The final review follows a different structure from all other review modes. While other modes use the standard review loop (fix-and-re-review for N passes), the final review is a **multi-perspective compliance audit** with targeted fixes between passes.
+
+### Structure: 2 + Conditional 3rd Pass
+
+| Pass | Agent | Inputs | Purpose |
+|------|-------|--------|---------|
+| **Pass 1: Internal** | Expertise-loaded (Composer: `always.reviewer` + `reviewer_modes.final` + stack antipatterns) | All inputs including concern resolution output | Dual comparison: implementation vs plan (bidirectional) + implementation vs original input (telephone game check) |
+| **Targeted Fixes** | Fix executors batched by severity tier | CRITICAL findings → one executor, HIGH → another | Batching prevents "Death of a Thousand Round Trips" anti-pattern |
+| **Pass 2: Cross-Model** | Different model family, fresh session | Deterministic inputs + concern resolution output (no Pass 1 LLM findings) | Independent review. Facts help, opinions contaminate. |
+| **Pass 3: Reconciliation** | Fresh agent (conditional) | Both pass outputs | Runs ONLY if Passes 1-2 have conflicting CRITICAL/HIGH findings |
+
+### Finding Severity (Final Review Specific)
+
+Final review uses a 4-level severity scale (not the blocking/warning/note scale used in other modes):
+
+| Severity | Meaning | Response |
+|----------|---------|----------|
+| CRITICAL | Implementation contradicts spec or original input | Targeted fix or escalate to user |
+| HIGH | Significant drift or integration gap | Targeted fix |
+| MEDIUM | Minor drift or quality gap | Document, fix if cheap (≤10 lines) |
+| LOW | Style or convention divergence | Document for learning only |
+
+### Exit Criteria
+
+**Precedence rule**: a single unresolved CRITICAL finding prevents SHIP regardless of score. Blocking findings take precedence over score thresholds.
+
+- All CRITICAL findings resolved (including CRITICAL residuals from execution)
+- All HIGH findings resolved or explicitly accepted by user
+- MEDIUM/LOW documented in learning system
+- Every spec requirement has implementation evidence
+- Cross-model reviewer has no unresolved CRITICAL/HIGH
+- Sign-off: SHIP / SHIP WITH CAVEATS / DO NOT SHIP
+
+### Prerequisites (Before Final Review)
+
+Final review requires two completion stages to run first:
+
+1. **Integration Verification** (Vision Stage 1): full test/lint/typecheck/build on merged main + plan-defined integration criteria + side effects verification
+2. **Concern Resolution** (Vision Stage 2): fresh agent evaluates concern registry + residuals + batch-boundary disposition. Sycophancy guard: generating agent MUST NOT rebut concerns.
+
+See `docs/vision/pipeline-complete.md` for full stage definitions.
 
 ---
 
@@ -355,7 +420,7 @@ workflow_policy:
   spec-challenge: { enabled: true, loop_cap: 10 }
   author:         { enabled: false, loop_cap: 10 }
   design:         { enabled: true, loop_cap: 10 }
-  design-review:  { enabled: true, loop_cap: 10 }
+  design-review:  { enabled: true, loop_cap: 10 }  # covers architectural-design-review + visual-design-review
   plan:           { enabled: true, loop_cap: 10 }
   plan-review:    { enabled: true, loop_cap: 10 }
   # Executor phase workflows
@@ -375,7 +440,7 @@ workflow_policy:
 
 - `learn` extracts durable learnings from review findings -- recurring findings become accepted learnings.
 - `prepare_next` prepares context and handoff for the next run.
-- `author` has a human approval gate, not an iterative review loop.
+- `author` runs autonomously with its own review loop — no human approval gate. Activated by content-author detection after spec review.
 - `run_audit` is an on-demand standalone audit, not part of the main pipeline flow.
 
 ---
@@ -386,13 +451,14 @@ The reviewer skill operates in different modes depending on the phase. **Mode is
 
 | Mode | Invoked during | Prerequisites | Dimensions | Output |
 |------|---------------|---------------|------------|--------|
-| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/` | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
-| `spec-challenge` | After specify | Draft spec artifact | 5 spec/clarification dims | Findings with severity, no score |
-| `design-review` | After design approval | Design artifact, approved spec, accessibility guidelines | 5 design-review dims (canonical) | Findings with severity (blocking/advisory) |
-| `plan-review` | After planning | Draft plan, approved spec, design artifact | 7 plan dims | Findings with severity, no score |
-| `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA) | 5 task-execution dims | Pass/fail per task, no score |
-| `research-review` | During discover | Research artifact | 5 research dims | Findings with severity, no score |
-| `clarification-review` | During clarify | Clarification artifact | 5 spec/clarification dims | Findings with severity, no score |
+| `final` | After execution + verification | Completed task artifacts in `.wazir/runs/latest/artifacts/`, original input | 7 final-review dims, scored 0-70 | Verdict: PASS/NEEDS FIXES/NEEDS REWORK/FAIL |
+| `spec-challenge` | After specify | Draft spec artifact, original input | 5 spec/clarification dims | Findings with severity, no score |
+| `architectural-design-review` | After architectural design approval (Phase 5) | Design artifact, approved spec, original input | 6 architectural design-review dims | Findings with severity (blocking/advisory) |
+| `visual-design-review` | After visual design (Phase 4a, conditional) | Visual design artifact, approved spec, accessibility guidelines, original input | 5 visual design-review dims | Findings with severity (blocking/advisory) |
+| `plan-review` | After planning | Draft plan, approved spec, design artifact, original input | 8 plan dims | Findings with severity, no score |
+| `task-review` | During execution, per task | Uncommitted changes (or committed with known base SHA), original input | 5 task-execution dims | Pass/fail per task, no score |
+| `research-review` | During discover | Research artifact, original input | 5 research dims | Findings with severity, no score |
+| `clarification-review` | During clarify | Clarification artifact, original input | 5 spec/clarification dims | Findings with severity, no score |
 
 If `--mode` is not provided, the reviewer asks the user which review to run. Auto-detection based on artifact availability is NOT used -- it causes ambiguity in resumed/multi-phase runs where stale artifacts from prior phases exist.
 
@@ -401,7 +467,8 @@ Each caller is responsible for passing the correct mode:
 - Clarifier passes `--mode clarification-review` after Phase 1A
 - Discover workflow passes `--mode research-review` after research
 - Specifier flow passes `--mode spec-challenge` after specify
-- Brainstorming passes `--mode design-review` after user approval
+- Brainstorming passes `--mode architectural-design-review` after user approval
+- Visual design workflow passes `--mode visual-design-review` after Phase 4a (if active)
 - Writing-plans passes `--mode plan-review` after planning
 - Executor passes `--mode task-review` for each task
 - `/wazir` runner passes `--mode final` for the final review gate
@@ -422,9 +489,10 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
 Use this template with `codex exec` for non-code artifacts piped via stdin:
 
 ```bash
-cat <artifact_path> | codex exec -c model="$CODEX_MODEL" \
+(cat <artifact_path>; echo "---ORIGINAL INPUT---"; cat .wazir/input/briefing.md; for f in input/*.md; do [ -f "$f" ] && cat "$f"; done) | codex exec -c model="$CODEX_MODEL" \
   "You are reviewing a [ARTIFACT_TYPE] for the Wazir engineering OS.
 Focus on [DIMENSION]: [dimension description].
+The content after ---ORIGINAL INPUT--- is the user's original briefing — check for input alignment.
 Rules: cite specific sections, be actionable, say CLEAN if no issues.
 Do NOT load or invoke any skills. Do NOT read the codebase.
 Review ONLY the content provided via stdin."
@@ -499,7 +567,8 @@ These are the fixed rubrics — no ad-hoc dimension selection:
 |-------|---------------------|
 | research-review | Coverage, Source quality, Relevance, Gaps identified, Actionability |
 | clarification-review / spec-challenge | Completeness, Testability, Ambiguity, Assumptions, Scope creep |
-| design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
+| architectural-design-review | Feasibility, Spec alignment, Completeness, Trade-off documentation, YAGNI, Security/performance |
+| visual-design-review | Spec coverage, Design-spec consistency, Accessibility, Visual consistency, Exported-code fidelity |
 | plan-review | Completeness, Testability, Task granularity, Dependency correctness, Phase structure, File coverage, Estimation accuracy, Input coverage |
 | task-review | Correctness, Tests, Wiring, Drift, Quality |
 | final | Correctness, Completeness, Wiring, Verification, Drift, Quality, Documentation |
@@ -537,3 +606,60 @@ Every phase exit produces a report saved to `.wazir/runs/latest/reviews/<phase>-
 5. **Usage** — token usage from `wazir capture usage` (runs before report generation)
 6. **Context Savings** — context-mode stats if available, omit section if not
 7. **Time Spent** — wall-clock elapsed time from phase start to end — log "codex marker not found in output, cannot extract findings" and present a warning to the user with 0 findings extracted. The raw file is preserved for manual review. Do NOT fall back to `tail` or any best-effort extraction that could leak traces into context.
+
+---
+
+## Subtask Execution Loop (Pipeline Mode)
+
+The subtask execution loop replaces the N-pass review loop for in-pipeline execution. It is NOT a variant of the N-pass loop — it is a separate pattern with different structure, different roles, and different termination conditions.
+
+**When to use which:**
+- **N-pass loop**: non-execution reviews (spec-challenge, plan-review, clarification-review, design-review, research-review) and standalone `task-review` invocations outside a pipeline run.
+- **Subtask execution loop**: in-pipeline execution only. The orchestrator (`workflows/execute.md`) dispatches this loop per subtask.
+
+### The Loop
+
+    Step 1: Executor          — TDD, implement, micro-commit, self-review
+    Step 2: Reviewer/Verifier — two-stage review (spec → quality) + verification + proof
+    Step 3: Executor          — fix findings (if any)
+    Step 4: Reviewer/Verifier — second round (if step 2 had findings)
+    Step 5: Executor          — fix findings (if any)
+    Step 6: Cross-Model R/V   — cross-model review + verification (concurrent)
+    Step 7: Executor          — fix cross-model + verification findings (if any)
+
+### Skip Logic
+
+- Step 2 clean (zero findings) → skip steps 3-4 → advance to step 6 (step 5 is implicitly skipped — no step 4 findings to fix)
+- Step 4 clean → skip step 5 → advance to step 6
+- Step 6 clean → skip step 7 → subtask complete
+
+### Spawn Counts
+
+- Best case: 2 spawns (executor → R/V clean → done)
+- Typical: 4-5 spawns
+- Worst case: 7 spawns per attempt
+
+### Residuals
+
+After step 7, if issues remain: unresolved findings are written to `residuals-<subtask-id>.md` (see `templates/artifacts/residuals.md`). CRITICAL residuals trigger Level 2 escalation. Non-critical residuals are collected for the completion gate.
+
+### Level 2 Escalation
+
+Triggered when: subtask loop exhausted with CRITICAL residuals, or subagent reports FAILED/NEEDS_CONTEXT/BLOCKED.
+
+- Tier 1: Replan — failure evidence + residuals to fresh planner. Max 1.
+- After Tier 1: Escalate to user with evidence.
+
+Total worst case per subtask: 7 loop spawns + 1 replan + 7 replanned loop spawns = 15 invocations.
+
+### Baseline SHA
+
+The orchestrator captures `PRE_TASK_SHA` before dispatching step 1. All Reviewer/Verifier passes scope their diff to `--base $PRE_TASK_SHA`.
+
+### Cross-Model Fallback
+
+If the cross-model tool is unavailable in step 6 (CLI not installed, API error), the subagent falls back to standard Reviewer/Verifier behavior. Unavailability is logged but does not block the pipeline. The next subtask still attempts the cross-model tool (transient failures may recover).
+
+### Finding Attribution
+
+All findings carry source tags: `[Internal]`, `[Codex]`, `[Gemini]`, `[Both]`. The Cross-Model R/V in step 6 merges findings from the cross-model tool with its own, preserving attribution.

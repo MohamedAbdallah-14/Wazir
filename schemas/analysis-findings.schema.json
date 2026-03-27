@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wazir.dev/schemas/analysis-findings.schema.json",
+  "title": "Analysis Findings Artifact",
+  "description": "Deterministic analysis scan output produced by the executor subagent. Delta semantics: is_new=true for findings introduced by this subtask.",
+  "type": "object",
+  "required": ["subtask_id", "findings", "baseline_count", "new_count"],
+  "properties": {
+    "subtask_id": { "type": "string", "minLength": 1 },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "severity", "file", "line", "rule", "message", "is_new"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^.+-\\d+$" },
+          "category": { "type": "string", "enum": ["lint", "type_error", "security", "complexity", "dead_code", "style"] },
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] },
+          "file": { "type": "string", "minLength": 1 },
+          "line": { "type": "integer", "minimum": 1 },
+          "rule": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 },
+          "is_new": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "baseline_count": { "type": "integer", "minimum": 0 },
+    "new_count": { "type": "integer", "minimum": 0 }
+  },
+  "additionalProperties": false
+}

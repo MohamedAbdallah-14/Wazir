@@ -1,3 +1,15 @@
+---
+tools:
+  - Read
+  - Write
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+model: opus
+maxTurns: 30
+---
+
 # clarifier
 
 ## Purpose

@@ -1,9 +1,5 @@
-import path from 'node:path';
-
 import { parseCommandOptions } from '../command-options.js';
-import { readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import {
   buildOrRefreshIndex,
   findSymbol,
@@ -34,19 +30,10 @@ function failure(message, exitCode = 1) {
   };
 }
 
-function loadProjectContext(context, stateRootOverride) {
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-  const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
-  const stateRoot = resolveStateRoot(projectRoot, manifest, {
-    cwd: context.cwd ?? process.cwd(),
-    override: stateRootOverride,
-  });
-
-  return {
-    projectRoot,
-    manifest,
-    stateRoot,
-  };
+function loadProjectContext(context, options = {}) {
+  const cwd = context.cwd ?? process.cwd();
+  const ctx = resolveProjectContext(cwd, { stateRootOverride: options.stateRoot });
+  return { projectRoot: ctx.projectRoot, stateRoot: ctx.stateRoot };
 }
 
 export function runIndexCommand(parsed, context = {}) {
@@ -55,7 +42,7 @@ export function runIndexCommand(parsed, context = {}) {
       boolean: ['json', 'refresh'],
       string: ['state-root', 'tier'],
     });
-    const { projectRoot, stateRoot } = loadProjectContext(context, options.stateRoot);
+    const { projectRoot, stateRoot } = loadProjectContext(context, { stateRoot: options.stateRoot });
 
     switch (parsed.subcommand) {
       case 'build': {

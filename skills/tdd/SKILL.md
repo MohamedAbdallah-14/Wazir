@@ -2,7 +2,7 @@
 name: wz:tdd
 description: Use for implementation work that changes behavior. Follow RED -> GREEN -> REFACTOR with evidence at each step.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Don't jump into implementation. Open your phase checklist at .wazir/runs/latest/phases/ first. Read it, follow it. Every step matters, even the ones that seem redundant. What's your first action according to the checklist?
 
 # Test-Driven Development
 
@@ -24,7 +24,7 @@ Sequence:
 1. RED
 Write or update a test that expresses the new behavior or the bug being fixed, then run it and confirm failure.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Right about now your attention on process is at its lowest. That's not a guess, it's a measured pattern. Counter it by re-reading .wazir/runs/latest/phases/. What items are you about to skip?
 **Test quality check (single-pass):** Before proceeding to GREEN, verify:
 - Are these tests testing the right behavior?
 - Are they real assertions, not tautologies?
@@ -45,4 +45,4 @@ Rules:
 
 For the full review loop pattern, see `docs/reference/review-loop-pattern.md`. TDD uses a single-pass quality check, not the full loop.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Honest question — if someone audited your work right now against the phase checklist, would every item hold up with evidence? Or would they find skipped steps and empty checkmarks? Which ones would fail the audit?

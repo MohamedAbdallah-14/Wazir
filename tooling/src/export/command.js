@@ -1,6 +1,6 @@
 import path from 'node:path';
 
-import { findProjectRoot } from '../project-root.js';
+import { findProjectRootStrict } from '../project-root.js';
 import {
   validateHooksAtProjectRoot,
   validateManifestAtProjectRoot,
@@ -33,7 +33,7 @@ function failure(message, exitCode = 1) {
 
 export function runExportCommand(parsed, context = {}) {
   try {
-    const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
+    const projectRoot = findProjectRootStrict(context.cwd ?? process.cwd());
     const wantsJson = parsed.args.includes('--json');
     const wantsCheck = parsed.args.includes('--check');
 

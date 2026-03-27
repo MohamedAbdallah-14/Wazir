@@ -5,7 +5,7 @@ enforcement:
   phased: true
   profile: default
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+The pipeline isn't decoration. It's the process. Start by reading your current phase file at .wazir/runs/latest/phases/. If a skill applies, use the skill — no exceptions. Which checklist items apply to this task?
 
 # Self-Audit — Worktree-Isolated Audit-Fix Loop
 
@@ -196,6 +196,7 @@ Beyond CLI checks, inspect for:
 6. **Skill structure**
    - Each skill dir under `skills/` has a well-formed `SKILL.md` with frontmatter
    - Skills referenced in documentation actually exist
+Pause for a second. Are you still following your phase checklist? If you skipped something because it felt unnecessary, go back and do it now. What did you skip?
 
 7. **Code Quality**
    - Run `node tooling/src/cli.js validate` (all subcommands) and capture exit codes
@@ -209,7 +210,6 @@ Beyond CLI checks, inspect for:
 
 9. **Expertise Coverage**
    - Read `expertise/composition-map.yaml`
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
    - For every module path referenced, check that the file exists under `expertise/`
    - Missing files are findings
 
@@ -385,4 +385,4 @@ const db = openStateDb(stateRoot);
 
 All findings are persisted across runs, enabling trend detection and learning extraction.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+I'm skeptical that everything on your checklist actually got done properly. Not because you're careless, but because context degrades and steps get rationalized away over time. Prove me wrong — what's the real status of every item?

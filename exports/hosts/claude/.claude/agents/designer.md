@@ -1,3 +1,17 @@
+---
+tools:
+  - Read
+  - Write
+  - Bash
+  - Glob
+  - Grep
+  - Skill
+model: opus
+maxTurns: 30
+mcpServers:
+  - pencil
+---
+
 # designer
 
 ## Purpose
@@ -35,9 +49,9 @@ Default approach: recall L1 (structural summaries)
   - exported HTML + CSS scaffold
   - design tokens JSON (colors, spacing, typography)
   - screenshot PNGs of key frames
-- emits design artifact for design-review loop
+- emits design artifact for visual-design-review loop
 
-Design is not approved for planning until it survives the design-review loop owned by the reviewer role.
+Design is not approved for planning until it survives the visual-design-review loop owned by the reviewer role.
 
 ## Git-Flow Responsibilities
 

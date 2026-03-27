@@ -2,7 +2,7 @@
 name: wz:humanize
 description: Use when reviewing or editing any text artifact (specs, plans, code comments, commit messages, content, documentation) to detect and remove AI writing patterns. Runs a 4-phase pipeline -- Scan for AI vocabulary and structural patterns, Identify severity and domain, Rewrite problematic sections, Verify meaning preservation. Invoke on existing text that needs corrective humanization. For preventive humanization, the composition engine loads domain-specific rules automatically.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You tend to skip pipeline steps when context gets long. Fight that habit right from the start. Check .wazir/runs/latest/phases/ right now and follow what it says. What does your checklist tell you to do first?
 
 # Humanize
 
@@ -70,7 +70,7 @@ Group findings by section so rewrites can be done in context rather than word-by
 
 If the scan finds fewer than 3 findings total and all are low severity, report "no changes needed" and skip Phases 3-4. Do not force rewrites on already-clean text.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 ## Phase 3: Rewrite
 
 Apply fixes, starting with high-severity findings.
@@ -137,4 +137,4 @@ Report:
 - Any domain exceptions that were preserved
 - Confirmation that meaning was preserved (Pass 2 result)
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Wrapping up is when the most steps get silently dropped. Before you declare completion, pull up .wazir/runs/latest/phases/ and match every item to something you actually produced. What can't you account for?

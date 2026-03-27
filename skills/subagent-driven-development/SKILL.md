@@ -2,7 +2,7 @@
 name: wz:subagent-driven-development
 description: Use when executing implementation plans with independent tasks in the current session
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Real talk: the pipeline steps aren't suggestions. Check .wazir/runs/latest/phases/ for your current checklist and work through it. Use wz: skills when they apply — that's not optional. What phase are you starting?
 
 # Subagent-Driven Development
 
@@ -97,7 +97,7 @@ digraph process {
     "More tasks remain?" -> "Capture PRE_TASK_SHA" [label="yes"];
     "More tasks remain?" -> "Dispatch final code reviewer subagent for entire implementation" [label="no"];
     "Dispatch final code reviewer subagent for entire implementation" -> "Use wz:finishing-a-development-branch";
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Sanity check: are you still using wz: skills where they apply, or did you start doing things manually because it felt faster? The skills exist for consistency, not convenience. Which skill should you be using right now?
 }
 ```
 
@@ -191,4 +191,4 @@ If codex exits non-zero during review, log the error, mark the pass as codex-una
 - Dispatch fix subagent with specific instructions
 - Don't try to fix manually (context pollution)
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Last check: did you use every applicable wz: skill, or did you handle things manually that should have gone through a skill? Be specific about which skills you used and which you decided to skip. Why did you skip them?

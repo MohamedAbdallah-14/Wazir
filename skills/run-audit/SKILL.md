@@ -2,7 +2,7 @@
 name: run-audit
 description: Run a structured audit on your codebase — security, code quality, architecture, performance, dependencies, or custom. Produces a report or actionable plan.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before anything else happens here: read your phase checklist. It's at .wazir/runs/latest/phases/. Every item on it is there because skipping it caused problems before. Are you going to follow it or skip it?
 
 # Run Audit — Structured Codebase Audit Pipeline
 
@@ -107,9 +107,9 @@ The composed researcher will:
    - **Location** — file path and line number
    - **Evidence** — code snippet or pattern detected, with source citation
    - **Remediation** — how to fix it
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 6. Produce a summary: total findings, severity breakdown, top recommendations
 7. List open risks and unknowns (per researcher contract)
+This is the point where compliance usually drops off. You feel like you're making progress so you stop checking the list. Don't fall into that trap. Pull up .wazir/runs/latest/phases/ again. What's next on it?
 
 ## Step 6: Output
 
@@ -176,6 +176,8 @@ Present the audit report directly to the user with this structure:
 - <anything the researcher could not verify or areas that need deeper investigation>
 ```
 
+Before presenting, invoke `wz:humanize` on the audit report (domain: technical-docs). Fix any high/medium findings — audit reports drive remediation decisions and may be shared with stakeholders.
+
 Announce: **"Audit complete. Report presented above."**
 
 If the user wants to save the report, they can copy it or ask to save it to a location of their choice.
@@ -211,4 +213,4 @@ Audit type maps to `audit-*` concerns in `expertise/composition-map.yaml`, compo
 
 Note: Only `audit-*` concerns have `researcher` entries in the composition map. Other existing concerns (e.g., `security-auth`, `architecture-patterns`) are keyed on `executor`/`verifier`/`reviewer` and will not be loaded for the researcher role by the composition engine.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Last check: did you use every applicable wz: skill, or did you handle things manually that should have gone through a skill? Be specific about which skills you used and which you decided to skip. Why did you skip them?

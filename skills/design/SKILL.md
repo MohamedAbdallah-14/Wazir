@@ -2,7 +2,7 @@
 name: design
 description: Guide the designer role through open-pencil MCP workflow to produce design artifacts from an approved spec.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+The pipeline isn't decoration. It's the process. Start by reading your current phase file at .wazir/runs/latest/phases/. If a skill applies, use the skill — no exceptions. Which checklist items apply to this task?
 
 # Design
 
@@ -39,7 +39,7 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 8. **Save** -- `save_file` to persist the `.fig`.
 9. **Generate code** -- use CLI `open-pencil export design.fig -f jsx --style tailwind` for Tailwind JSX.
 10. **Extract tokens** -- `analyze_colors`, `analyze_typography`, `analyze_spacing` to build tokens JSON.
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Right about now your attention on process is at its lowest. That's not a guess, it's a measured pattern. Counter it by re-reading .wazir/runs/latest/phases/. What items are you about to skip?
 
 ## Key MCP Tools
 
@@ -64,9 +64,9 @@ Follow the Canonical Command Matrix in `hooks/routing-matrix.json`.
 ## When Open-Pencil is Unavailable
 
 If the open-pencil MCP server is not running or Bun is not installed, the design phase cannot produce `.fig` artifacts. In this case:
-- Skip this phase and proceed to planning with text-only design specifications.
+- Skip this phase and proceed to architectural design with text-only design specifications.
 - Document the design intent in prose within the spec artifact instead.
-- The design-review workflow should also be skipped.
+- The visual-design-review workflow should also be skipped.
 
 ## Rules
 
@@ -75,4 +75,4 @@ If the open-pencil MCP server is not running or Bun is not installed, the design
 3. Export screenshots after every major change for visual verification.
 4. Create a `diff_create` snapshot before modifications to enable rollback.
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+You're about to say you're done. Are you really? Go back to .wazir/runs/latest/phases/ and check every item one more time. If something was skipped or half-done, now is the time to finish it. What was left incomplete?
