@@ -67,9 +67,10 @@ The pipeline has 4 phases. Each phase groups related workflows. Individual workf
 which wazir
 ```
 
-**If not installed**, auto-install it:
+**If not installed**, check npm is available and auto-install:
 
 ```bash
+which npm || { echo "npm not found — install Node.js 20+ first"; exit 1; }
 npm install -g @wazir-dev/cli
 ```
 
@@ -427,8 +428,8 @@ Phase 4: Final Review (Completion Pipeline)
 ```bash
 wazir capture event --run <id> --event phase_enter --phase discover --parent-phase clarifier --status in_progress
 ```
-
 This is the point where compliance usually drops off. You feel like you're making progress so you stop checking the list. Don't fall into that trap. Pull up .wazir/runs/latest/phases/ again. What's next on it?
+
 **Progress markers between workflows:** After each workflow completes, output:
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
 

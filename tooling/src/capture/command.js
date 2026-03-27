@@ -398,7 +398,7 @@ function handleSummary(parsed, context = {}) {
 
   // Enforce workflow completion before allowing summary to finalize
   if (options.complete) {
-    const wazirRoot = findProjectRoot();
+    const wazirRoot = findProjectRoot(context.cwd ?? process.cwd());
     const manifestPath = wazirRoot ? path.join(wazirRoot, 'wazir.manifest.yaml') : null;
     if (manifestPath) {
       const result = validateRunCompletion(runPaths.runRoot, manifestPath);

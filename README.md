@@ -343,7 +343,7 @@ Three modes control how much the pipeline stops for human input:
 | **Guided** | Pauses at 2 interaction points (clarify questions, design choice) plus boundary gates between pipeline parts. Everything else autonomous. | Most work. The default. |
 | **Interactive** | Stops between every sub-phase. Pair-programmer tone -- discusses findings, co-designs, helps think through ambiguity. | New domains, visual design, ambiguous requirements |
 
-Set during `wazir init`, overridable per-run: `/wazir auto "..."`, `/wazir interactive "..."`.
+Configured automatically on first use, overridable per-run: `/wazir auto "..."`, `/wazir interactive "..."`.
 
 ---
 

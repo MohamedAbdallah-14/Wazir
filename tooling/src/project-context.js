@@ -43,7 +43,13 @@ export function resolveProjectContext(cwd = process.cwd(), opts = {}) {
 
   if (wazirRoot) {
     const manifest = readYamlFile(path.join(wazirRoot, 'wazir.manifest.yaml'));
-    if (!manifest || !manifest.paths) {
+    if (!manifest || typeof manifest !== 'object') {
+      if (opts.stateRootOverride) {
+        // Manifest is corrupt but caller provided explicit state root — fall back to synthetic
+        const synthetic = buildSyntheticManifest(wazirRoot);
+        const stateRoot = resolveStateRoot(wazirRoot, synthetic, { cwd, override: opts.stateRootOverride });
+        return { projectRoot: wazirRoot, manifest: synthetic, stateRoot, isUserProject: false };
+      }
       throw new Error(`wazir.manifest.yaml at ${wazirRoot} is empty or malformed`);
     }
     const stateRoot = resolveStateRoot(wazirRoot, manifest, {
