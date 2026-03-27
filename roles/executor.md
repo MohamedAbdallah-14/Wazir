@@ -71,7 +71,8 @@ Self-review is NOT the gate — the Reviewer/Verifier is the real gate. But it c
 
 - create feature/codex branch from develop (or hotfix from main) per plan
 - use conventional commit format for all commits: `<type>(<scope>): <description>`
-- update `CHANGELOG.md` `[Unreleased]` section for every user-facing change
+- update `CHANGELOG.md` `[Unreleased]` section for every user-facing change (keepachangelog categories: Added, Changed, Fixed, Removed, Deprecated, Security)
+- run `wazir validate commits` and `wazir validate changelog` after each commit — fix before proceeding
 - do NOT merge to develop or main — merges happen post-review
 
 ## Writing Quality

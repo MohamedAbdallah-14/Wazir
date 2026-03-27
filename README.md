@@ -1,0 +1,454 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo.svg">
+    <img alt="Wazir" src="assets/logo.svg" width="360">
+  </picture>
+</p>
+
+<h3 align="center">Engineering with itqan.</h3>
+
+<p align="center">
+  <a href="https://github.com/MohamedAbdallah-14/Wazir/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/MohamedAbdallah-14/Wazir/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="https://www.npmjs.com/package/@wazir-dev/cli"><img src="https://img.shields.io/npm/v/@wazir-dev/cli" alt="npm"></a>
+  <a href="https://github.com/MohamedAbdallah-14/Wazir/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js" alt="Node.js"></a>
+  <a href="https://codecov.io/gh/MohamedAbdallah-14/Wazir"><img src="https://codecov.io/gh/MohamedAbdallah-14/Wazir/graph/badge.svg" alt="codecov"></a>
+  <a href="https://github.com/MohamedAbdallah-14/Wazir/blob/main/CONTRIBUTING.md"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs Welcome"></a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Claude-supported-5436DA?logo=anthropic" alt="Claude">
+  <img src="https://img.shields.io/badge/Codex-supported-00A36C" alt="Codex">
+  <img src="https://img.shields.io/badge/Gemini-supported-4285F4?logo=google" alt="Gemini">
+  <img src="https://img.shields.io/badge/Cursor-supported-FF6B35" alt="Cursor">
+</p>
+
+---
+
+Your AI agent writes code fast. Wazir makes it write code *right*.
+
+A host-native engineering OS kit that gives Claude, Codex, Gemini, and Cursor canonical roles, phased workflows, callable skills, and quality gates -- so you drop a task in and get production-ready code out.
+
+**14 phases · 10 roles · 3 approval gates · 270 expertise modules · 30 skills · grounded in [47+ research papers](#research-basis)**
+
+> **Pre-1.0 alpha.** For a weekend hack, raw prompting is fine. For production, you want structure.
+
+---
+
+## Table of Contents
+
+- [Why Wazir?](#why-wazir)
+- [Pipeline](#pipeline)
+- [Quick Start](#quick-start)
+- [How It Works](#how-it-works)
+- [Architecture](#architecture)
+- [What Makes Wazir Different](#what-makes-wazir-different)
+- [Interaction Modes](#interaction-modes)
+- [Design Philosophy](#design-philosophy)
+- [Research Basis](#research-basis)
+- [Wazir vs. Alternatives](#wazir-vs-alternatives)
+- [Project Structure](#project-structure)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
+
+---
+
+## Why Wazir?
+
+AI agents degrade on long tasks. Context rot, overconfidence, instruction-following decay, sycophancy -- none of this shows on small tasks, but the deeper the session the greater the effect. Users compound this by providing vague input and assuming the agent knows best practices. It doesn't.
+
+Most AI coding pipelines fail not because the model is weak but because the operating model is missing:
+
+| Failure Mode | Wazir's Structural Fix |
+|---|---|
+| Ambiguous requirements laundered into code | `clarify` &rarr; `specify` &rarr; `spec-challenge` before any plan is written |
+| Plans written without acceptance criteria | Hard gate at `specify`: no plan until spec is approved |
+| Rubber-stamp review | `reviewer` role is never the phase author; adversarial review at three chokepoints |
+| Completion theater | `verify` requires a proof artifact with fresh command evidence; no proof = no done |
+| Context rot between sessions | `prepare-next` makes handoff explicit; no implicit carry-forward |
+| Agent self-corrects its own mistakes | 64.5% blind spot on self-correction. Fresh agent reads output + findings from disk instead |
+
+Wazir is not a wrapper around a model. It is an operating model that any model runs inside. The discipline is in the contracts, not the prompts.
+
+---
+
+## Pipeline
+
+14 phases. 3 approval gates. The agent cannot skip, shortcut, or rubber-stamp its way through.
+
+```mermaid
+graph LR
+    P0["[0] clarify<br/><i>clarifier</i>"]
+    P1["[1] discover<br/><i>researcher</i>"]
+    P2["[2] specify<br/><i>specifier</i>"]
+    P3{{"[3] spec-challenge<br/><i>reviewer</i><br/>APPROVAL GATE"}}
+    P4["[4] author<br/><i>content-author</i>"]
+    P5["[5] design<br/><i>designer</i>"]
+    P6{{"[6] design-review<br/><i>reviewer</i><br/>APPROVAL GATE"}}
+    P7["[7] plan<br/><i>planner</i>"]
+    P8{{"[8] plan-review<br/><i>reviewer</i><br/>APPROVAL GATE"}}
+    P9["[9] execute<br/><i>executor</i>"]
+    P10["[10] verify<br/><i>verifier</i>"]
+    P11["[11] review<br/><i>reviewer</i>"]
+    P12["[12] learn<br/><i>learner</i>"]
+    P13["[13] prepare-next<br/><i>learner</i>"]
+
+    P0 --> P1 --> P2 --> P3
+    P3 -->|approved| P4 --> P5 --> P6
+    P6 -->|approved| P7 --> P8
+    P8 -->|approved| P9 --> P10 --> P11 --> P12 --> P13
+
+    P3 -.->|rejected| P2
+    P6 -.->|rejected| P5
+    P8 -.->|rejected| P7
+
+    style P3 fill:#f96,stroke:#333,color:#000
+    style P6 fill:#f96,stroke:#333,color:#000
+    style P8 fill:#f96,stroke:#333,color:#000
+    style P0 fill:#e8f4fd,stroke:#333
+    style P1 fill:#e8f4fd,stroke:#333
+    style P2 fill:#e8f4fd,stroke:#333
+    style P4 fill:#d4edda,stroke:#333
+    style P5 fill:#d4edda,stroke:#333
+    style P7 fill:#fff3cd,stroke:#333
+    style P9 fill:#cce5ff,stroke:#333
+    style P10 fill:#f8d7da,stroke:#333
+    style P11 fill:#f8d7da,stroke:#333
+    style P12 fill:#e2e3e5,stroke:#333
+    style P13 fill:#e2e3e5,stroke:#333
+```
+
+Each phase has a dedicated role. The reviewer is never the author. Gates reject work back to the authoring phase until quality passes.
+
+---
+
+## Quick Start
+
+### As a Claude Code plugin (recommended)
+
+```bash
+# Install the plugin
+claude mcp add wazir -- npx @wazir-dev/cli serve
+
+# Start a new task
+/wazir "Build a REST API with auth"
+```
+
+### From npm
+
+```bash
+npm install -g @wazir-dev/cli
+
+# Initialize in your project
+wazir init
+
+# Export host packages
+wazir export build
+
+# Validate your setup
+wazir doctor
+```
+
+### From source
+
+```bash
+git clone https://github.com/MohamedAbdallah-14/Wazir.git
+cd Wazir
+npm install
+npm test  # verify everything works
+```
+
+---
+
+## How It Works
+
+1. **You describe the task.** Plain language.
+2. **Wazir assigns roles.** The clarifier researches and sharpens your spec. The designer proposes approaches. The planner breaks it into subtasks. Each role gets domain-specific expertise composed into its context by the Composer -- a deterministic function, not an LLM.
+3. **Gates enforce quality.** Three adversarial review gates reject work that doesn't meet the spec. The reviewer is never the author.
+4. **The executor builds with TDD.** Micro-commits, self-review, verification proof before completion.
+5. **The learner captures what worked.** Findings feed into future runs. The agent that builds your 10th feature is better than the one that built your 1st.
+
+---
+
+## Architecture
+
+Three research-mandated design decisions define Wazir's architecture:
+
+### Every agent is born, does one job, and dies
+
+No agent carries state from a previous agent. No agent talks to another agent. No agent knows about the pipeline. This is not a preference -- multi-turn conversations degrade 39% on average (Laban et al. Microsoft 2025), self-correction without external feedback has a 64.5% blind spot (Tsui 2025), and context poisoning has no fix except session death.
+
+A fresh fix agent reads current output + error findings from disk. Full context without context rot.
+
+### The plan is the intelligence, execution is mechanical
+
+Cheap models execute well-written subtasks. The pipeline front-loads intelligence into clarify, specify, design, and plan phases using the strongest available model. Execution then becomes mechanical application of a detailed plan. At 85% per-step success and 10 steps, total success is 20% -- so the plan must eliminate ambiguity before execution begins.
+
+### Enforcement is mechanical, not advisory
+
+Prompt-only compliance caps at 40-50% for complex pipelines (confirmed across 5 production sessions). Compound probability: at 95% per-step compliance, a 10-step pipeline succeeds 59% of the time. Wazir uses hook guardrails, protected-path enforcement, and schema validation to target 99%+ per-step mechanically.
+
+```mermaid
+flowchart TD
+    subgraph Hosts["Host Environments"]
+        Claude["Claude"]
+        Codex["Codex"]
+        Gemini["Gemini"]
+        Cursor["Cursor"]
+    end
+
+    subgraph Canonical["Canonical Sources"]
+        Roles["Roles<br/>10 contracts"]
+        Workflows["Workflows<br/>14 phases"]
+        Skills["Skills<br/>29 procedures"]
+        Hooks["Hooks<br/>7 guardrails"]
+        Expertise["Expertise<br/>270 modules"]
+    end
+
+    subgraph Runtime["Task Execution"]
+        Operator["Operator Input"]
+        Orchestrator["Orchestrator<br/>(state machine, not LLM)"]
+        Composer["Composer<br/>(deterministic function)"]
+        HookGuard["Hook Guardrails"]
+        ArtifactOut["Verified Artifact"]
+    end
+
+    subgraph Exports["Host Exports"]
+        Compiler["Export Compiler"]
+        HostPkg["Host Packages"]
+    end
+
+    Compiler --> HostPkg
+    HostPkg --> Claude & Codex & Gemini & Cursor
+
+    Roles & Workflows & Hooks --> Compiler
+
+    Operator --> Orchestrator
+    Workflows -.->|"phase sequence"| Orchestrator
+    Orchestrator --> Composer
+    Roles -.->|"contract"| Composer
+    Expertise -.->|"composed into prompt"| Composer
+    Composer --> HookGuard
+    Hooks -.->|"enforce"| HookGuard
+    HookGuard --> ArtifactOut
+    ArtifactOut -->|"handoff to disk"| Orchestrator
+```
+
+The file system is the communication bus. Agents write artifacts to disk, downstream agents read from disk. No agent-to-agent messages, no shared memory. This eliminates the coordination failures that account for 79% of multi-agent system failures (Cemri et al. NeurIPS 2025).
+
+---
+
+## What Makes Wazir Different
+
+Most AI coding tools give an agent a prompt and hope for the best. Wazir gives it an engineering department.
+
+### The Researcher Goes Online First
+
+Before any code is written, the researcher role searches the web for prior art, reads documentation, and checks for existing solutions. Most AI agents start coding immediately from whatever they have in their training data. Wazir's researcher fetches live sources -- API docs, library changelogs, Stack Overflow threads, GitHub issues -- and produces a research brief that feeds into clarification. The agent starts informed, not guessing.
+
+### 270 Expertise Modules, Composed Per Task
+
+The Composer is a deterministic function (not an LLM) that reads `composition-map.yaml` and assembles task-specific agent prompts from 270 modules across 13 domains: architecture, security, performance, i18n, antipatterns, frontend, backend, infrastructure, design, content, quality, and humanize.
+
+The executor building a Flutter RTL app gets Flutter patterns, RTL layout rules, and mobile antipatterns composed into its context. The reviewer gets the corresponding antipattern catalog. The security modules load automatically when the diff touches auth, crypto, or user input. Every dispatched agent is a specialist, not a generalist pretending.
+
+No other AI coding tool has a composition engine with this depth. 270 modules is not a marketing number -- it's `find expertise -name "*.md" | wc -l` minus READMEs and indexes.
+
+### Multi-Pass Review Loops
+
+Adversarial review at 7 pipeline checkpoints: research-review, clarification-review, spec-challenge, design-review, plan-review, per-task execution review, and final review. Each uses phase-specific quality dimensions loaded from the expertise system.
+
+The review architecture is hybrid: deterministic tools (static analysis, data flow, complexity metrics) catch known patterns at zero cost and zero drift. LLM reviewers catch what rules cannot express -- design coherence, specification alignment, semantic bugs. Cross-model review (a different model family) closes the 64.5% self-correction blind spot.
+
+Review loops run until findings are resolved, with a hard cap to prevent infinite cycling. Research shows 75% of improvement happens in rounds 1-2 (Yang et al. EMNLP 2025), so Wazir optimizes for fast convergence.
+
+### The Humanizer
+
+Every text artifact -- specs, plans, code comments, commit messages, documentation -- passes through a humanization pipeline that strips AI writing patterns. A vocabulary blacklist of 61 statistically overrepresented AI words, 24 structural pattern detectors, sentence-level burstiness analysis, and domain-specific voice rules ensure that output reads like it was written by an engineer, not generated by a model.
+
+This is not cosmetic. AI-sounding output erodes trust with reviewers, stakeholders, and users who read your commit history.
+
+### Published Compliance Numbers
+
+Wazir measures its own enforcement. The compliance measurement skill (`wz:compliance-measurement`) runs at the end of every pipeline and scores five dimensions: phase execution, artifact production, gate evidence, hook enforcement, and process quality. The aggregate score is stored in SQLite for trend analysis across runs.
+
+Prompt-only compliance caps at 40-50%. Wazir's first mechanical enforcement iteration hit 76%. Current target: 99%+ per-step via hook guardrails and schema validation. These are real numbers from real production sessions, not benchmarks on curated test sets.
+
+No other AI coding tool publishes its own compliance data. Most don't measure it.
+
+### Gitflow and Keep a Changelog Enforcement
+
+The executor enforces [Gitflow](https://nvie.com/posts/a-successful-git-branching-model/) branching and [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) at three hard gates -- not as guidelines, but as validators that block the pipeline on failure:
+
+| Gate | What Runs | Blocks On |
+|---|---|---|
+| **Pre-execution** | `wazir validate branches` | Branch name not matching git-flow pattern (feat/\*, hotfix/\*, release/\*, etc.) |
+| **Per-task post-commit** | `wazir validate commits` + `wazir validate changelog` | Non-conventional commit format, malformed changelog |
+| **Pre-phase-exit** | All three: branches + commits + `changelog --require-entries` | Any failure, including zero new changelog entries since branch point |
+
+The changelog validator is diff-aware -- it compares entries against the branch point, so pre-existing `[Unreleased]` entries from the parent branch don't satisfy the gate. The commit validator auto-detects the correct base branch per git-flow rules (develop for features, main for hotfixes). The branch validator accepts the standard git-flow patterns plus `codex/*` and `worktree-*` for AI-specific workflows.
+
+Most AI coding tools leave git hygiene to the developer. Wazir makes it a mechanical guarantee.
+
+### Context Efficiency
+
+AI agents waste most of their context window on brute-force file reads. Wazir's routing hook auto-routes large commands through a sandbox. The index provides three retrieval layers -- AST-based structural (L1), trigram text search (L2), and optional semantic (L3). Query first, read only what's needed. Result: 60-80% token reduction on exploration-heavy phases.
+
+### Continuous Learning
+
+Review findings, audit findings, and user corrections feed into a learning system. Recurring issues become accepted learnings injected into future runs. A drift budget prevents learned behavior from diverging too far from the original design. Learning proposes changes -- it never auto-applies them. The agent that builds your 10th feature is better than the one that built your 1st.
+
+### Multi-Host, One Source
+
+One canonical source, four host exports. Roles, workflows, skills, and expertise are written once and compiled into each host's native format via `wazir export build`. Switch hosts without rewriting your engineering process.
+
+---
+
+## Interaction Modes
+
+Three modes control how much the pipeline stops for human input:
+
+| Mode | Behavior | Best For |
+|---|---|---|
+| **Auto** | Zero human stops. External reviewer (Codex/Gemini) acts as gating agent. Escalates to human only on cap exceeded or "not doable." | Overnight runs, clear specs |
+| **Guided** | Pauses at 2 interaction points (clarify questions, design choice) plus boundary gates between pipeline parts. Everything else autonomous. | Most work. The default. |
+| **Interactive** | Stops between every sub-phase. Pair-programmer tone -- discusses findings, co-designs, helps think through ambiguity. | New domains, visual design, ambiguous requirements |
+
+Set during `wazir init`, overridable per-run: `/wazir auto "..."`, `/wazir interactive "..."`.
+
+---
+
+## Design Philosophy
+
+| Principle | What It Means |
+|---|---|
+| **Measure twice, cut once** | Research, spec, design, and plan phases complete before any implementation code is written |
+| **Born, work, die** | Every agent gets a fresh context window. No session continuity. Context rot is worse than one extra spawn |
+| **The plan is the intelligence** | Cheap models execute well-written subtasks. Front-load thinking into planning, not execution |
+| **Adversarial separation** | The reviewer is never the author. Review gates use phase-specific quality dimensions |
+| **Evidence over assertion** | Verification requires proof artifacts with fresh command output. No proof = no done |
+| **Mechanical enforcement** | Hook guardrails and schema validation enforce compliance at 99%+. Prompt-based compliance caps at 40-50% |
+| **Convention over configuration** | Sensible defaults from the manifest. Override only what you need |
+| **Zero runtime bloat** | Three npm packages (`ajv`, `yaml`, `gray-matter`) and Node.js built-ins. No framework, no HTTP client, no background process |
+
+---
+
+## Research Basis
+
+Every pipeline design decision is grounded in empirical research, not intuition. Wazir ships its research -- 123 files across 14 categories in [`docs/research/`](docs/research/), covering agent architecture, context engineering, code review, enforcement, orchestration, security, and more. Every design decision in the [pipeline vision](docs/vision/pipeline.md) links to the research that justifies it.
+
+This is not typical for AI coding tools. Most ship features and hope they work. Wazir cites its sources, measures its compliance, and publishes the numbers.
+
+### The research that shaped the pipeline
+
+| Constraint | Value | Source |
+|---|---|---|
+| Task duration cliff | 35 minutes | Zylos 2026 |
+| Output instruction adherence cliff | 4,000 tokens | LongGenBench ICLR 2025 |
+| Multi-turn degradation | 39% average drop | Laban et al. Microsoft 2025 |
+| Context alone hurts (perfect retrieval) | 13.9-85% degradation | Du et al. EMNLP 2025 |
+| Lost in the Middle | Architectural, proven at initialization | Chowdhury 2026 |
+| Self-correction blind spot | 64.5% | Tsui 2025 |
+| Prompt-only compliance ceiling | 40-50% | 5 production sessions |
+| Separate test agent accuracy | 91.5% vs 61% solo | AgentCoder |
+| Cross-model ensemble gain | ~9% | Lu et al., 37 models |
+| Review improvement saturation | 75% in rounds 1-2 | Yang et al. EMNLP 2025 |
+| Multi-agent coordination failures | 79% | Cemri et al. NeurIPS 2025 |
+| Compound success at 85%/step, 10 steps | 20% | Probability |
+
+### Research sources
+
+47 pre-execution research files covering SWE-bench empirics, IEEE/ISO requirements engineering standards, TDD defect reduction studies, Google/Amazon/Rust design doc methodologies, and DeepMind multi-agent scaling laws. 20 execution research files covering production systems (Devin, Cursor, OpenHands, Codex CLI, Claude Code Teams), DAG engines, verification gaps, and context rot mechanics. Plus 56 additional research files on code analysis, security, context engineering, summarization, and orchestration patterns.
+
+Full index: [`docs/research/INDEX.md`](docs/research/INDEX.md)
+
+---
+
+## Wazir vs. Alternatives
+
+| Dimension | Wazir | Raw Prompting | Superpowers | Spec-Kit | LangChain/CrewAI |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Enforced delivery pipeline | 14 phases, 3 gates | None | Skill-based | Spec-first | Agent loops |
+| Pre-coding research (live web) | Mandatory phase | Manual | None | None | None |
+| Domain expertise composition | 270 modules, deterministic | Manual | Plugin skills | Spec templates | Custom tools |
+| Adversarial code review | Reviewer ≠ author, hybrid | Self-review | Optional | None | Optional |
+| AI writing detection + removal | 61-word blacklist, 24 patterns | None | None | None | None |
+| Published compliance measurement | Per-run scoring, trend tracking | None | None | None | None |
+| Mechanical enforcement | Hooks + schemas, 99%+ target | None | Hooks | None | None |
+| Research-backed design decisions | 123 files, 47+ papers cited | None | None | None | None |
+| Token optimization | 60-80% reduction | None | None | None | Manual |
+| Multi-host (Claude/Codex/Gemini/Cursor) | 4 from one source | Per-host | Claude-first | GitHub-first | Framework-specific |
+| TDD enforcement | Mandatory | Optional | Skill-guided | None | None |
+| Fresh agent per step | Research-mandated | Same session | Same session | N/A | Configurable |
+| Cross-run learning | Automated | None | None | None | Manual |
+| Verification proof | Required artifact | Honor system | Optional | None | None |
+
+Wazir is not competing with these tools -- it learned from all of them. See [Acknowledgments](#acknowledgments).
+
+---
+
+## Project Structure
+
+```
+wazir/
+├── roles/           # 10 canonical role contracts
+├── workflows/       # 14 phase entrypoints
+├── skills/          # 30 callable procedures (wz: namespace)
+├── hooks/           # 7 guardrail definitions
+├── expertise/       # 270 knowledge modules (13 domains)
+├── templates/       # Artifact formats and phase checklists
+├── schemas/         # Validation schemas (manifest, hooks, artifacts)
+├── exports/         # Generated host packages (claude, codex, gemini, cursor)
+├── tooling/         # CLI source (validation, indexing, recall, capture)
+├── docs/
+│   ├── concepts/    # Architecture, roles, composition engine
+│   ├── reference/   # Lookup tables, review dimensions
+│   ├── research/    # 123 research files (14 categories)
+│   └── vision/      # Pipeline source of truth (locked)
+└── wazir.manifest.yaml  # Project manifest (single source of truth)
+```
+
+---
+
+## Documentation
+
+| Section | What You'll Find |
+|---|---|
+| [Architecture](docs/concepts/architecture.md) | System design, component interactions, context tiers |
+| [Why Wazir](docs/concepts/why-wazir.md) | The 14 reasons Wazir exists |
+| [Roles & Workflows](docs/concepts/roles-and-workflows.md) | Role contracts and phase sequencing |
+| [Composition Engine](docs/concepts/composition-engine.md) | How expertise modules are assembled per task |
+| [Indexing & Recall](docs/concepts/indexing-and-recall.md) | Three-tier context system (L0/L1/L2) |
+| [Roles Reference](docs/reference/roles-reference.md) | Role and workflow lookup tables |
+| [Pipeline Vision](docs/vision/pipeline.md) | Source of truth -- all design decisions with research citations |
+| [Research Index](docs/research/INDEX.md) | 123 research files across 14 categories |
+
+---
+
+## Contributing
+
+Wazir is pre-1.0 alpha. Contributions are welcome -- see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+For security issues, see [SECURITY.md](SECURITY.md).
+
+---
+
+## Acknowledgments
+
+Wazir learned from projects that shaped disciplined AI-assisted engineering:
+
+| Project | What Wazir Learned |
+|---|---|
+| [**superpowers**](https://github.com/jasonjmcghee/superpowers) by [@obra](https://github.com/obra) | Skill system architecture, bootstrap injection pattern, session-start hooks |
+| [**context-mode**](https://github.com/ozankasikci/context-mode) | Context window optimization and sandbox execution patterns |
+| [**spec-kit**](https://github.com/github/spec-kit) by GitHub | Specification-driven development patterns |
+| [**oh-my-claudecode**](https://github.com/yeachan-heo/oh-my-claudecode) by [@yeachan-heo](https://github.com/yeachan-heo) | Claude Code customization and extension patterns |
+
+---
+
+## License
+
+[MIT](LICENSE) -- Mohamed Abdallah

@@ -2,7 +2,7 @@
 name: wz:wazir
 description: One-command pipeline — type /wazir followed by what you want to build. Handles init, clarification, execution, review, and audits automatically.
 ---
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Before anything else happens here: read your phase checklist. It's at .wazir/runs/latest/phases/. Every item on it is there because skipping it caused problems before. Are you going to follow it or skip it?
 
 # Wazir — Full Pipeline Runner
 
@@ -412,7 +412,6 @@ Phase 4: Final Review (Completion Pipeline)
   ├── learn ← adoption rates, quality delta, user corrections
   └── prepare_next
 ```
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
 
 **Event capture uses both levels.** When emitting phase events, include `--parent-phase`:
 ```bash
@@ -423,6 +422,7 @@ wazir capture event --run <id> --event phase_enter --phase discover --parent-pha
 > Phase 2: Clarifier > Workflow: specify (3 of 6 workflows complete)
 
 **`wazir status` shows both levels:** "Phase 2: Clarifier > Workflow: specify"
+This is the point where compliance usually drops off. You feel like you're making progress so you stop checking the list. Don't fall into that trap. Pull up .wazir/runs/latest/phases/ again. What's next on it?
 
 ---
 
@@ -524,8 +524,8 @@ wazir capture event --run <run-id> --event phase_enter --phase executor --status
 **Pre-execution gate:**
 
 ```bash
-wazir validate manifest && wazir validate hooks
-# Hard gate — stop if either fails.
+wazir validate manifest && wazir validate hooks && wazir validate branches
+# Hard gate — stop if any fails.
 ```
 
 Invoke the `wz:executor` skill. It handles:
@@ -676,8 +676,9 @@ Output the report content to the user in the conversation.
 Before presenting results:
 
 ```bash
-wazir validate changelog --require-entries --base main
-wazir validate commits --base main
+wazir validate branches
+wazir validate commits
+wazir validate changelog --require-entries --base $(git merge-base HEAD develop || git merge-base HEAD main)
 ```
 
 Both must pass before PR. These are not warnings.
@@ -842,4 +843,4 @@ Create the `reasoning/` directory during run init. Every phase skill (clarifier,
 - **No open-ended questions** — every question has concrete options to pick from
 - **Inline answers accepted** — users can type the number or the option name
 
-<!-- PIPELINE: Please try 100% compliance with Wazir pipeline and skill usage. If anything can be done by a wz: skill, use the skill. Follow your current phase checklist at .wazir/runs/latest/phases/ please. -->
+Final challenge: name every checklist item you completed and what you produced for each one. If any answer is "I think I covered that" instead of "here's the output," you have more work to do. Which items are you unsure about?

@@ -246,7 +246,8 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
    ```
 3. Fix any findings (still uncommitted).
 4. Re-review until all passes exhausted or cap reached.
-5. **Only after review passes:** commit with conventional commit format.
+5. **Only after review passes:** if user-facing change, update `CHANGELOG.md` under `[Unreleased]` using keepachangelog categories (Added, Changed, Fixed, Removed, Deprecated, Security). Then commit with conventional commit format.
+6. **Post-commit validation:** run `wazir validate commits --base $PRE_TASK_SHA` and `wazir validate changelog`. If either fails, amend and re-validate before proceeding to the next task.
 
 **If changes are already committed** (e.g., subagent workflow where the implementer subagent commits before review):
 
@@ -262,6 +263,10 @@ CODEX_MODEL=${CODEX_MODEL:-gpt-5.4}
 codex review -c model="$CODEX_MODEL" --base $PRE_TASK_SHA --title "Task NNN: <summary>" \
   "Review against acceptance criteria: <criteria>" \
   2>&1 | tee .wazir/runs/latest/reviews/execute-task-NNN-review-pass-N.md
+
+# Post-review validation (same as uncommitted path step 6)
+wazir validate commits --base $PRE_TASK_SHA
+wazir validate changelog
 ```
 
 ---

@@ -2,6 +2,7 @@
 name: wz:executor
 description: Orchestrator entry point — gate prerequisites, set interaction mode, delegate to the execute workflow.
 ---
+You tend to skip pipeline steps when context gets long. Fight that habit right from the start. Check .wazir/runs/latest/phases/ right now and follow what it says. What does your checklist tell you to do first?
 
 # Executor
 
@@ -44,8 +45,9 @@ Required artifacts:
 Run these checks before implementing:
 - `wazir validate manifest` — confirm manifest schema is valid
 - `wazir validate hooks` — confirm hook contracts are intact
+- `wazir validate branches` — confirm current branch follows git-flow naming (feat/*, hotfix/*, release/*, etc.)
 
-If either fails, surface the failure and do NOT proceed until resolved.
+If any fails, surface the failure and do NOT proceed until resolved.
 
 ## Interaction Mode Awareness
 
@@ -70,6 +72,7 @@ Pause and escalate to user when:
 When escalating, present: subtask ID, status, what was attempted, evidence.
 
 ## Reasoning Output
+Look at your recent actions. Did each one follow from a checklist item, or are you improvising? Improvisation means drift. Go back to .wazir/runs/latest/phases/ and realign. Where did you go off-script?
 
 Throughout the executor phase, produce reasoning at two layers:
 
@@ -83,6 +86,16 @@ Throughout the executor phase, produce reasoning at two layers:
 ## Done
 
 When all subtasks are complete (or abandoned with user approval):
+
+### Step 0: Git-Flow and Changelog Gate (Hard Gate)
+
+Run all three validators before producing the handover. If ANY fails, fix before proceeding:
+
+- `wazir validate branches` — branch name must match git-flow pattern
+- `wazir validate commits` — all commits since base must follow conventional commit format (auto-detects base per git-flow)
+- `wazir validate changelog --require-entries --base $(git merge-base HEAD develop || git merge-base HEAD main)` — CHANGELOG.md must have NEW [Unreleased] entries since branch point
+
+This is a hard gate. Do NOT produce the handover or declare phase complete with validation failures.
 
 ### Step 1: Produce execute-to-complete handover
 
@@ -137,3 +150,5 @@ Then ask via AskUserQuestion:
   3. "Continue in this session (not recommended)" — context rot risk. Execution context may bias review findings.
 
 Wait for selection. If option 3, warn: "Continuing without a session boundary risks context rot. Execution context may bias review — the reviewer may miss drift it participated in. Proceeding anyway."
+
+Almost done? Then you should be able to list every phase checklist item and show exactly where you completed it with real evidence. If you can't do that, you're not actually done. Can you list them all with proof?

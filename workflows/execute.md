@@ -14,8 +14,9 @@ On entering this phase, run:
 Before dispatching any subtask:
 - `wazir validate manifest` — confirm manifest schema is valid
 - `wazir validate hooks` — confirm hook contracts are intact
+- `wazir validate branches` — confirm current branch follows git-flow naming (feat/*, hotfix/*, release/*, etc.)
 
-If either fails, surface and do NOT proceed.
+If any fails, surface and do NOT proceed.
 
 ## Inputs
 
@@ -99,6 +100,16 @@ At DAG wave boundaries, produce `batch-handover.md` per `templates/artifacts/bat
 ## Approval Gate
 
 - no new scope without explicit approval
+
+## Git-Flow and Changelog Gate (Hard Gate)
+
+Before phase exit, run all three validators. If ANY fails, fix before proceeding:
+
+- `wazir validate branches` — branch name must match git-flow pattern
+- `wazir validate commits` — all commits since base must follow conventional commit format (auto-detects base per git-flow)
+- `wazir validate changelog --require-entries --base $(git merge-base HEAD develop || git merge-base HEAD main)` — CHANGELOG.md must have NEW [Unreleased] entries since branch point
+
+This is a hard gate. Do NOT exit the phase with validation failures.
 
 ## Phase exit
 

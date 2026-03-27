@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - KI-006/KI-007 Fix fields updated to "no fix decided" (previously referenced tmux)
 
 ### Added
+- Gitflow and Keep a Changelog hard gates in executor — branch validation at pre-execution, commit + changelog validation per-task and at phase exit
 - Regression tests for TodoWrite redirect guard wording (6 assertions)
 - Regression tests for tmux removal (6 assertions verifying Fix 3 removed)
 - KI-015 through KI-018 in KNOWN-ISSUES (init-pipeline, config values, context-mode detection, CLI arg parsing)
