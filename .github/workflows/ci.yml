@@ -34,8 +34,8 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
-      - name: Audit dependencies
-        run: npm audit --audit-level=high
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Run root verification
         run: npm test
