@@ -475,3 +475,74 @@ concerns:
   audit-dependencies:
     researcher: [antipatterns/code/dependency-antipatterns.md, security/foundations/supply-chain-security.md, antipatterns/process/technical-debt-antipatterns.md]
     reviewer: [security/foundations/secure-sdlc.md]
+
+# Agent policy — host-agnostic capability declarations
+# The export compiler translates these to host-specific agent definitions.
+#
+# Capabilities (host-agnostic):
+#   read    — read files
+#   write   — create new files
+#   edit    — modify existing files
+#   shell   — run shell commands
+#   search  — search files by name and content
+#   skills  — invoke skills
+#   agents  — dispatch subagents
+#   web     — web search and fetch
+#
+# Model tiers (host exporter maps to specific model IDs):
+#   orchestration  — lightweight routing/dispatch
+#   exploration    — research and discovery
+#   review         — quality assessment, adversarial review
+#   implementation — code writing, content creation
+
+agent_policy:
+  controller:
+    model_tier: orchestration
+    capabilities: [read, shell, search, skills, agents]
+    max_turns: 50
+  clarifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 30
+  researcher:
+    model_tier: exploration
+    capabilities: [read, write, shell, search, skills, web]
+    max_turns: 25
+  specifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 25
+  content-author:
+    model_tier: implementation
+    capabilities: [read, write, shell, search, skills, web]
+    max_turns: 30
+  designer:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    mcp_servers: [pencil]
+    max_turns: 30
+  planner:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 30
+  executor:
+    model_tier: implementation
+    capabilities: [read, write, edit, shell, search, skills]
+    isolation: worktree
+    max_turns: 80
+  verifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 30
+  reviewer:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 40
+  learner:
+    model_tier: implementation
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 20
+  reviewer-verifier:
+    model_tier: review
+    capabilities: [read, write, shell, search, skills]
+    max_turns: 40
