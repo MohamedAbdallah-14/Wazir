@@ -30,12 +30,6 @@
 
 - [Memory and Learnings](guides/memory-and-learnings.md)
 - [Troubleshooting](guides/troubleshooting.md)
-- [Writing Custom Roles](guides/writing-custom-roles.md) _(coming soon)_
-- [Creating Skills](guides/creating-skills.md) _(coming soon)_
-- [Expertise Module Authoring](guides/expertise-module-authoring.md) _(coming soon)_
-- [CI Integration](guides/ci-integration.md) _(coming soon)_
-- [Hook Development](guides/hook-development.md) _(coming soon)_
-- [Multi-Host Export](guides/multi-host-export.md) _(coming soon)_
 
 ## Reference (Lookup)
 

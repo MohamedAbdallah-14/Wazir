@@ -23,7 +23,6 @@ paths:
   exports: exports
   tooling: tooling
   examples: examples
-  memory: memory
   state_root_default: ~/.wazir/projects/{project_slug}
 hosts:
   - claude
