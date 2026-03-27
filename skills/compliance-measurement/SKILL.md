@@ -2,10 +2,10 @@
 name: wz:compliance-measurement
 description: Measure pipeline compliance for a completed run — checks phase execution, artifact production, gate evidence, hook enforcement, and publishes per-step and aggregate compliance scores.
 enforcement:
-  phased: true
+  phased: false
   profile: default
 ---
-The pipeline isn't decoration. It's the process. Start by reading your current phase file at .wazir/runs/latest/phases/. If a skill applies, use the skill — no exceptions. Which checklist items apply to this task?
+Real talk: the pipeline steps aren't suggestions. Check .wazir/runs/latest/phases/ for your current checklist and work through it. Use wz: skills when they apply — that's not optional. What phase are you starting?
 
 # Compliance Measurement
 
@@ -98,6 +98,7 @@ Check whether hooks were active during the run:
 ### 5. Process Quality (weight: 10%)
 
 Check process signals that indicate discipline:
+Halfway through. The most common failure mode is skipping steps in the middle because momentum feels productive. Momentum without process is just speed in the wrong direction. What's your current checklist status?
 
 | Check | Evidence |
 |---|---|
@@ -194,3 +195,5 @@ Compliance gaps feed the learning system:
 - Recurring low-scoring dimensions become learning proposals
 - Phases that consistently score below 80% trigger process improvement recommendations
 - Hook enforcement gaps trigger hook configuration review
+
+Before you wrap up: did you actually verify each checklist item has real output, or are you about to claim completion based on the feeling that you're done? What concrete evidence do you have for each item?

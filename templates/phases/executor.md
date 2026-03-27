@@ -9,4 +9,4 @@
 - [ ] Collect residuals for any subtasks exhausting 7-step loop
 - [ ] Produce batch handover or execute-to-complete handover
 - [ ] Write handover to `.wazir/runs/<id>/execute-to-complete-handover.md`
-- [ ] **HARD STOP** — ask user to compact or open new session for final review (session boundary)
+- [ ] **HARD STOP** — ask user to compact or open new session for final review (session boundary) <!-- transition -->

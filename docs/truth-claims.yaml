@@ -52,6 +52,24 @@
   subject: wazir validate artifacts
   verifier: command_registry
   required: true
+- id: command-export
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir export
+  verifier: command_registry
+  required: true
+- id: command-capture-ensure
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir capture ensure
+  verifier: command_registry
+  required: true
+- id: command-report
+  file: docs/reference/tooling-cli.md
+  claim_type: command
+  subject: wazir report
+  verifier: command_registry
+  required: true
 - id: command-export-build
   file: docs/reference/tooling-cli.md
   claim_type: command

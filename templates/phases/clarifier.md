@@ -31,4 +31,4 @@
 - [ ] Get user approval on clarified spec and plan
 - [ ] Write outputs to `.wazir/runs/<id>/clarified/`
 - [ ] Write clarify-to-execute handover to `.wazir/runs/<id>/clarified/execute-handover.md`
-- [ ] **HARD STOP** — ask user to compact or open new session for execution (session boundary)
+- [ ] **HARD STOP** — ask user to compact or open new session for execution (session boundary) <!-- transition -->
