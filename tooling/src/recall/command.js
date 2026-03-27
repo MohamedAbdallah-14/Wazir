@@ -2,9 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { parseCommandOptions, parsePositiveInteger } from '../command-options.js';
-import { readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import {
   findSymbol,
   hashContent,
@@ -36,16 +34,10 @@ function failure(message, exitCode = 1) {
 }
 
 function loadProjectContext(context, stateRootOverride) {
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-  const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
-  const stateRoot = resolveStateRoot(projectRoot, manifest, {
-    cwd: context.cwd ?? process.cwd(),
-    override: stateRootOverride,
-  });
-
+  const ctx = resolveProjectContext(context.cwd ?? process.cwd(), { stateRootOverride });
   return {
-    projectRoot,
-    stateRoot,
+    projectRoot: ctx.projectRoot,
+    stateRoot: ctx.stateRoot,
   };
 }
 

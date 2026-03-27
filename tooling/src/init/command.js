@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { autoInit, isConfigCurrent } from './auto-detect.js';
+import { findProjectRoot } from '../project-root.js';
 
 /**
  * wazir init [--force]
@@ -40,14 +41,19 @@ export async function runInitCommand(parsed, context = {}) {
   try {
     const result = autoInit(cwd, { context, force: isForce });
 
-    // Auto-export for detected host
+    // Auto-export for detected host (only in Wazir repo; user projects get exports from the plugin)
     let exportNote = '';
-    try {
-      const { buildHostExports } = await import('../export/compiler.js');
-      buildHostExports(cwd);
-      exportNote = `  Exports:     generated for ${result.host.host}\n`;
-    } catch {
-      exportNote = '  Exports:     skipped (run `wazir export build` manually)\n';
+    const wazirRoot = findProjectRoot(cwd);
+    if (wazirRoot) {
+      try {
+        const { buildHostExports } = await import('../export/compiler.js');
+        buildHostExports(cwd);
+        exportNote = `  Exports:     generated for ${result.host.host}\n`;
+      } catch {
+        exportNote = '  Exports:     skipped (run `wazir export build` manually)\n';
+      }
+    } else {
+      exportNote = '  Exports:     provided by wazir plugin\n';
     }
 
     const lines = [

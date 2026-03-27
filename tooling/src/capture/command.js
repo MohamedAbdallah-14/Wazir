@@ -2,10 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { parseCommandOptions, parsePositiveInteger } from '../command-options.js';
-import { readYamlFile } from '../loaders.js';
 import { validateRunCompletion } from '../guards/phase-prerequisite-guard.js';
 import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import {
   appendEvent,
   createCaptureTarget,
@@ -62,8 +61,6 @@ function readInput() {
 }
 
 function resolveCaptureContext(parsed, context = {}) {
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-  const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
   const { options } = parseCommandOptions(parsed.args, {
     boolean: ['json', 'complete'],
     string: [
@@ -84,10 +81,9 @@ function resolveCaptureContext(parsed, context = {}) {
       'skill',
     ],
   });
-  const stateRoot = resolveStateRoot(projectRoot, manifest, {
-    cwd: context.cwd ?? process.cwd(),
-    override: options.stateRoot,
-  });
+  const ctx = resolveProjectContext(context.cwd ?? process.cwd(), { stateRootOverride: options.stateRoot });
+  const projectRoot = ctx.projectRoot;
+  const stateRoot = ctx.stateRoot;
 
   return {
     projectRoot,
@@ -402,15 +398,17 @@ function handleSummary(parsed, context = {}) {
 
   // Enforce workflow completion before allowing summary to finalize
   if (options.complete) {
-    const projectRoot = findProjectRoot();
-    const manifestPath = path.join(projectRoot, 'wazir.manifest.yaml');
-    const result = validateRunCompletion(runPaths.runRoot, manifestPath);
-    if (!result.complete) {
-      const msg = `Run incomplete: ${result.missing.length} workflow(s) not finished: ${result.missing.join(', ')}`;
-      if (options.json) {
-        return { exitCode: 1, stdout: JSON.stringify({ run_id: options.run, complete: false, missing_workflows: result.missing, error: msg }, null, 2) + '\n' };
+    const wazirRoot = findProjectRoot();
+    const manifestPath = wazirRoot ? path.join(wazirRoot, 'wazir.manifest.yaml') : null;
+    if (manifestPath) {
+      const result = validateRunCompletion(runPaths.runRoot, manifestPath);
+      if (!result.complete) {
+        const msg = `Run incomplete: ${result.missing.length} workflow(s) not finished: ${result.missing.join(', ')}`;
+        if (options.json) {
+          return { exitCode: 1, stdout: JSON.stringify({ run_id: options.run, complete: false, missing_workflows: result.missing, error: msg }, null, 2) + '\n' };
+        }
+        return { exitCode: 1, stderr: msg + '\n' };
       }
-      return { exitCode: 1, stderr: msg + '\n' };
     }
   }
 
@@ -582,7 +580,7 @@ function handleEnsure(parsed, context = {}) {
   // Quick check for --scope skill without full parsing (avoids unknown option errors)
   const scopeIdx = (parsed.args || []).indexOf('--scope');
   if (scopeIdx !== -1 && parsed.args[scopeIdx + 1] === 'skill') {
-    const { projectRoot, options } = resolveProjectContext(parsed, context);
+    const { projectRoot, options } = resolveSkillContext(parsed, context);
     return handleEnsureSkill(projectRoot, options);
   }
 
@@ -595,8 +593,9 @@ function handleEnsure(parsed, context = {}) {
   return { exitCode: 0, stdout: msg + '\n' };
 }
 
-function resolveProjectContext(parsed, context = {}) {
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
+function resolveSkillContext(parsed, context = {}) {
+  const cwd = context.cwd ?? process.cwd();
+  const projectRoot = findProjectRoot(cwd) ?? path.resolve(cwd);
   const { options } = parseCommandOptions(parsed.args, {
     boolean: ['json', 'complete'],
     string: ['run', 'phase', 'scope', 'skill'],
@@ -701,7 +700,7 @@ function readLatestRunIdFromProject(projectRoot) {
 }
 
 function handleSkillPhase(parsed, context = {}) {
-  const { projectRoot, options } = resolveProjectContext(parsed, context);
+  const { projectRoot, options } = resolveSkillContext(parsed, context);
 
   requireOption(options, 'phase', 'Usage: wazir capture skill-phase --phase <name> [--run <id>]');
 
@@ -775,7 +774,7 @@ function handleSkillPhase(parsed, context = {}) {
 }
 
 function handleSkillExit(parsed, context = {}) {
-  const { projectRoot, options } = resolveProjectContext(parsed, context);
+  const { projectRoot, options } = resolveSkillContext(parsed, context);
 
   const runId = options.run || readLatestRunIdFromProject(projectRoot);
   if (!runId) return { exitCode: 1, stderr: 'No active run found.\n' };

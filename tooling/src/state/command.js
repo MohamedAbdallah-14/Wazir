@@ -1,9 +1,5 @@
-import path from 'node:path';
-
 import { parseCommandOptions } from '../command-options.js';
-import { readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import {
   closeStateDb,
   getAuditTrend,
@@ -36,17 +32,11 @@ function failure(message, exitCode = 1) {
 }
 
 function loadProjectContext(context, stateRootOverride) {
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-  const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
-  const stateRoot = resolveStateRoot(projectRoot, manifest, {
-    cwd: context.cwd ?? process.cwd(),
-    override: stateRootOverride,
-  });
-
+  const ctx = resolveProjectContext(context.cwd ?? process.cwd(), { stateRootOverride });
   return {
-    projectRoot,
-    manifest,
-    stateRoot,
+    projectRoot: ctx.projectRoot,
+    manifest: ctx.manifest,
+    stateRoot: ctx.stateRoot,
   };
 }
 

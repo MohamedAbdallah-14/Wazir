@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { listYamlFiles, readJsonFile, readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
+import { findProjectRootStrict } from '../project-root.js';
 import { validateAgainstSchema } from '../schema-validator.js';
 import { validateDocsAtProjectRoot } from '../checks/docs-truth.js';
 import { validateBrandTruthAtProjectRoot } from '../checks/brand-truth.js';
@@ -219,7 +219,7 @@ function hasFlag(args, flag) {
 }
 
 export function runValidateCommand(parsed, context = {}) {
-  const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
+  const projectRoot = findProjectRootStrict(context.cwd ?? process.cwd());
 
   switch (parsed.subcommand) {
     case 'manifest':

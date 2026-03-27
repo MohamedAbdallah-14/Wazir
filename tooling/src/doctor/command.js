@@ -1,9 +1,8 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 
-import { readYamlFile } from '../loaders.js';
-import { findProjectRoot } from '../project-root.js';
-import { resolveStateRoot } from '../state-root.js';
+import { resolveProjectContext } from '../project-context.js';
 import {
   validateHooksAtProjectRoot,
   validateManifestAtProjectRoot,
@@ -34,52 +33,76 @@ export function runDoctorCommand(parsed, context = {}) {
     }
 
     const wantsJson = parsed.args.includes('--json');
-    const projectRoot = findProjectRoot(context.cwd ?? process.cwd());
-    const manifest = readYamlFile(path.join(projectRoot, 'wazir.manifest.yaml'));
-    const defaultStateRoot = resolveStateRoot(projectRoot, manifest, {
-      cwd: context.cwd ?? process.cwd(),
-    });
+    const ctx = resolveProjectContext(context.cwd ?? process.cwd());
     const checks = [];
 
-    const manifestResult = validateManifestAtProjectRoot(projectRoot);
-    checks.push({
-      name: 'manifest',
-      status: manifestResult.exitCode === 0 ? 'pass' : 'fail',
-      detail: manifestResult.exitCode === 0 ? 'Manifest is valid.' : manifestResult.stderr.trim(),
-    });
+    if (ctx.isUserProject) {
+      checks.push({
+        name: 'cli',
+        status: 'pass',
+        detail: 'CLI is available.',
+      });
 
-    const hooksResult = validateHooksAtProjectRoot(projectRoot);
-    checks.push({
-      name: 'hooks',
-      status: hooksResult.exitCode === 0 ? 'pass' : 'fail',
-      detail: hooksResult.exitCode === 0 ? 'Hook definitions are valid.' : hooksResult.stderr.trim(),
-    });
+      const configPath = path.join(ctx.projectRoot, '.wazir', 'state', 'config.json');
+      const stateDirsExist = fs.existsSync(configPath);
+      checks.push({
+        name: 'state-dirs',
+        status: stateDirsExist ? 'pass' : 'fail',
+        detail: stateDirsExist
+          ? 'State directories exist.'
+          : `Missing state config at ${configPath}`,
+      });
 
-    const defaultStateInsideRepo = !path.relative(projectRoot, defaultStateRoot).startsWith('..');
-    checks.push({
-      name: 'state-root',
-      status: defaultStateInsideRepo ? 'fail' : 'pass',
-      detail: defaultStateInsideRepo
-        ? `${defaultStateRoot} resolves inside the project root`
-        : `${defaultStateRoot} stays outside the project root`,
-    });
+      const pluginDir = path.join(os.homedir(), '.claude', 'plugins', 'cache', 'wazir-marketplace');
+      const pluginInstalled = fs.existsSync(pluginDir);
+      checks.push({
+        name: 'plugin',
+        status: pluginInstalled ? 'pass' : 'fail',
+        detail: pluginInstalled
+          ? 'Wazir marketplace plugin is installed.'
+          : `Missing plugin directory at ${pluginDir}`,
+      });
+    } else {
+      const manifestResult = validateManifestAtProjectRoot(ctx.projectRoot);
+      checks.push({
+        name: 'manifest',
+        status: manifestResult.exitCode === 0 ? 'pass' : 'fail',
+        detail: manifestResult.exitCode === 0 ? 'Manifest is valid.' : manifestResult.stderr.trim(),
+      });
 
-    const missingHostExports = manifest.hosts.filter((host) => {
-      const exportPath = path.join(projectRoot, 'exports', 'hosts', host);
-      return !fs.existsSync(exportPath);
-    });
-    checks.push({
-      name: 'host-exports',
-      status: missingHostExports.length === 0 ? 'pass' : 'fail',
-      detail: missingHostExports.length === 0
-        ? 'All required host export directories exist.'
-        : `Missing export directories for: ${missingHostExports.join(', ')}`,
-    });
+      const hooksResult = validateHooksAtProjectRoot(ctx.projectRoot);
+      checks.push({
+        name: 'hooks',
+        status: hooksResult.exitCode === 0 ? 'pass' : 'fail',
+        detail: hooksResult.exitCode === 0 ? 'Hook definitions are valid.' : hooksResult.stderr.trim(),
+      });
+
+      const defaultStateInsideRepo = !path.relative(ctx.projectRoot, ctx.stateRoot).startsWith('..');
+      checks.push({
+        name: 'state-root',
+        status: defaultStateInsideRepo ? 'fail' : 'pass',
+        detail: defaultStateInsideRepo
+          ? `${ctx.stateRoot} resolves inside the project root`
+          : `${ctx.stateRoot} stays outside the project root`,
+      });
+
+      const missingHostExports = ctx.manifest.hosts.filter((host) => {
+        const exportPath = path.join(ctx.projectRoot, 'exports', 'hosts', host);
+        return !fs.existsSync(exportPath);
+      });
+      checks.push({
+        name: 'host-exports',
+        status: missingHostExports.length === 0 ? 'pass' : 'fail',
+        detail: missingHostExports.length === 0
+          ? 'All required host export directories exist.'
+          : `Missing export directories for: ${missingHostExports.join(', ')}`,
+      });
+    }
 
     return success({
       healthy: checks.every((check) => check.status === 'pass'),
-      project_root: projectRoot,
-      state_root_default: defaultStateRoot,
+      project_root: ctx.projectRoot,
+      state_root_default: ctx.stateRoot,
       checks,
     }, { json: wantsJson });
   } catch (error) {
