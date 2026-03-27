@@ -12,8 +12,10 @@ Extract durable scoped learnings and experiments without silently mutating the c
 - user corrections (approvals, rejections, redirects, scope changes from `user-input-log.ndjson`) — highest-priority learning signal
 - concern registry and resolutions (final disposition from completion Stage 2)
 - residuals and their disposition
+- retry evidence (which subtasks retried, which tier, why they failed)
 - model performance data (success/failure per tier per complexity)
 - timing data (bottlenecks per phase)
+- merge issues (conflicts despite planning)
 
 ## Allowed Tools
 

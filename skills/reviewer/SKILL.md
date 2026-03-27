@@ -527,33 +527,9 @@ Produces `.wazir/runs/<run-id>/execution-summary.md` with: what was built (linke
 
 ### Mode 2: Run Incomplete → handover-batch-N.md
 
-Produces `.wazir/runs/<run-id>/handover-batch-N.md` with:
+Produces `.wazir/runs/<run-id>/handover-batch-N.md` with: completed/in-progress/remaining subtask IDs with status and lifecycle state, accumulated concerns from DONE_WITH_CONCERNS subtasks, blocked subtasks with reasons and lifecycle state, partial learnings, environment state (active branches, worktrees), resume prompt (~500 tokens, self-contained, references files for depth).
 
-```markdown
-# Handoff — <run-id>
-
-**Status:** [Completed | Partial]
-**Branch:** <branch-name>
-**Date:** YYYY-MM-DD
-
-## What Was Done
-[List of completed tasks with commit hashes]
-
-## Test Results
-[Test count, pass/fail, validator status]
-
-## Review Score
-[Final review verdict and score]
-
-## What's Next
-[Pending items, deferred work, follow-up tasks]
-
-## Open Bugs
-[Any known issues discovered during this run]
-
-## Learnings From This Run
-[Key insights — what worked, what didn't, what to change]
-```
+See `skills/prepare-next/SKILL.md` for the canonical template.
 
 ### Cleanup
 
